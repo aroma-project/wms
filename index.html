@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<!-- saved from url=(0045)file:///C:/Users/papas/Downloads/index_4.html -->
+<!-- saved from url=(0045)file:///C:/Users/papas/Downloads/index_7.html -->
 <html lang="ko"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>aromaproject. 생산관리 시스템</title>
-<script src="./index_files/supabase.min.js.다운로드"></script>
+<script src="./index_files/supabase.min.js.다운로드" onerror="window._supabaseLoadFailed=true"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -642,21 +642,106 @@ textarea{min-height:60px;resize:vertical}
 </div><!-- /modals -->
 
 <script>
-// ══════════════════════════════════════════════════════════════
-// SUPABASE INIT
-// ══════════════════════════════════════════════════════════════
-const SUPA_URL = 'https://xwwuwbstopynjwyynion.supabase.co';
-const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh3d3V3YnN0b3B5bmp3eXluaW9uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzNDE5MTEsImV4cCI6MjA5MTkxNzkxMX0.ohZyzK0RFcznmcdnL0zI69ys0vGjWfyhiVFVC0FLKz4';
-if(typeof supabase==='undefined'){alert('Supabase 라이브러리 로드 실패. 페이지를 새로고침 해주세요.');throw new Error('supabase not loaded');}
-const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
-
-// ══ IN-MEMORY CACHE ══════════════════════════════════════════
+// ══ 전역 변수 먼저 선언 ══════════════════════════════════════
 var C = {
   companies:[], materials:[], locations:[], stock:[],
   products:[], bom:[], inbounds:[], orders:[], outbounds:[],
   history:[], accounts:[], progressLogs:[], prodIssues:[]
 };
-var CU = null; // current user
+var CU = null;
+
+// ══ SUPABASE REST API 직접 호출 (CDN 불필요) ══════════════════
+const SUPA_URL = 'https://xwwuwbstopynjwyynion.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh3d3V3YnN0b3B5bmp3eXluaW9uIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYzNDE5MTEsImV4cCI6MjA5MTkxNzkxMX0.ohZyzK0RFcznmcdnL0zI69ys0vGjWfyhiVFVC0FLKz4';
+
+const HEADERS = {
+  'apikey': SUPA_KEY,
+  'Authorization': 'Bearer ' + SUPA_KEY,
+  'Content-Type': 'application/json',
+  'Prefer': 'return=representation'
+};
+
+// fetch 기반 Supabase REST wrapper
+const sb = {
+  from(table){
+    const base = SUPA_URL + '/rest/v1/' + table;
+    return {
+      _table: table,
+      _params: [],
+      _order: null,
+      _limit: null,
+      _eq: null,
+      select(cols='*'){
+        this._sel = cols; return this;
+      },
+      order(col, opts={}){
+        this._order = col + (opts.ascending===false?'.desc':'.asc'); return this;
+      },
+      limit(n){ this._limit = n; return this; },
+      eq(col, val){ this._eq = {col, val}; return this; },
+      async _run(method='GET', body=null){
+        let url = base;
+        const params = new URLSearchParams();
+        params.set('select', this._sel||'*');
+        if(this._order) params.set('order', this._order);
+        if(this._limit) params.set('limit', this._limit);
+        if(this._eq)    params.set(this._eq.col, 'eq.' + this._eq.val);
+        if(method==='GET') url += '?' + params.toString();
+        const opts = { method, headers: {...HEADERS} };
+        if(body) opts.body = JSON.stringify(body);
+        if(method==='GET') opts.headers['Prefer']='';
+        try{
+          const res = await fetch(url, opts);
+          const text = await res.text();
+          const data = text ? JSON.parse(text) : [];
+          if(!res.ok) return {data:null, error:{message: data.message||data.hint||res.statusText}};
+          return {data: Array.isArray(data)?data:[data], error:null};
+        }catch(e){
+          return {data:null, error:{message:e.message}};
+        }
+      },
+      async insert(obj){
+        const r = await (async()=>{
+          const url = base;
+          const res = await fetch(url, {method:'POST', headers:HEADERS, body:JSON.stringify(obj)});
+          const text = await res.text();
+          const data = text ? JSON.parse(text) : [];
+          if(!res.ok) return {data:null, error:{message:(Array.isArray(data)?data[0]:data)?.message||res.statusText}};
+          return {data: Array.isArray(data)?data:[data], error:null};
+        })();
+        return r;
+      },
+      async update(obj){
+        const url = base + (this._eq ? '?' + this._eq.col + '=eq.' + this._eq.val : '');
+        const res = await fetch(url, {method:'PATCH', headers:HEADERS, body:JSON.stringify(obj)});
+        const text = await res.text();
+        const data = text ? JSON.parse(text) : [];
+        if(!res.ok) return {data:null, error:{message:(Array.isArray(data)?data[0]:data)?.message||res.statusText}};
+        return {data: Array.isArray(data)?data:[data], error:null};
+      },
+      async delete(){
+        const url = base + (this._eq ? '?' + this._eq.col + '=eq.' + this._eq.val : '');
+        const res = await fetch(url, {method:'DELETE', headers:{...HEADERS,'Prefer':''}});
+        if(!res.ok){ const t=await res.text(); return {data:null,error:{message:t}}; }
+        return {data:[], error:null};
+      },
+      async upsert(obj, opts={}){
+        const h = {...HEADERS, 'Prefer':'resolution=merge-duplicates,return=representation'};
+        if(opts.onConflict) h['Prefer'] += ',on_conflict='+opts.onConflict;
+        const res = await fetch(base, {method:'POST', headers:h, body:JSON.stringify(obj)});
+        const text = await res.text();
+        const data = text ? JSON.parse(text) : [];
+        if(!res.ok) return {data:null,error:{message:(Array.isArray(data)?data[0]:data)?.message||res.statusText}};
+        return {data: Array.isArray(data)?data:[data], error:null};
+      },
+      then(resolve, reject){
+        return this._run().then(resolve, reject);
+      },
+      // Thenable - await sb.from(...).select() works
+      async [Symbol.asyncIterator](){ yield await this._run(); }
+    };
+  }
+};
 
 // ══ HELPERS ════════════════════════════════════════════════════
 const fmt = n => Number(n||0).toLocaleString();
@@ -699,19 +784,19 @@ async function loadAll(){
 
   // 테이블별 개별 로드 - 하나 실패해도 나머지 계속 진행
   const tableList=[
-    {key:'companies',   q:()=>sb.from('companies').select('*').order('name')},
-    {key:'accounts',    q:()=>sb.from('accounts').select('*')},
-    {key:'locations',   q:()=>sb.from('locations').select('*').order('code')},
-    {key:'materials',   q:()=>sb.from('materials').select('*').order('name')},
-    {key:'stock',       q:()=>sb.from('stock').select('*')},
-    {key:'products',    q:()=>sb.from('products').select('*').order('code')},
-    {key:'bom',         q:()=>sb.from('bom').select('*').order('pri')},
-    {key:'orders',      q:()=>sb.from('orders').select('*').order('created_at',{ascending:false})},
-    {key:'inbounds',    q:()=>sb.from('inbounds').select('*').order('created_at',{ascending:false})},
-    {key:'outbounds',   q:()=>sb.from('outbounds').select('*').order('created_at',{ascending:false})},
-    {key:'history',     q:()=>sb.from('history').select('*').order('created_at',{ascending:false}).limit(300)},
-    {key:'progressLogs',q:()=>sb.from('progress_logs').select('*').order('created_at',{ascending:false})},
-    {key:'prodIssues',  q:()=>sb.from('prod_issues').select('*').order('created_at',{ascending:false}).limit(200)},
+    {key:'companies',    q:async()=>{ const o=sb.from('companies').select('*').order('name'); return o._run(); }},
+    {key:'accounts',     q:async()=>{ const o=sb.from('accounts').select('*'); return o._run(); }},
+    {key:'locations',    q:async()=>{ const o=sb.from('locations').select('*').order('code'); return o._run(); }},
+    {key:'materials',    q:async()=>{ const o=sb.from('materials').select('*').order('name'); return o._run(); }},
+    {key:'stock',        q:async()=>{ const o=sb.from('stock').select('*'); return o._run(); }},
+    {key:'products',     q:async()=>{ const o=sb.from('products').select('*').order('code'); return o._run(); }},
+    {key:'bom',          q:async()=>{ const o=sb.from('bom').select('*').order('pri'); return o._run(); }},
+    {key:'orders',       q:async()=>{ const o=sb.from('orders').select('*').order('created_at.desc'); return o._run(); }},
+    {key:'inbounds',     q:async()=>{ const o=sb.from('inbounds').select('*').order('created_at.desc'); return o._run(); }},
+    {key:'outbounds',    q:async()=>{ const o=sb.from('outbounds').select('*').order('created_at.desc'); return o._run(); }},
+    {key:'history',      q:async()=>{ const o=sb.from('history').select('*').order('created_at.desc').limit(300); return o._run(); }},
+    {key:'progressLogs', q:async()=>{ const o=sb.from('progress_logs').select('*').order('created_at.desc'); return o._run(); }},
+    {key:'prodIssues',   q:async()=>{ const o=sb.from('prod_issues').select('*').order('created_at.desc').limit(200); return o._run(); }},
   ];
 
   let connOk=false;
@@ -740,10 +825,25 @@ async function loadAll(){
   document.getElementById('conn-status').textContent='● 연결됨';
   document.getElementById('conn-status').className='badge b-green';
 }
-async function dbInsert(table, obj){const r=await sb.from(table).insert(obj).select();if(r.error)throw r.error;return r.data[0];}
-async function dbUpdate(table, id_field, id_val, obj){const r=await sb.from(table).update(obj).eq(id_field,id_val).select();if(r.error)throw r.error;return r.data[0];}
-async function dbDelete(table, id_field, id_val){const r=await sb.from(table).delete().eq(id_field,id_val);if(r.error)throw r.error;}
-async function dbUpsert(table, obj, key){const r=await sb.from(table).upsert(obj,{onConflict:key}).select();if(r.error)throw r.error;return r.data[0];}
+async function dbInsert(table, obj){
+  const r=await sb.from(table).insert(obj);
+  if(r.error)throw r.error;
+  return r.data&&r.data[0];
+}
+async function dbUpdate(table, id_field, id_val, obj){
+  const r=await sb.from(table).eq(id_field,id_val).update(obj);
+  if(r.error)throw r.error;
+  return r.data&&r.data[0];
+}
+async function dbDelete(table, id_field, id_val){
+  const r=await sb.from(table).eq(id_field,id_val).delete();
+  if(r.error)throw r.error;
+}
+async function dbUpsert(table, obj, key){
+  const r=await sb.from(table).upsert(obj,{onConflict:key});
+  if(r.error)throw r.error;
+  return r.data&&r.data[0];
+}
 
 async function addHist(type,matCode,qty,from_loc,to_loc,note){
   const h={id:nowId(),type,mat_code:matCode,qty,from_loc:from_loc||'',to_loc:to_loc||'',note:note||'',date:today(),user_name:CU?.name||'관리자'};
