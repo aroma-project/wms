@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0045)file:///C:/Users/papas/Downloads/index_8.html -->
+<!-- saved from url=(0045)file:///C:/Users/papas/Downloads/index_9.html -->
 <html lang="ko"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
@@ -335,6 +335,7 @@ textarea{min-height:60px;resize:vertical}
     <input placeholder="코드/명/업체 검색..." id="stock-s" oninput="renderStock()" style="max-width:240px">
     <select id="stock-type" onchange="renderStock()" style="width:110px"><option value="">전체 타입</option><option>용기</option><option>펌프</option><option>숄더</option><option>오버캡</option><option>라벨</option><option>카톤</option><option>포장재</option><option>기타</option></select>
     <select id="stock-co" onchange="renderStock()" style="width:150px"><option value="">전체 업체</option></select>
+    <button class="btn btn-s" onclick="exportStock()">📥 엑셀 다운로드</button>
   </div>
   <div id="stock-cards" class="inv-grid"></div>
 </div>
@@ -984,11 +985,28 @@ async function delMat(code){if(!confirm('삭제?'))return;try{await dbDelete('ma
 
 // ══ LOCATION ════════════════════════════════════════════════
 let editLocCode=null;
+function locSortKey(code){
+  // 한글(라벨동, 생산대기, 입고대기, 출고대기 등) → 최상단
+  if(/[가-힣]/.test(code)) return '0_' + code;
+  // 영문+숫자 (A11, A12 ... A118, B11 ...) → 자연 정렬
+  const m = code.match(/^([A-Z]+)(\d+)$/);
+  if(m){
+    const letter = m[1];
+    const num = m[2];
+    // 자릿수별 정렬: A11→A-1-1, A118→A-1-18  (앞자리 우선)
+    const floor = num.length === 3 ? num[0] : (num.length === 2 ? num[0] : num);
+    const rack  = num.length === 3 ? num.slice(1) : (num.length === 2 ? num[1] : '');
+    return `1_${letter}_${floor.padStart(3,'0')}_${rack.padStart(3,'0')}`;
+  }
+  return '2_' + code;
+}
 function renderLoc(){
   const q=(document.getElementById('loc-s')?.value||'').toLowerCase();
-  document.getElementById('loc-tbody').innerHTML=C.locations.filter(l=>!q||[l.code,l.zone].join(' ').toLowerCase().includes(q)).map(l=>{
+  const sorted=[...C.locations].sort((a,b)=>locSortKey(a.code).localeCompare(locSortKey(b.code)));
+  document.getElementById('loc-tbody').innerHTML=sorted.filter(l=>!q||[l.code,l.zone].join(' ').toLowerCase().includes(q)).map(l=>{
     const items=C.stock.filter(s=>s.loc===l.code).map(s=>{const m=matObj(s.mat_code);return m?`${coName(m.co_id)} ${m.name}`:s.mat_code;}).slice(0,3).join(', ')||'-';
-    return`<tr><td><span class="mono">${l.code}</span></td><td>${badge(l.zone,'blue')}</td><td style="font-size:12px;color:var(--text2)">${items}</td><td><button class="btn btn-g btn-sm" onclick="editLoc('${l.code}')">수정</button> <button class="btn btn-g btn-sm" onclick="delLoc('${l.code}')">삭제</button></td></tr>`;
+    const zoneColor=/[가-힣]/.test(l.code)?'purple':l.zone==='피킹존'?'green':l.zone==='임시보관'?'amber':'blue';
+    return`<tr><td><span class="mono">${l.code}</span></td><td>${badge(l.zone,zoneColor)}</td><td style="font-size:12px;color:var(--text2)">${items}</td><td><button class="btn btn-g btn-sm" onclick="editLoc('${l.code}')">수정</button> <button class="btn btn-g btn-sm" onclick="delLoc('${l.code}')">삭제</button></td></tr>`;
   }).join('')||'<tr><td colspan="4" style="text-align:center;color:var(--text3);padding:20px">위치 없음</td></tr>';
 }
 function openLocModal(code){
@@ -1017,7 +1035,7 @@ function renderBom(){
   const cos=[...new Set(C.products.map(p=>p.co_id))].map(id=>C.companies.find(c=>c.id===id)).filter(Boolean).sort((a,b)=>a.name.localeCompare(b.name));
   document.getElementById('bom-co-list').innerHTML=cos.length?cos.map(c=>`<div class="bom-row ${bomSelCo===c.id?'active':''}" onclick="bomSelCo='${c.id}';bomSelProd='';renderBom()">${c.name}</div>`).join(''):'<div style="padding:14px;font-size:12px;color:var(--text2)">업체 없음</div>';
   const prods=C.products.filter(p=>(!bomSelCo||p.co_id===bomSelCo)&&(!q||[p.code,p.name||'',coName(p.co_id)].join(' ').toLowerCase().includes(q)));
-  document.getElementById('bom-prod-list').innerHTML=bomSelCo?prods.map(p=>`<div class="bom-row ${bomSelProd===p.code?'active':''}" onclick="bomSelProd='${p.code}';renderBom()"><div style="flex:1"><div style="font-size:12px;font-weight:600">${p.code}</div><div style="font-size:11px;opacity:.8">${p.name||''}</div><div style="margin-top:4px">${badge(p.kind==='A'?'화장품':'방향제',p.kind==='A'?'blue':'purple')}</div></div><div style="display:flex;flex-direction:column;gap:3px;flex-shrink:0" onclick="event.stopPropagation()"><span style="font-size:10px;cursor:pointer;padding:2px 6px;border-radius:4px;border:1px solid rgba(255,255,255,.3)" onclick="openProdEdit('${p.code}')">✏️</span><span style="font-size:10px;cursor:pointer;padding:2px 6px;border-radius:4px;background:rgba(220,38,38,.3)" onclick="deleteProd('${p.code}')">🗑</span></div></div>`).join('')||'<div style="padding:14px;font-size:12px;color:var(--text2)">제품 없음</div>':'<div style="padding:14px;font-size:12px;color:var(--text2)">업체를 선택하세요</div>';
+  document.getElementById('bom-prod-list').innerHTML=bomSelCo?prods.map(p=>`<div class="bom-row ${bomSelProd===p.code?'active':''}" onclick="bomSelProd='${p.code}';renderBom()"><div style="flex:1"><div style="font-size:12px;font-weight:600">${p.code}</div><div style="font-size:11px;opacity:.8">${p.name||''}</div><div style="margin-top:4px">${badge(p.kind==='A'?'화장품':'방향제',p.kind==='A'?'blue':'purple')}</div></div><div style="display:flex;flex-direction:column;gap:3px;flex-shrink:0" onclick="event.stopPropagation()"><span style="font-size:10px;cursor:pointer;padding:2px 6px;border-radius:4px;border:1px solid rgba(255,255,255,.3)" onclick="openProdEdit('${p.code}')">✏️</span><span style="font-size:10px;cursor:pointer;padding:2px 6px;border-radius:4px;border:1px solid rgba(255,255,255,.3)" onclick="copyProd('${p.code}')">📋</span><span style="font-size:10px;cursor:pointer;padding:2px 6px;border-radius:4px;background:rgba(220,38,38,.3)" onclick="deleteProd('${p.code}')">🗑</span></div></div>`).join('')||'<div style="padding:14px;font-size:12px;color:var(--text2)">제품 없음</div>':'<div style="padding:14px;font-size:12px;color:var(--text2)">업체를 선택하세요</div>';
   const grpB={'용기':'blue','펌프':'teal','숄더':'amber','오버캡':'purple','라벨':'amber','카톤':'gray','포장재':'teal'};
   if(bomSelProd){
     const items=C.bom.filter(b=>b.prod===bomSelProd).sort((a,c)=>a.pri-c.pri);
@@ -1070,10 +1088,49 @@ async function deleteProd(prodCode){
     if(bomSelProd===prodCode)bomSelProd='';renderBom();
   }catch(e){alert('삭제 실패: '+e.message);}
 }
+async function copyProd(prodCode){
+  const orig=C.products.find(p=>p.code===prodCode);if(!orig)return;
+  const newCode=prompt('새 제품코드 입력 (사본):',prodCode+'-COPY');
+  if(!newCode||newCode.trim()===''||newCode.trim()===prodCode)return;
+  const trimmed=newCode.trim();
+  if(C.products.find(p=>p.code===trimmed)){alert('이미 존재하는 제품코드');return;}
+  try{
+    const np={code:trimmed,co_id:orig.co_id,name:orig.name+' (사본)',kind:orig.kind};
+    await dbInsert('products',np);C.products.push(np);
+    for(const b of C.bom.filter(x=>x.prod===prodCode)){
+      const nb={prod:trimmed,mat_code:b.mat_code,qty:b.qty,grp:b.grp,pri:b.pri};
+      const r=await dbInsert('bom',nb);C.bom.push(r||nb);
+    }
+    alert(`✅ "${trimmed}" 으로 복사됐습니다.`);
+    bomSelProd=trimmed;renderBom();
+  }catch(e){alert('복사 실패: '+e.message);}
+}
 async function delBomItem(id){if(!confirm('삭제?'))return;try{await dbDelete('bom','id',id);C.bom=C.bom.filter(b=>b.id!==id);renderBom();}catch(e){alert('삭제 실패: '+e.message);}}
 
 // ══ STOCK ════════════════════════════════════════════════════
 let stockEditId=null;
+function exportStock(){
+  const tf=document.getElementById('stock-type')?.value||'';
+  const cf=document.getElementById('stock-co')?.value||'';
+  const q=(document.getElementById('stock-s')?.value||'').toLowerCase();
+  const rows=C.materials.filter(m=>{
+    if(tf&&m.type!==tf)return false;
+    if(cf&&m.co_id!==cf)return false;
+    if(q&&![m.code,m.name,coName(m.co_id)].join(' ').toLowerCase().includes(q))return false;
+    return true;
+  }).sort((a,b)=>coName(a.co_id).localeCompare(coName(b.co_id)));
+  const header=['업체명','부자재코드','부자재명','타입','구분','용량(ml)','현재재고','위치'];
+  const data=rows.map(m=>{
+    const qty=totalStock(m.code);
+    const locs=[...new Set(C.stock.filter(s=>s.mat_code===m.code).map(s=>s.loc))].join(' / ')||'-';
+    return[coName(m.co_id),m.code,m.name,m.type,m.div,m.vol||'',qty,locs];
+  });
+  const csv=[header,...data].map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'}));
+  a.download=`재고현황_${today()}.csv`;
+  a.click();
+}
 function renderStock(){
   const coSel=document.getElementById('stock-co');
   if(coSel){const prev=coSel.value;coSel.innerHTML='<option value="">전체 업체</option>'+C.companies.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');if(prev)coSel.value=prev;}
@@ -2098,79 +2155,87 @@ function kpP(v){if(kpVal===''||kpVal==='0')kpVal=(v==='00'?'0':v);else kpVal+=v;
 function kpDel(){kpVal=kpVal.slice(0,-1);document.getElementById('kp-disp').textContent=parseInt(kpVal||'0').toLocaleString();}
 async function startScan(){
   if(location.protocol!=='https:'&&location.hostname!=='localhost'){
-    alert('카메라 스캔은 HTTPS 환경에서만 사용 가능합니다.\nhttps://aroma-project.github.io/wms/ 로 접속해주세요.');
+    alert('카메라 스캔은 HTTPS 환경에서만 사용 가능합니다.');
     return;
   }
   if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
-    alert('이 브라우저는 카메라를 지원하지 않습니다.\n직접 입력을 사용해주세요.');
     manualScan();return;
   }
-  const scanStatusEl=document.getElementById('scan-status');
-  if(scanStatusEl)scanStatusEl.textContent='카메라 시작 중...';
+  const statusEl=document.getElementById('scan-status');
+  if(statusEl)statusEl.textContent='카메라 시작 중...';
   try{
-    const stream=await navigator.mediaDevices.getUserMedia({
-      video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}}
-    });
+    // iPhone Safari: facingMode를 문자열로 지정해야 작동
+    const constraints={video:{facingMode:'environment'}};
+    const stream=await navigator.mediaDevices.getUserMedia(constraints);
     scanStream=stream;
     const video=document.getElementById('scan-video');
     video.srcObject=stream;
+    video.setAttribute('playsinline','true'); // iOS 필수
+    video.setAttribute('autoplay','true');
+    video.muted=true;
     await video.play();
-    if(scanStatusEl)scanStatusEl.textContent='📷 바코드를 카메라에 비춰주세요 (Code128 / QR 지원)';
+    if(statusEl)statusEl.textContent='📷 바코드를 비춰주세요';
 
-    // ── 1순위: BarcodeDetector (Chrome Android 최신 - 가장 빠름) ──
+    // 1순위: BarcodeDetector (Android Chrome)
     if('BarcodeDetector' in window){
       try{
-        const bd=new BarcodeDetector({
-          formats:['code_128','code_39','code_93','ean_13','ean_8','upc_a','upc_e','qr_code','data_matrix','itf','codabar']
-        });
+        const bd=new BarcodeDetector({formats:['code_128','code_39','ean_13','ean_8','upc_a','qr_code']});
         const tick=async()=>{
           if(!scanStream)return;
-          try{
-            const codes=await bd.detect(video);
-            if(codes.length){
-              if(scanStatusEl)scanStatusEl.textContent='✅ 인식됨: '+codes[0].rawValue;
-              handleScan(codes[0].rawValue);stopScan();return;
-            }
-          }catch(e){}
+          try{const codes=await bd.detect(video);if(codes.length){handleScan(codes[0].rawValue);stopScan();return;}}catch(e){}
           requestAnimationFrame(tick);
         };
         requestAnimationFrame(tick);
-        return; // BarcodeDetector 사용하면 ZXing 불필요
-      }catch(e){
-        console.log('BarcodeDetector 초기화 실패, ZXing으로 전환');
-      }
+        return;
+      }catch(e){}
     }
 
-    // ── 2순위: ZXing (모든 바코드 + QR 지원, 크로스브라우저) ──
-    if(typeof ZXing==='undefined'){
-      if(scanStatusEl)scanStatusEl.textContent='📦 바코드 인식 라이브러리 로딩 중...';
-      await new Promise((res,rej)=>{
-        const s=document.createElement('script');
-        s.src='https://cdn.jsdelivr.net/npm/@zxing/library@0.19.1/umd/index.min.js';
-        s.onload=res;s.onerror=rej;
-        document.head.appendChild(s);
-      });
-    }
-    if(scanStatusEl)scanStatusEl.textContent='📷 바코드를 카메라에 비춰주세요';
-    const codeReader=new ZXing.BrowserMultiFormatReader();
-    // ZXing은 video element를 직접 처리
-    codeReader.decodeFromVideoElement(video,(result,err)=>{
-      if(result){
-        if(scanStatusEl)scanStatusEl.textContent='✅ 인식됨: '+result.getText();
-        handleScan(result.getText());
-        codeReader.reset();
-        stopScan();
-      }
-      // err는 매 프레임마다 발생하는 정상 동작이므로 무시
+    // 2순위: ZXing - iPhone Safari 포함 모든 브라우저
+    if(statusEl)statusEl.textContent='📦 라이브러리 로딩 중...';
+    await new Promise((res,rej)=>{
+      if(typeof ZXing!=='undefined'){res();return;}
+      const s=document.createElement('script');
+      s.src='https://cdn.jsdelivr.net/npm/@zxing/library@0.19.1/umd/index.min.js';
+      s.onload=res;s.onerror=rej;
+      document.head.appendChild(s);
     });
-    // ZXing reader 참조 저장 (stopScan 시 reset 필요)
-    window._zxingReader=codeReader;
+    if(statusEl)statusEl.textContent='📷 바코드를 비춰주세요';
+
+    // ZXing: canvas 방식으로 직접 처리 (iOS 호환)
+    const canvas=document.createElement('canvas');
+    const ctx=canvas.getContext('2d');
+    const hints=new Map();
+    const reader=new ZXing.MultiFormatReader();
+    reader.setHints(hints);
+
+    const tick=()=>{
+      if(!scanStream)return;
+      try{
+        if(video.readyState>=2){
+          canvas.width=video.videoWidth||320;
+          canvas.height=video.videoHeight||240;
+          ctx.drawImage(video,0,0,canvas.width,canvas.height);
+          const imageData=ctx.getImageData(0,0,canvas.width,canvas.height);
+          const luminance=new ZXing.RGBLuminanceSource(imageData.data,canvas.width,canvas.height);
+          const binary=new ZXing.HybridBinarizer(luminance);
+          const bitmap=new ZXing.BinaryBitmap(binary);
+          try{
+            const result=reader.decode(bitmap);
+            if(result){
+              if(statusEl)statusEl.textContent='✅ 인식됨: '+result.getText();
+              handleScan(result.getText());stopScan();return;
+            }
+          }catch(e){/* 인식 안 됨 - 정상 */}
+        }
+      }catch(e){}
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
 
   }catch(err){
     let msg='카메라 실행 실패:\n';
-    if(err.name==='NotAllowedError')msg+='카메라 권한이 거부됐습니다.\n브라우저 설정에서 카메라 권한을 허용해주세요.';
+    if(err.name==='NotAllowedError')msg+='카메라 권한을 허용해주세요.\n설정 → Safari → 카메라 → 허용';
     else if(err.name==='NotFoundError')msg+='카메라를 찾을 수 없습니다.';
-    else if(err.name==='NotReadableError')msg+='카메라가 다른 앱에서 사용 중입니다.';
     else msg+=err.message;
     alert(msg+'\n\n직접 입력을 사용합니다.');
     manualScan();
