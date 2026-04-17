@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- saved from url=(0045)file:///C:/Users/papas/Downloads/index_9.html -->
+<!-- saved from url=(0046)file:///C:/Users/papas/Downloads/index_11.html -->
 <html lang="ko"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
@@ -964,8 +964,47 @@ function renderMat(){
   const rows=C.materials.filter(m=>{if(tf&&m.type!==tf)return false;if(!q)return true;return[m.code,m.name,coName(m.co_id),String(m.vol||''),m.type].join(' ').toLowerCase().includes(q);}).sort((a,b)=>coName(a.co_id).localeCompare(coName(b.co_id)));
   document.getElementById('mat-tbody').innerHTML=rows.length?rows.map(m=>`<tr><td><span class="mono">${m.code}</span></td><td><button class="btn btn-g btn-sm" onclick="showBarcode('${m.code}')">🔲</button></td><td style="font-size:12px">${coName(m.co_id)}</td><td><strong>${m.name}</strong></td><td>${badge(m.type,'gray')}</td><td>${badge(m.div,m.div==='공용'?'blue':'purple')}</td><td style="font-size:12px">${m.vol?m.vol+'ml':'-'}</td><td style="font-weight:600;color:${totalStock(m.code)>1000?'var(--green)':totalStock(m.code)>300?'var(--amber)':'var(--red)'}">${fmt(totalStock(m.code))}</td><td><button class="btn btn-g btn-sm" onclick="delMat('${m.code}')">삭제</button></td></tr>`).join(''):'<tr><td colspan="9" style="text-align:center;color:var(--text3);padding:20px">부자재 없음</td></tr>';
 }
-function genBarcodeSVG(code){let h=0;for(let i=0;i<code.length;i++)h=(h*31+code.charCodeAt(i))&0xffffffff;let svg=`<svg xmlns="http://www.w3.org/2000/svg" width="180" height="60">`;let x=5;for(let i=0;i<56;i++){const w=((h>>(i%32))&3)+1;if(i%2===0)svg+=`<rect x="${x}" y="5" width="${w*2.4}" height="40" fill="#000"/>`;x+=w*2.4+1;}return svg+`<text x="90" y="58" text-anchor="middle" font-size="9" font-family="monospace">${code}</text></svg>`;}
-function showBarcode(code){const m=matObj(code);document.getElementById('barcode-area').innerHTML=`<div style="text-align:center;padding:12px;border:1px solid var(--border);border-radius:8px"><div style="font-size:12px;font-weight:700;margin-bottom:6px">${m?m.name:code}</div>${genBarcodeSVG(code)}<div style="font-size:10px;color:var(--text2);margin-top:4px">${coName(m?.co_id||'')}</div></div>`;showMo('m-barcode');}
+// ── 실제 Code128 바코드 생성기 ──────────────────────────────
+// ── QR코드 생성기 (순수 JS, 라이브러리 불필요) ────────────────
+// qrcode-generator 방식 - canvas 기반
+function showBarcode(code){
+  const m=matObj(code);
+  const container=document.getElementById('barcode-area');
+  container.innerHTML=`
+    <div style="text-align:center;padding:16px;border:1px solid var(--border);border-radius:8px;background:#fff">
+      <div style="font-size:13px;font-weight:700;margin-bottom:4px">${m?m.name:code}</div>
+      <div style="font-size:11px;color:var(--text2);margin-bottom:10px">${coName(m?.co_id||'')}</div>
+      <canvas id="qr-canvas" style="display:block;margin:0 auto"></canvas>
+      <div style="font-size:11px;font-family:monospace;margin-top:8px;color:#333">${code}</div>
+    </div>`;
+  showMo('m-barcode');
+  // QR 라이브러리 로드 후 생성
+  if(typeof QRCode==='undefined'){
+    const s=document.createElement('script');
+    s.src='https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js';
+    s.onload=()=>renderQR(code);
+    s.onerror=()=>renderQRFallback(code);
+    document.head.appendChild(s);
+  } else {
+    renderQR(code);
+  }
+}
+function renderQR(code){
+  const canvas=document.getElementById('qr-canvas');
+  if(!canvas)return;
+  QRCode.toCanvas(canvas,code,{width:200,margin:2,color:{dark:'#000',light:'#fff'}},(err)=>{
+    if(err)renderQRFallback(code);
+  });
+}
+function renderQRFallback(code){
+  // Google Charts API로 QR 이미지 생성 (폴백)
+  const canvas=document.getElementById('qr-canvas');
+  if(!canvas)return;
+  const img=document.createElement('img');
+  img.src=`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(code)}`;
+  img.width=200;img.height=200;
+  canvas.replaceWith(img);
+}
 function openMatModal(){
   if(!C.companies.length){alert('먼저 업체를 등록하세요');return;}
   const sel=document.getElementById('m-co-sel');sel.innerHTML='';
@@ -1611,9 +1650,19 @@ function viewRob(id){
 // ══ 출고내역 리포트 ══════════════════════════════════════════
 async function renderRhReport(){
   const coId=document.getElementById('rh-co').value;
-  const from=document.getElementById('rh-from').value;
-  const to=document.getElementById('rh-to').value;
-  if(!from||!to){alert('기간을 선택하세요');return;}
+  let from=document.getElementById('rh-from').value;
+  let to=document.getElementById('rh-to').value;
+  // 기간 비어있으면 해당월 자동 설정
+  if(!from||!to){
+    const now=new Date();
+    const y=now.getFullYear();
+    const m=String(now.getMonth()+1).padStart(2,'0');
+    from=`${y}-${m}-01`;
+    const lastDay=new Date(y,now.getMonth()+1,0).getDate();
+    to=`${y}-${m}-${lastDay}`;
+    document.getElementById('rh-from').value=from;
+    document.getElementById('rh-to').value=to;
+  }
   // populate co
   const coSel=document.getElementById('rh-co');const prev=coSel.value;
   coSel.innerHTML='<option value="">전체 업체</option>'+C.companies.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');coSel.value=prev;
@@ -2207,13 +2256,14 @@ async function startScan(){
     const hints=new Map();
     const reader=new ZXing.MultiFormatReader();
     reader.setHints(hints);
+    let scanning=true;
 
     const tick=()=>{
-      if(!scanStream)return;
+      if(!scanStream||!scanning)return;
       try{
-        if(video.readyState>=2){
-          canvas.width=video.videoWidth||320;
-          canvas.height=video.videoHeight||240;
+        if(video.readyState>=2&&video.videoWidth>0){
+          canvas.width=video.videoWidth;
+          canvas.height=video.videoHeight;
           ctx.drawImage(video,0,0,canvas.width,canvas.height);
           const imageData=ctx.getImageData(0,0,canvas.width,canvas.height);
           const luminance=new ZXing.RGBLuminanceSource(imageData.data,canvas.width,canvas.height);
@@ -2221,16 +2271,19 @@ async function startScan(){
           const bitmap=new ZXing.BinaryBitmap(binary);
           try{
             const result=reader.decode(bitmap);
-            if(result){
-              if(statusEl)statusEl.textContent='✅ 인식됨: '+result.getText();
-              handleScan(result.getText());stopScan();return;
+            if(result&&result.getText()){
+              scanning=false;
+              const val=result.getText();
+              if(statusEl)statusEl.textContent='✅ '+val;
+              setTimeout(()=>{handleScan(val);stopScan();},100);
+              return;
             }
           }catch(e){/* 인식 안 됨 - 정상 */}
         }
       }catch(e){}
-      requestAnimationFrame(tick);
+      setTimeout(tick,150); // 150ms 간격으로 스캔 (iOS 배터리 절약)
     };
-    requestAnimationFrame(tick);
+    setTimeout(tick,500); // 카메라 초기화 대기
 
   }catch(err){
     let msg='카메라 실행 실패:\n';
