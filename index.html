@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="ko">
-<head>
-<meta charset="UTF-8">
+<!-- saved from url=(0056)file:///C:/Users/papas/Downloads/aromaproject_app_1.html -->
+<html lang="ko"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>aromaproject. 생산관리 시스템</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="./index_files/supabase-js@2"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -170,8 +170,8 @@ textarea{min-height:60px;resize:vertical}
       <div style="font-size:20px;font-weight:700;color:var(--nav)">aromaproject.</div>
       <div style="font-size:12px;color:var(--text2);margin-top:4px">생산관리 시스템</div>
     </div>
-    <div style="margin-bottom:12px"><label>아이디</label><input id="l-id" onkeydown="if(event.key==='Enter')doLogin()"></div>
-    <div style="margin-bottom:18px"><label>비밀번호</label><input id="l-pw" type="password" onkeydown="if(event.key==='Enter')doLogin()"></div>
+    <div style="margin-bottom:12px"><label>아이디</label><input id="l-id" onkeydown="if(event.key===&#39;Enter&#39;)doLogin()"></div>
+    <div style="margin-bottom:18px"><label>비밀번호</label><input id="l-pw" type="password" onkeydown="if(event.key===&#39;Enter&#39;)doLogin()"></div>
     <button class="btn btn-p" style="width:100%;justify-content:center;padding:11px" onclick="doLogin()">로그인</button>
     <div id="l-err" style="color:var(--red);font-size:12px;text-align:center;margin-top:10px;display:none">아이디 또는 비밀번호가 올바르지 않습니다.</div>
     <div id="l-loading" style="display:none;text-align:center;margin-top:10px;font-size:12px;color:var(--text2)">로그인 중...</div>
@@ -184,33 +184,33 @@ textarea{min-height:60px;resize:vertical}
   <div class="nav-logo"><div class="nav-logo-title">🌿 aromaproject.</div><div class="nav-logo-sub">생산관리 시스템</div></div>
   <div class="nav-scroll">
     <div class="nav-sec admin-only">대시보드</div>
-    <div class="nav-item admin-only" onclick="go('dashboard')"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>대시보드</div>
-    <div class="nav-item admin-only" onclick="go('scan')"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 7V1h-6M1 7V1h6M23 17v6h-6M1 17v6h6"/></svg>📱 모바일 입출고</div>
+    <div class="nav-item admin-only" onclick="go(&#39;dashboard&#39;)"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect></svg>대시보드</div>
+    <div class="nav-item admin-only" onclick="go(&#39;scan&#39;)"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 7V1h-6M1 7V1h6M23 17v6h-6M1 17v6h6"></path></svg>📱 모바일 입출고</div>
     <div class="nav-sec admin-only">마스터</div>
-    <div class="nav-item admin-only" onclick="go('company')"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>업체관리</div>
-    <div class="nav-item admin-only" onclick="go('material')"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>부자재마스터</div>
-    <div class="nav-item admin-only" onclick="go('location')"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>위치마스터</div>
-    <div class="nav-item admin-only" onclick="go('bom')"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>BOM 관리</div>
+    <div class="nav-item admin-only" onclick="go(&#39;company&#39;)"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>업체관리</div>
+    <div class="nav-item admin-only" onclick="go(&#39;material&#39;)"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path></svg>부자재마스터</div>
+    <div class="nav-item admin-only" onclick="go(&#39;location&#39;)"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>위치마스터</div>
+    <div class="nav-item admin-only" onclick="go(&#39;bom&#39;)"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>BOM 관리</div>
     <div class="nav-sec admin-only">재고·입출고</div>
-    <div class="nav-item admin-only" onclick="go('stock')"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/></svg>재고현황</div>
-    <div class="nav-item admin-only" onclick="go('inbound')"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="8 17 12 21 16 17"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.29"/></svg>입고관리</div>
-    <div class="nav-item admin-only" onclick="go('outbound')"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 7 12 3 8 7"/><line x1="12" y1="3" x2="12" y2="12"/><path d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.29"/></svg>출고관리</div>
-    <div class="nav-item admin-only" onclick="go('stockmove')"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>위치이동</div>
+    <div class="nav-item admin-only" onclick="go(&#39;stock&#39;)"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line><line x1="3" y1="6" x2="3.01" y2="6"></line></svg>재고현황</div>
+    <div class="nav-item admin-only" onclick="go(&#39;inbound&#39;)"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="8 17 12 21 16 17"></polyline><line x1="12" y1="12" x2="12" y2="21"></line><path d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.29"></path></svg>입고관리</div>
+    <div class="nav-item admin-only" onclick="go(&#39;outbound&#39;)"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 7 12 3 8 7"></polyline><line x1="12" y1="3" x2="12" y2="12"></line><path d="M20.88 18.09A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.29"></path></svg>출고관리</div>
+    <div class="nav-item admin-only" onclick="go(&#39;stockmove&#39;)"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"></polyline><path d="M3 11V9a4 4 0 0 1 4-4h14"></path><polyline points="7 23 3 19 7 15"></polyline><path d="M21 13v2a4 4 0 0 1-4 4H3"></path></svg>위치이동</div>
     <div class="nav-sec admin-only">생산</div>
-    <div class="nav-item admin-only" onclick="go('order')"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>발주·생산오더<span class="nav-badge" id="ord-badge">0</span></div>
-    <div class="nav-item admin-only" onclick="go('picking')"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>피킹리스트</div>
+    <div class="nav-item admin-only" onclick="go(&#39;order&#39;)"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>발주·생산오더<span class="nav-badge" id="ord-badge">0</span></div>
+    <div class="nav-item admin-only" onclick="go(&#39;picking&#39;)"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 11 12 14 22 4"></polyline><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>피킹리스트</div>
     <div class="nav-sec admin-only">리포트</div>
-    <div class="nav-item admin-only" onclick="go('report-outbound')"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>출고거래명세서</div>
-    <div class="nav-item admin-only" onclick="go('report-history')"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>출고내역 리포트</div>
-    <div class="nav-item admin-only" onclick="go('report-lot')"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>LOT 생산내역</div>
-    <div class="nav-item admin-only" onclick="go('report-cert')"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>완제품시험성적서</div>
+    <div class="nav-item admin-only" onclick="go(&#39;report-outbound&#39;)"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>출고거래명세서</div>
+    <div class="nav-item admin-only" onclick="go(&#39;report-history&#39;)"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"></rect><path d="M3 9h18M9 21V9"></path></svg>출고내역 리포트</div>
+    <div class="nav-item admin-only" onclick="go(&#39;report-lot&#39;)"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>LOT 생산내역</div>
+    <div class="nav-item admin-only" onclick="go(&#39;report-cert&#39;)"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>완제품시험성적서</div>
     <div class="nav-sec admin-only">이력</div>
-    <div class="nav-item admin-only" onclick="go('history')"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.63"/></svg>히스토리</div>
+    <div class="nav-item admin-only" onclick="go(&#39;history&#39;)"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 .49-3.63"></path></svg>히스토리</div>
     <div class="nav-sec admin-only">시스템</div>
-    <div class="nav-item admin-only" onclick="go('accounts')"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>계정관리</div>
+    <div class="nav-item admin-only" onclick="go(&#39;accounts&#39;)"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>계정관리</div>
     <!-- 거래처 전용 -->
     <div class="nav-sec client-only">재고 조회</div>
-    <div class="nav-item client-only" onclick="go('cstock')"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/></svg>내 부자재 재고</div>
+    <div class="nav-item client-only" onclick="go(&#39;cstock&#39;)"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"></line><line x1="8" y1="12" x2="21" y2="12"></line><line x1="8" y1="18" x2="21" y2="18"></line></svg>내 부자재 재고</div>
   </div>
   <div class="nav-user"><strong id="nav-uname">-</strong><span id="nav-role">-</span>
     <button class="btn btn-g btn-sm" style="margin-top:6px;width:100%;justify-content:center" onclick="doLogout()">로그아웃</button>
@@ -225,7 +225,7 @@ textarea{min-height:60px;resize:vertical}
   </div>
   <div class="topbar-right">
     <span class="badge b-green" style="font-size:10px" id="conn-status">● 연결중</span>
-    <button class="btn btn-g btn-sm admin-only" onclick="go('scan')">📱 스캔</button>
+    <button class="btn btn-g btn-sm admin-only" onclick="go(&#39;scan&#39;)">📱 스캔</button>
   </div>
 </div>
 <div class="content">
@@ -233,12 +233,12 @@ textarea{min-height:60px;resize:vertical}
 <!-- DASHBOARD -->
 <div class="page" id="page-dashboard">
   <div class="g3">
-    <div class="kpi" style="cursor:pointer" onclick="go('order')"><div class="kpi-icon">🏭</div><div class="kpi-label">진행중 오더</div><div class="kpi-value" id="kpi-ord" style="color:var(--blue)">-</div></div>
+    <div class="kpi" style="cursor:pointer" onclick="go(&#39;order&#39;)"><div class="kpi-icon">🏭</div><div class="kpi-label">진행중 오더</div><div class="kpi-value" id="kpi-ord" style="color:var(--blue)">-</div></div>
     <div class="kpi" style="cursor:pointer" onclick="showLowStock()"><div class="kpi-icon">⚠️</div><div class="kpi-label">재고 부족</div><div class="kpi-value" id="kpi-low" style="color:var(--amber)">-</div></div>
-    <div class="kpi" style="cursor:pointer" onclick="go('outbound')"><div class="kpi-icon">📤</div><div class="kpi-label">출고 대기</div><div class="kpi-value" id="kpi-out" style="color:var(--purple)">-</div></div>
+    <div class="kpi" style="cursor:pointer" onclick="go(&#39;outbound&#39;)"><div class="kpi-icon">📤</div><div class="kpi-label">출고 대기</div><div class="kpi-value" id="kpi-out" style="color:var(--purple)">-</div></div>
   </div>
   <div id="dash-low-panel" style="display:none" class="card">
-    <div class="card-hd">⚠️ 오더 연관 재고 부족 <button class="btn btn-g btn-sm" onclick="document.getElementById('dash-low-panel').style.display='none'">닫기</button></div>
+    <div class="card-hd">⚠️ 오더 연관 재고 부족 <button class="btn btn-g btn-sm" onclick="document.getElementById(&#39;dash-low-panel&#39;).style.display=&#39;none&#39;">닫기</button></div>
     <div id="dash-low-list"></div>
   </div>
   <div class="g2">
@@ -247,10 +247,10 @@ textarea{min-height:60px;resize:vertical}
   </div>
   <div class="card"><div class="card-hd">빠른 작업</div>
     <div class="br" style="margin-top:0">
-      <button class="btn btn-p" onclick="go('scan')">📱 모바일 입출고</button>
-      <button class="btn btn-s" onclick="go('order');openOrdModal()">+ 생산오더</button>
-      <button class="btn btn-g" onclick="go('inbound');openIbModal()">+ 입고 등록</button>
-      <button class="btn btn-g" onclick="go('stock')">재고 확인</button>
+      <button class="btn btn-p" onclick="go(&#39;scan&#39;)">📱 모바일 입출고</button>
+      <button class="btn btn-s" onclick="go(&#39;order&#39;);openOrdModal()">+ 생산오더</button>
+      <button class="btn btn-g" onclick="go(&#39;inbound&#39;);openIbModal()">+ 입고 등록</button>
+      <button class="btn btn-g" onclick="go(&#39;stock&#39;)">재고 확인</button>
     </div>
   </div>
 </div>
@@ -259,7 +259,7 @@ textarea{min-height:60px;resize:vertical}
 <div class="page" id="page-scan">
   <div class="scan-page">
     <div style="font-size:15px;font-weight:700;margin-bottom:14px">📱 모바일 입출고</div>
-    <div class="scan-box"><video id="scan-video" autoplay playsinline muted></video><div class="scan-overlay"><div class="scan-frame"></div></div></div>
+    <div class="scan-box"><video id="scan-video" autoplay="" playsinline="" muted=""></video><div class="scan-overlay"><div class="scan-frame"></div></div></div>
     <div id="scan-status" style="text-align:center;font-size:12px;color:var(--text2);margin-bottom:8px;min-height:18px"></div>
     <div style="display:flex;gap:8px;margin-bottom:14px">
       <button class="btn btn-p" style="flex:1;justify-content:center" onclick="startScan()">📷 카메라 스캔</button>
@@ -270,26 +270,26 @@ textarea{min-height:60px;resize:vertical}
       <div class="card" style="margin-bottom:12px">
         <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px">작업 선택</div>
         <div style="display:flex;gap:8px">
-          <button id="stype-in" class="btn btn-s" style="flex:1;justify-content:center" onclick="setSType('입고')">입고</button>
-          <button id="stype-out" class="btn btn-g" style="flex:1;justify-content:center" onclick="setSType('출고')">출고</button>
-          <button id="stype-mv" class="btn btn-g" style="flex:1;justify-content:center" onclick="setSType('위치이동')">위치이동</button>
+          <button id="stype-in" class="btn btn-s" style="flex:1;justify-content:center" onclick="setSType(&#39;입고&#39;)">입고</button>
+          <button id="stype-out" class="btn btn-g" style="flex:1;justify-content:center" onclick="setSType(&#39;출고&#39;)">출고</button>
+          <button id="stype-mv" class="btn btn-g" style="flex:1;justify-content:center" onclick="setSType(&#39;위치이동&#39;)">위치이동</button>
         </div>
       </div>
       <div class="card" style="margin-bottom:12px">
         <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px">수량 입력</div>
         <div class="keypad-display" id="kp-disp">0</div>
         <div class="kp-grid">
-          <div class="kp-btn" onclick="kpP('1')">1</div><div class="kp-btn" onclick="kpP('2')">2</div><div class="kp-btn" onclick="kpP('3')">3</div>
-          <div class="kp-btn" onclick="kpP('4')">4</div><div class="kp-btn" onclick="kpP('5')">5</div><div class="kp-btn" onclick="kpP('6')">6</div>
-          <div class="kp-btn" onclick="kpP('7')">7</div><div class="kp-btn" onclick="kpP('8')">8</div><div class="kp-btn" onclick="kpP('9')">9</div>
-          <div class="kp-btn kp-del" onclick="kpDel()">⌫</div><div class="kp-btn" onclick="kpP('0')">0</div><div class="kp-btn" onclick="kpP('00')">00</div>
+          <div class="kp-btn" onclick="kpP(&#39;1&#39;)">1</div><div class="kp-btn" onclick="kpP(&#39;2&#39;)">2</div><div class="kp-btn" onclick="kpP(&#39;3&#39;)">3</div>
+          <div class="kp-btn" onclick="kpP(&#39;4&#39;)">4</div><div class="kp-btn" onclick="kpP(&#39;5&#39;)">5</div><div class="kp-btn" onclick="kpP(&#39;6&#39;)">6</div>
+          <div class="kp-btn" onclick="kpP(&#39;7&#39;)">7</div><div class="kp-btn" onclick="kpP(&#39;8&#39;)">8</div><div class="kp-btn" onclick="kpP(&#39;9&#39;)">9</div>
+          <div class="kp-btn kp-del" onclick="kpDel()">⌫</div><div class="kp-btn" onclick="kpP(&#39;0&#39;)">0</div><div class="kp-btn" onclick="kpP(&#39;00&#39;)">00</div>
         </div>
       </div>
       <div class="card" style="margin-bottom:12px">
         <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px">위치 선택 <span id="sloc-badge" class="badge b-blue" style="display:none"></span></div>
         <div class="loc-grid" id="loc-picker"></div>
       </div>
-      <div id="scan-loc2" style="display:none" class="card" style="margin-bottom:12px">
+      <div id="scan-loc2" style="display:none" class="card">
         <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:8px">이동 후 위치 <span id="sloc2-badge" class="badge b-amber" style="display:none"></span></div>
         <div class="loc-grid" id="loc-picker2"></div>
       </div>
@@ -348,7 +348,7 @@ textarea{min-height:60px;resize:vertical}
 
 <!-- 출고관리 -->
 <div class="page" id="page-outbound">
-  <div class="tabs"><div class="tab active" onclick="obTab('wait',this)">출고 대기</div><div class="tab" onclick="obTab('done',this)">출고 완료</div></div>
+  <div class="tabs"><div class="tab active" onclick="obTab(&#39;wait&#39;,this)">출고 대기</div><div class="tab" onclick="obTab(&#39;done&#39;,this)">출고 완료</div></div>
   <div id="ob-wait">
     <div class="sw">
       <input placeholder="업체명/발주번호/로트번호..." id="ob-s" oninput="renderOb()">
@@ -420,7 +420,7 @@ textarea{min-height:60px;resize:vertical}
   <div id="rob-list-area"></div>
   <div id="rob-receipt-area" style="display:none">
     <div class="br no-print" style="margin-bottom:16px">
-      <button class="btn btn-g" onclick="document.getElementById('rob-receipt-area').style.display='none';document.getElementById('rob-list-area').style.display='block'">← 목록으로</button>
+      <button class="btn btn-g" onclick="document.getElementById(&#39;rob-receipt-area&#39;).style.display=&#39;none&#39;;document.getElementById(&#39;rob-list-area&#39;).style.display=&#39;block&#39;">← 목록으로</button>
       <button class="btn btn-p" onclick="window.print()">🖨️ PDF / 인쇄</button>
     </div>
     <div id="rob-receipt-doc"></div>
@@ -458,7 +458,7 @@ textarea{min-height:60px;resize:vertical}
 <div class="page" id="page-report-cert">
   <div class="sw no-print">
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-      <input id="cert-lot" placeholder="LOT 번호 입력 (예: APC6MA01)" style="width:260px" onkeydown="if(event.key==='Enter')renderCert()">
+      <input id="cert-lot" placeholder="LOT 번호 입력 (예: APC6MA01)" style="width:260px" onkeydown="if(event.key===&#39;Enter&#39;)renderCert()">
       <button class="btn btn-p" onclick="renderCert()">성적서 조회</button>
       <button class="btn btn-g" onclick="window.print()">🖨️ PDF / 인쇄</button>
     </div>
@@ -489,7 +489,7 @@ textarea{min-height:60px;resize:vertical}
 
 <!-- 거래명세서 뷰 (인쇄용) -->
 <div class="page" id="page-receipt">
-  <div class="br no-print" style="margin-bottom:16px"><button class="btn btn-g" onclick="go('outbound')">← 출고관리</button><button class="btn btn-p" onclick="window.print()">🖨️ 인쇄</button></div>
+  <div class="br no-print" style="margin-bottom:16px"><button class="btn btn-g" onclick="go(&#39;outbound&#39;)">← 출고관리</button><button class="btn btn-p" onclick="window.print()">🖨️ 인쇄</button></div>
   <div id="receipt-content"></div>
 </div>
 
@@ -542,7 +542,7 @@ textarea{min-height:60px;resize:vertical}
   <!-- BOM 제품 수정 -->
   <div class="modal" id="m-bom-edit" style="display:none">
     <div class="modal-hd">제품 수정 <button class="modal-x" onclick="closeMo()">×</button></div>
-    <div class="fr c2"><div><label>업체명</label><select id="be-co"></select></div><div><label>제품코드</label><input id="be-prod" readonly style="background:var(--gray-lt)"></div></div>
+    <div class="fr c2"><div><label>업체명</label><select id="be-co"></select></div><div><label>제품코드</label><input id="be-prod" readonly="" style="background:var(--gray-lt)"></div></div>
     <div class="fr c2"><div><label>종류</label><select id="be-kind"><option value="A">화장품</option><option value="C">방향제</option></select></div><div><label>제품명 *</label><input id="be-name"></div></div>
     <div class="br"><button class="btn btn-p" onclick="saveProdEdit()">저장</button><button class="btn btn-g" onclick="closeMo()">취소</button></div>
   </div>
@@ -577,10 +577,10 @@ textarea{min-height:60px;resize:vertical}
     <div class="divider"></div>
     <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px">공정 선택 (포장 완료 = 제품 완성)</div>
     <div id="process-sel" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px">
-      <label style="display:flex;align-items:center;gap:4px;font-size:13px;font-weight:400;cursor:pointer"><input type="checkbox" id="pc-충진" checked> 충진</label>
-      <label style="display:flex;align-items:center;gap:4px;font-size:13px;font-weight:400;cursor:pointer"><input type="checkbox" id="pc-라벨링" checked> 라벨링</label>
-      <label style="display:flex;align-items:center;gap:4px;font-size:13px;font-weight:400;cursor:pointer"><input type="checkbox" id="pc-기타" checked> 기타</label>
-      <label style="display:flex;align-items:center;gap:4px;font-size:13px;font-weight:400;cursor:pointer"><input type="checkbox" id="pc-포장" checked> 포장 ⭐</label>
+      <label style="display:flex;align-items:center;gap:4px;font-size:13px;font-weight:400;cursor:pointer"><input type="checkbox" id="pc-충진" checked=""> 충진</label>
+      <label style="display:flex;align-items:center;gap:4px;font-size:13px;font-weight:400;cursor:pointer"><input type="checkbox" id="pc-라벨링" checked=""> 라벨링</label>
+      <label style="display:flex;align-items:center;gap:4px;font-size:13px;font-weight:400;cursor:pointer"><input type="checkbox" id="pc-기타" checked=""> 기타</label>
+      <label style="display:flex;align-items:center;gap:4px;font-size:13px;font-weight:400;cursor:pointer"><input type="checkbox" id="pc-포장" checked=""> 포장 ⭐</label>
     </div>
     <div class="br"><button class="btn btn-p" onclick="saveOrd()">등록</button><button class="btn btn-g" onclick="closeMo()">취소</button></div>
   </div>
@@ -1965,17 +1965,14 @@ function setSType(t){
 function kpP(v){if(kpVal===''||kpVal==='0')kpVal=(v==='00'?'0':v);else kpVal+=v;if(kpVal.length>8)kpVal=kpVal.slice(0,8);document.getElementById('kp-disp').textContent=parseInt(kpVal||'0').toLocaleString();}
 function kpDel(){kpVal=kpVal.slice(0,-1);document.getElementById('kp-disp').textContent=parseInt(kpVal||'0').toLocaleString();}
 async function startScan(){
-  // HTTPS 체크
   if(location.protocol!=='https:'&&location.hostname!=='localhost'){
     alert('카메라 스캔은 HTTPS 환경에서만 사용 가능합니다.\nhttps://aroma-project.github.io/wms/ 로 접속해주세요.');
     return;
   }
-  // mediaDevices 지원 여부
   if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
     alert('이 브라우저는 카메라를 지원하지 않습니다.\n직접 입력을 사용해주세요.');
     manualScan();return;
   }
-  const scanBox=document.getElementById('scan-box');
   const scanStatusEl=document.getElementById('scan-status');
   if(scanStatusEl)scanStatusEl.textContent='카메라 시작 중...';
   try{
@@ -1986,44 +1983,57 @@ async function startScan(){
     const video=document.getElementById('scan-video');
     video.srcObject=stream;
     await video.play();
-    if(scanStatusEl)scanStatusEl.textContent='바코드를 카메라에 비춰주세요';
-    // BarcodeDetector API 지원 (Chrome Android 등)
+    if(scanStatusEl)scanStatusEl.textContent='📷 바코드를 카메라에 비춰주세요 (Code128 / QR 지원)';
+
+    // ── 1순위: BarcodeDetector (Chrome Android 최신 - 가장 빠름) ──
     if('BarcodeDetector' in window){
-      const bd=new BarcodeDetector({formats:['code_128','code_39','ean_13','qr_code','data_matrix']});
-      const tick=async()=>{
-        if(!scanStream)return;
-        try{
-          const codes=await bd.detect(video);
-          if(codes.length){handleScan(codes[0].rawValue);stopScan();return;}
-        }catch(e){}
-        requestAnimationFrame(tick);
-      };
-      requestAnimationFrame(tick);
-    } else {
-      // jsQR 폴백 — canvas 기반 QR 인식
-      if(typeof jsQR==='undefined'){
-        // jsQR 동적 로드
-        await new Promise((res,rej)=>{
-          const s=document.createElement('script');
-          s.src='https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js';
-          s.onload=res;s.onerror=rej;document.head.appendChild(s);
+      try{
+        const bd=new BarcodeDetector({
+          formats:['code_128','code_39','code_93','ean_13','ean_8','upc_a','upc_e','qr_code','data_matrix','itf','codabar']
         });
-      }
-      const canvas=document.createElement('canvas');
-      const ctx=canvas.getContext('2d');
-      const tick=()=>{
-        if(!scanStream)return;
-        if(video.readyState===video.HAVE_ENOUGH_DATA){
-          canvas.height=video.videoHeight;canvas.width=video.videoWidth;
-          ctx.drawImage(video,0,0,canvas.width,canvas.height);
-          const imageData=ctx.getImageData(0,0,canvas.width,canvas.height);
-          const code=jsQR(imageData.data,imageData.width,imageData.height,{inversionAttempts:'dontInvert'});
-          if(code){handleScan(code.data);stopScan();return;}
-        }
+        const tick=async()=>{
+          if(!scanStream)return;
+          try{
+            const codes=await bd.detect(video);
+            if(codes.length){
+              if(scanStatusEl)scanStatusEl.textContent='✅ 인식됨: '+codes[0].rawValue;
+              handleScan(codes[0].rawValue);stopScan();return;
+            }
+          }catch(e){}
+          requestAnimationFrame(tick);
+        };
         requestAnimationFrame(tick);
-      };
-      requestAnimationFrame(tick);
+        return; // BarcodeDetector 사용하면 ZXing 불필요
+      }catch(e){
+        console.log('BarcodeDetector 초기화 실패, ZXing으로 전환');
+      }
     }
+
+    // ── 2순위: ZXing (모든 바코드 + QR 지원, 크로스브라우저) ──
+    if(typeof ZXing==='undefined'){
+      if(scanStatusEl)scanStatusEl.textContent='📦 바코드 인식 라이브러리 로딩 중...';
+      await new Promise((res,rej)=>{
+        const s=document.createElement('script');
+        s.src='https://cdn.jsdelivr.net/npm/@zxing/library@0.19.1/umd/index.min.js';
+        s.onload=res;s.onerror=rej;
+        document.head.appendChild(s);
+      });
+    }
+    if(scanStatusEl)scanStatusEl.textContent='📷 바코드를 카메라에 비춰주세요';
+    const codeReader=new ZXing.BrowserMultiFormatReader();
+    // ZXing은 video element를 직접 처리
+    codeReader.decodeFromVideoElement(video,(result,err)=>{
+      if(result){
+        if(scanStatusEl)scanStatusEl.textContent='✅ 인식됨: '+result.getText();
+        handleScan(result.getText());
+        codeReader.reset();
+        stopScan();
+      }
+      // err는 매 프레임마다 발생하는 정상 동작이므로 무시
+    });
+    // ZXing reader 참조 저장 (stopScan 시 reset 필요)
+    window._zxingReader=codeReader;
+
   }catch(err){
     let msg='카메라 실행 실패:\n';
     if(err.name==='NotAllowedError')msg+='카메라 권한이 거부됐습니다.\n브라우저 설정에서 카메라 권한을 허용해주세요.';
@@ -2035,8 +2045,10 @@ async function startScan(){
   }
 }
 function stopScan(){
+  if(window._zxingReader){try{window._zxingReader.reset();}catch(e){}window._zxingReader=null;}
   if(scanStream){scanStream.getTracks().forEach(t=>t.stop());scanStream=null;}
   const v=document.getElementById('scan-video');if(v)v.srcObject=null;
+  const el=document.getElementById('scan-status');if(el)el.textContent='';
 }
 function manualScan(){
   const existing=document.getElementById('manual-scan-wrap');
@@ -2103,5 +2115,6 @@ function closeMo(){document.getElementById('mo').classList.remove('open');docume
 function checkMobile(){const t=document.getElementById('nav-toggle');if(window.innerWidth<=768){t.style.display='flex';}else{t.style.display='none';document.getElementById('nav').classList.remove('open');}}
 window.addEventListener('resize',checkMobile);checkMobile();
 </script>
-</body>
-</html>
+
+
+</body></html>
