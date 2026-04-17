@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<!-- saved from url=(0045)file:///C:/Users/papas/Downloads/index_1.html -->
+<!-- saved from url=(0045)file:///C:/Users/papas/Downloads/index_3.html -->
 <html lang="ko"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>aromaproject. 생산관리 시스템</title>
-<script src="./index_files/supabase-js@2"></script>
+<script src="./index_files/supabase.min.js.다운로드"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
@@ -695,41 +695,49 @@ function nextInvId(){const nums=C.stock.map(s=>parseInt((s.id||'').replace('INV-
 async function loadAll(){
   document.getElementById('conn-status').textContent='● 로딩중';
   document.getElementById('conn-status').className='badge b-amber';
-  try{
-    const res = await Promise.all([
-      sb.from('companies').select('*').order('name'),
-      sb.from('accounts').select('*'),
-      sb.from('locations').select('*').order('code'),
-      sb.from('materials').select('*').order('name'),
-      sb.from('stock').select('*'),
-      sb.from('products').select('*').order('code'),
-      sb.from('bom').select('*').order('pri'),
-      sb.from('orders').select('*').order('created_at',{ascending:false}),
-      sb.from('inbounds').select('*').order('created_at',{ascending:false}),
-      sb.from('outbounds').select('*').order('created_at',{ascending:false}),
-      sb.from('history').select('*').order('created_at',{ascending:false}).limit(300),
-      sb.from('progress_logs').select('*').order('created_at',{ascending:false}),
-    ]);
-    const keys=['companies','accounts','locations','materials','stock','products','bom','orders','inbounds','outbounds','history','progressLogs'];
-    res.forEach((r,i)=>{
-      if(!r.error)C[keys[i]]=r.data||[];
-      else console.warn(`테이블 로드 오류 [${keys[i]}]:`,r.error.message);
-    });
-    // prod_issues 는 선택적 (테이블 없어도 로그인 가능)
+
+  // 테이블별 개별 로드 - 하나 실패해도 나머지 계속 진행
+  const tableList=[
+    {key:'companies',   q:()=>sb.from('companies').select('*').order('name')},
+    {key:'accounts',    q:()=>sb.from('accounts').select('*')},
+    {key:'locations',   q:()=>sb.from('locations').select('*').order('code')},
+    {key:'materials',   q:()=>sb.from('materials').select('*').order('name')},
+    {key:'stock',       q:()=>sb.from('stock').select('*')},
+    {key:'products',    q:()=>sb.from('products').select('*').order('code')},
+    {key:'bom',         q:()=>sb.from('bom').select('*').order('pri')},
+    {key:'orders',      q:()=>sb.from('orders').select('*').order('created_at',{ascending:false})},
+    {key:'inbounds',    q:()=>sb.from('inbounds').select('*').order('created_at',{ascending:false})},
+    {key:'outbounds',   q:()=>sb.from('outbounds').select('*').order('created_at',{ascending:false})},
+    {key:'history',     q:()=>sb.from('history').select('*').order('created_at',{ascending:false}).limit(300)},
+    {key:'progressLogs',q:()=>sb.from('progress_logs').select('*').order('created_at',{ascending:false})},
+    {key:'prodIssues',  q:()=>sb.from('prod_issues').select('*').order('created_at',{ascending:false}).limit(200)},
+  ];
+
+  let connOk=false;
+  for(const t of tableList){
     try{
-      const pi=await sb.from('prod_issues').select('*').order('created_at',{ascending:false}).limit(200);
-      if(!pi.error)C.prodIssues=pi.data||[];
-    }catch(e){C.prodIssues=[];}
-    // 연결 상태 표시
-    const hasAccounts=C.accounts&&C.accounts.length>0;
-    document.getElementById('conn-status').textContent='● 연결됨';
-    document.getElementById('conn-status').className='badge b-green';
-  }catch(e){
-    console.error('Supabase 연결 오류:',e);
+      const r=await t.q();
+      if(!r.error){
+        C[t.key]=r.data||[];
+        if(t.key==='accounts')connOk=true; // accounts 성공하면 연결 확인
+      }else{
+        console.warn(`[${t.key}] 로드 오류:`,r.error.message);
+        C[t.key]=[];
+      }
+    }catch(e){
+      console.warn(`[${t.key}] 예외:`,e.message);
+      C[t.key]=[];
+    }
+  }
+
+  if(!connOk){
     document.getElementById('conn-status').textContent='● 오류';
     document.getElementById('conn-status').className='badge b-red';
-    throw e; // doLogin 에서 catch
+    throw new Error('accounts 테이블 로드 실패 - 스키마를 확인하세요');
   }
+
+  document.getElementById('conn-status').textContent='● 연결됨';
+  document.getElementById('conn-status').className='badge b-green';
 }
 async function dbInsert(table, obj){const r=await sb.from(table).insert(obj).select();if(r.error)throw r.error;return r.data[0];}
 async function dbUpdate(table, id_field, id_val, obj){const r=await sb.from(table).update(obj).eq(id_field,id_val).select();if(r.error)throw r.error;return r.data[0];}
@@ -754,7 +762,7 @@ async function doLogin(){
   }catch(e){
     document.getElementById('l-loading').style.display='none';
     document.getElementById('l-err').style.display='block';
-    document.getElementById('l-err').textContent='서버 연결 실패. 인터넷 연결을 확인하세요.';
+    document.getElementById('l-err').textContent='DB 연결 실패: '+e.message+' — Supabase 스키마(SQL)가 실행됐는지 확인하세요.';
     return;
   }
   const user=C.accounts.find(a=>a.id===id&&a.pw===pw);
