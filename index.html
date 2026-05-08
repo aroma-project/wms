@@ -253,6 +253,7 @@ textarea{min-height:60px;resize:vertical}
     <div class="nav-sec admin-only">재고·입출고</div>
     <div class="nav-item admin-only" onclick="go('stock')"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/><rect x="7" y="5" width="10" height="7" rx="1"/></svg>재고현황</div>
     <div class="nav-item admin-only" onclick="go('inbound')"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="3" width="15" height="13" rx="1"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>입고관리</div>
+    <div class="nav-item admin-only" onclick="go('inbound-plan')"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><path d="M8 14h.01M12 14h.01M16 14h.01"/></svg>입고 예정</div>
     <div class="nav-item admin-only" onclick="go('outbound')"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>출고관리</div>
     <div class="nav-item admin-only" onclick="go('stockmove')"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>위치이동</div>
     <div class="nav-sec admin-only">생산</div>
@@ -265,13 +266,14 @@ textarea{min-height:60px;resize:vertical}
     <div class="nav-item admin-only" onclick="go('report-cert')"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>완제품시험성적서</div>
     <div class="nav-sec admin-only">이력</div>
     <div class="nav-item admin-only" onclick="go('history')"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.63"/></svg>히스토리</div>
+    <div class="nav-item admin-only" onclick="go('lot-trace')"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>LOT 역추적</div>
     <div class="nav-sec admin-only">시스템</div>
     <div class="nav-item admin-only" onclick="go('accounts')"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>계정관리</div>
     <div class="nav-item admin-only" onclick="go('datamanage')"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>데이터 관리</div>
     <!-- 거래처 전용 -->
     <div class="nav-sec client-only">재고 조회</div>
     <div class="nav-item client-only" onclick="go('cstock')"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/></svg>내 부자재 재고</div>
-  </div>
+    <div class="nav-item client-only" onclick="go('client-view')"><svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg>내 오더 현황</div>
   <div class="nav-user"><strong id="nav-uname">-</strong><span id="nav-role">-</span>
     <button class="btn btn-g btn-sm" style="margin-top:6px;width:100%;justify-content:center" onclick="doLogout()">로그아웃</button>
   </div>
@@ -292,7 +294,7 @@ textarea{min-height:60px;resize:vertical}
 
 <!-- DASHBOARD -->
 <div class="page" id="page-dashboard">
-  <div class="g3" style="margin-bottom:14px">
+  <div class="g3" style="margin-bottom:10px">
     <div class="kpi" style="cursor:pointer" onclick="go('order')">
       <div class="kpi-icon">🏭</div><div class="kpi-label">진행중 오더</div>
       <div class="kpi-value" id="kpi-ord" style="color:var(--blue)">-</div>
@@ -306,6 +308,23 @@ textarea{min-height:60px;resize:vertical}
     <div class="kpi" style="cursor:pointer" onclick="go('inbound')">
       <div class="kpi-icon">📥</div><div class="kpi-label">오늘 입고</div>
       <div class="kpi-value" id="kpi-today-in" style="color:var(--teal)">-</div>
+    </div>
+  </div>
+  <div class="g3" style="margin-bottom:14px">
+    <div class="kpi">
+      <div class="kpi-icon">📅</div><div class="kpi-label">이번 주 입고</div>
+      <div class="kpi-value" id="kpi-week-in" style="color:var(--green);font-size:20px">-</div>
+      <div class="kpi-trend" id="kpi-week-in-sub"></div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-icon">📆</div><div class="kpi-label">이번 달 입고</div>
+      <div class="kpi-value" id="kpi-month-in" style="color:var(--blue);font-size:20px">-</div>
+      <div class="kpi-trend" id="kpi-month-in-sub"></div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-icon">✅</div><div class="kpi-label">오더 완료율</div>
+      <div class="kpi-value" id="kpi-complete-rate" style="color:var(--amber);font-size:20px">-</div>
+      <div class="kpi-trend" id="kpi-complete-sub"></div>
     </div>
   </div>
   <!-- 재고 부족 자동 표시 -->
@@ -613,6 +632,29 @@ textarea{min-height:60px;resize:vertical}
   </div>
 </div>
 
+<!-- 입고 예정 -->
+<div class="page" id="page-inbound-plan">
+  <div class="sw">
+    <input placeholder="부자재명/업체..." id="ip-s" oninput="renderInboundPlan()">
+    <button class="btn btn-p" onclick="openInboundPlanModal()">+ 입고 예정 등록</button>
+  </div>
+  <div class="card"><div class="tw"><table><thead><tr><th>발주일</th><th>예정 입고일</th><th>업체</th><th>제품군/향</th><th>부자재</th><th>수량</th><th>상태</th><th></th></tr></thead><tbody id="ip-tbody"></tbody></table></div></div>
+</div>
+
+<!-- LOT 역추적 -->
+<div class="page" id="page-lot-trace">
+  <div class="sw">
+    <input id="lt-lot" placeholder="LOT 번호 입력 (예: APC6AP01)" style="max-width:280px">
+    <button class="btn btn-p" onclick="traceLot()">🔍 역추적</button>
+  </div>
+  <div id="lt-result"></div>
+</div>
+
+<!-- 클라이언트 전용 뷰 -->
+<div class="page" id="page-client-view">
+  <div id="cv-content"></div>
+</div>
+
 <!-- 계정관리 -->
 <div class="page" id="page-accounts">
   <div class="sw"><input placeholder="아이디/이름..." id="acc-s" oninput="renderAcc()"><button class="btn btn-p" onclick="openAccModal()">+ 계정 추가</button></div>
@@ -679,13 +721,13 @@ textarea{min-height:60px;resize:vertical}
   </div>
   <!-- 부자재 -->
   <div class="modal" id="m-mat" style="display:none">
-    <div class="modal-hd">부자재 등록 <button class="modal-x" onclick="closeMo()">×</button></div>
+    <div class="modal-hd" id="m-mat-hd">부자재 등록 <button class="modal-x" onclick="closeMo()">×</button></div>
     <div class="fr c2"><div><label>업체명 *</label><select id="m-co-sel" onchange="matOnCoChange()"><option value="">업체 선택...</option></select></div><div><label>부자재명 *</label><input id="m-name"></div></div>
     <div class="fr c2"><div><label>타입 *</label><select id="m-type"><option>용기</option><option>펌프</option><option>숄더</option><option>오버캡</option><option>라벨</option><option>카톤</option><option>포장재</option><option>기타</option></select></div><div><label>구분</label><select id="m-div"><option>공용</option><option>전용</option></select></div></div>
     <div class="fr c2"><div><label>제품군 (해당 업체 브랜드 기준)</label><select id="m-group" onchange="filterScentsByGroup()"><option value="">없음 (전사 공용)</option></select></div><div><label>향 전용 (공용이면 비움)</label><select id="m-scent"><option value="">공용 (향 무관)</option></select></div></div>
     <div class="fr c2"><div><label>용량(ml)</label><input id="m-vol" type="number"></div><div><label>최소재고 (경고기준, 기본 1000)</label><input id="m-min-stock" type="number" placeholder="기본: 1000"></div></div>
     <div class="fr"><label>비고</label><textarea id="m-note" style="min-height:48px"></textarea></div>
-    <div class="br"><button class="btn btn-p" onclick="saveMat()">등록</button><button class="btn btn-g" onclick="closeMo()">취소</button></div>
+    <div class="br"><button class="btn btn-p" id="m-mat-save-btn" onclick="saveMat()">등록</button><button class="btn btn-g" onclick="closeMo()">취소</button></div>
   </div>
   <!-- 위치 -->
   <div class="modal" id="m-loc" style="display:none">
@@ -778,7 +820,16 @@ textarea{min-height:60px;resize:vertical}
       <button class="btn btn-g" onclick="closeMo()">취소</button>
     </div>
   </div>
-    <!-- 입고 정정 -->
+  <!-- 입고 예정 등록 -->
+  <div class="modal" id="m-ip" style="display:none">
+    <div class="modal-hd">입고 예정 등록 <button class="modal-x" onclick="closeMo()">×</button></div>
+    <div class="fr c2"><div><label>발주일 *</label><input id="ip-order-date" type="date"></div><div><label>예정 입고일 *</label><input id="ip-plan-date" type="date"></div></div>
+    <div class="fr c2"><div><label>업체 *</label><select id="ip-co" onchange="ipOnCoChange()"><option value="">선택...</option></select></div><div><label>제품군</label><select id="ip-group" onchange="ipOnGroupChange()"><option value="">전체</option></select></div></div>
+    <div class="fr"><label>부자재 *</label><select id="ip-mat"><option value="">선택...</option></select></div>
+    <div class="fr c2"><div><label>발주 수량 *</label><input id="ip-qty" type="number" min="1"></div><div><label>비고</label><input id="ip-note" placeholder="거래처/발주번호 등"></div></div>
+    <div class="br"><button class="btn btn-p" onclick="saveInboundPlan()">등록</button><button class="btn btn-g" onclick="closeMo()">취소</button></div>
+  </div>
+  <!-- 입고 정정 -->
   <div class="modal" id="m-ib-correct" style="display:none">
     <div class="modal-hd">입고 정정 <button class="modal-x" onclick="closeMo()">×</button></div>
     <div id="ib-correct-info" style="background:var(--red-lt);border-radius:8px;padding:10px;font-size:12px;color:var(--red);margin-bottom:12px"></div>
@@ -871,7 +922,19 @@ textarea{min-height:60px;resize:vertical}
     </div>
     <div class="fr c2"><div><label>수량 직접 입력</label><input id="se-qty" type="number"></div><div><label>위치 변경</label><select id="se-loc"></select></div></div>
     <div style="font-size:12px;color:var(--text2);margin-bottom:8px" id="se-delta"></div>
-    <div class="fr"><label>사유</label><input id="se-reason" placeholder="수정 사유 입력"></div>
+    <div class="fr"><label>사유 *</label>
+      <select id="se-reason" style="margin-bottom:6px">
+        <option value="">사유 선택...</option>
+        <option value="재고조사">재고조사 (실사 결과 반영)</option>
+        <option value="파손">파손</option>
+        <option value="샘플출고">샘플출고</option>
+        <option value="오입력수정">오입력수정</option>
+        <option value="반품입고">반품입고</option>
+        <option value="폐기">폐기</option>
+        <option value="기타">기타 (직접입력)</option>
+      </select>
+      <input id="se-reason-text" placeholder="기타 사유 직접 입력..." style="display:none">
+    </div>
     <div class="br"><button class="btn btn-a" onclick="saveStockEdit()">수정 저장</button><button class="btn btn-g" onclick="closeMo()">취소</button></div>
   </div>
   <!-- 바코드 -->
@@ -1256,7 +1319,7 @@ function applyRole(){
 }
 
 // ══ NAV ═════════════════════════════════════════════════════
-const PT={dashboard:'대시보드',scan:'📱 모바일 입출고',prodgroup:'제품군 관리',scents:'향(Scent) 관리',company:'업체관리',material:'부자재마스터',location:'위치마스터',bom:'BOM 관리',stock:'재고현황',inbound:'입고관리',outbound:'출고관리',stockmove:'위치이동',order:'발주·생산오더',picking:'피킹리스트','report-outbound':'출고거래명세서','report-history':'출고내역 리포트','report-lot':'LOT 생산내역','report-cert':'완제품시험성적서',history:'히스토리',cstock:'내 부자재 재고',accounts:'계정관리',datamanage:'데이터 관리',receipt:'거래명세서'};
+const PT={dashboard:'대시보드',scan:'📱 모바일 입출고',prodgroup:'제품군 관리',scents:'향(Scent) 관리',company:'업체관리',material:'부자재마스터',location:'위치마스터',bom:'BOM 관리',stock:'재고현황',inbound:'입고관리','inbound-plan':'입고 예정',outbound:'출고관리',stockmove:'위치이동',order:'발주·생산오더',picking:'피킹리스트','report-outbound':'출고거래명세서','report-history':'출고내역 리포트','report-lot':'LOT 생산내역','report-cert':'완제품시험성적서',history:'히스토리','lot-trace':'LOT 역추적',cstock:'내 부자재 재고','client-view':'내 오더 현황',accounts:'계정관리',datamanage:'데이터 관리',receipt:'거래명세서'};
 function go(id){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
@@ -1268,7 +1331,7 @@ function go(id){
     bom:()=>{bomSelCo='';bomSelProd='';renderBom()},stock:renderStock,inbound:renderIb,
     outbound:renderOb,stockmove:renderStockMove,order:renderOrds,picking:renderPickNav,
     'report-outbound':renderRobList,'report-history':()=>{},'report-lot':initLotReport,'report-cert':()=>{},
-    history:renderHistory,cstock:renderCStock,accounts:renderAcc,datamanage:renderDataManage,scan:initScan})[id]?.();
+    history:renderHistory,'lot-trace':renderLotTrace,cstock:renderCStock,'client-view':renderClientView,accounts:renderAcc,datamanage:renderDataManage,'inbound-plan':renderInboundPlan,scan:initScan})[id]?.();
 }
 function toggleNav(){document.getElementById('nav').classList.toggle('open');}
 
@@ -1329,6 +1392,29 @@ function renderDash(){
   document.getElementById('kpi-today-in').textContent=todayIn;
   const ordSub=document.getElementById('kpi-ord-sub');
   if(ordSub){const done=C.orders.filter(o=>o.status==='완료').length;ordSub.textContent=`완료 ${done}건`;}
+  // ⑤ 주간/월간 통계
+  const now=new Date();
+  const weekAgo=new Date(now);weekAgo.setDate(now.getDate()-7);
+  const monthStart=new Date(now.getFullYear(),now.getMonth(),1);
+  const weekStr=weekAgo.toISOString().slice(0,10);
+  const monthStr=monthStart.toISOString().slice(0,10);
+  const weekIn=C.inbounds.filter(i=>i.date&&i.date>=weekStr).reduce((s,i)=>s+(i.qty||0),0);
+  const monthIn=C.inbounds.filter(i=>i.date&&i.date>=monthStr).reduce((s,i)=>s+(i.qty||0),0);
+  const totalOrds=C.orders.length;
+  const doneOrds=C.orders.filter(o=>o.status==='완료').length;
+  const completeRate=totalOrds>0?Math.round(doneOrds/totalOrds*100):0;
+  const weekInEl=document.getElementById('kpi-week-in');
+  if(weekInEl){weekInEl.textContent=weekIn.toLocaleString();}
+  const weekInSub=document.getElementById('kpi-week-in-sub');
+  if(weekInSub){weekInSub.textContent=`${C.inbounds.filter(i=>i.date&&i.date>=weekStr).length}건`;}
+  const monthInEl=document.getElementById('kpi-month-in');
+  if(monthInEl){monthInEl.textContent=monthIn.toLocaleString();}
+  const monthInSub=document.getElementById('kpi-month-in-sub');
+  if(monthInSub){monthInSub.textContent=`${C.inbounds.filter(i=>i.date&&i.date>=monthStr).length}건`;}
+  const rateEl=document.getElementById('kpi-complete-rate');
+  if(rateEl){rateEl.textContent=completeRate+'%';}
+  const rateSub=document.getElementById('kpi-complete-sub');
+  if(rateSub){rateSub.textContent=`${doneOrds}/${totalOrds}건`;}
   // 재고 부족 자동 표시
   const shortages=getOrderShortages();
   const shEl=document.getElementById('dash-shortage');
@@ -1903,8 +1989,8 @@ function renderMat(){
       <span style="font-size:11px">${badge(m.type,'gray')}</span>
       <span style="font-weight:700;color:${qtyColor};min-width:50px;text-align:right">${fmt(qty)}개${min>0?`<span style="font-size:10px;color:var(--text3)">/${fmt(min)}</span>`:''}</span>
       <button class="btn btn-g btn-sm" onclick="showBarcode('${m.code}')">🔲</button>
-      <button class="btn btn-g btn-sm" onclick="openStockEdit('${m.code}')">✏️</button>
-      ${CU?.role==='admin'?`<button class="btn btn-g btn-sm" onclick="delMat('${m.code}')">🗑</button>`:''}
+      <button class="btn btn-g btn-sm" onclick="openStockEdit('${m.code}')">재고✏️</button>
+      ${CU?.role==='admin'?`<button class="btn btn-p btn-sm" onclick="editMat('${m.code}')">수정</button><button class="btn btn-g btn-sm" onclick="delMat('${m.code}')">🗑</button>`:''}
     </div>`;
   };
 
@@ -2031,7 +2117,38 @@ function renderQRFallback(code){
   img.width=200;img.height=200;
   canvas.replaceWith(img);
 }
+let editMatCode=null;
 function filterScentsByGroup(){ updateMatScentFilter(); }
+function editMat(code){
+  if(CU?.role!=='admin'){toast('관리자만 수정할 수 있습니다','error');return;}
+  const m=matObj(code);if(!m)return;
+  editMatCode=code;
+  const hd=document.getElementById('m-mat-hd');
+  if(hd)hd.innerHTML=`부자재 수정 <button class="modal-x" onclick="closeMo()">×</button>`;
+  const saveBtn=document.getElementById('m-mat-save-btn');
+  if(saveBtn)saveBtn.textContent='수정 저장';
+  // 업체
+  const sel=document.getElementById('m-co-sel');
+  sel.innerHTML='<option value="">업체 선택...</option>';
+  C.companies.forEach(c=>{const o=document.createElement('option');o.value=c.id;o.textContent=c.name;sel.appendChild(o);});
+  sel.value=m.co_id||'';
+  matOnCoChange();
+  // 필드
+  document.getElementById('m-name').value=m.name||'';
+  document.getElementById('m-type').value=m.type||'용기';
+  document.getElementById('m-div').value=m.div||'공용';
+  document.getElementById('m-vol').value=m.vol||'';
+  document.getElementById('m-min-stock').value=m.min_stock||'1000';
+  const noteEl=document.getElementById('m-note');if(noteEl)noteEl.value=m.note||'';
+  // 제품군
+  const gsel=document.getElementById('m-group');
+  if(gsel&&m.group_id){const opt=[...gsel.options].find(o=>o.value===m.group_id);if(opt)gsel.value=m.group_id;}
+  updateMatScentFilter();
+  // 향
+  const scel=document.getElementById('m-scent');
+  if(scel&&m.scent_id)scel.value=m.scent_id;
+  showMo('m-mat');
+}
 // 1. 업체 선택 시 해당 업체 제품군만 표시
 function matOnCoChange(){
   const coId=document.getElementById('m-co-sel')?.value||'';
@@ -2045,6 +2162,11 @@ function matOnCoChange(){
 }
 function openMatModal(){
   if(!C.companies.length){toast('먼저 업체를 등록하세요','warn');return;}
+  editMatCode=null;
+  const hd=document.getElementById('m-mat-hd');
+  if(hd)hd.innerHTML='부자재 등록 <button class="modal-x" onclick="closeMo()">×</button>';
+  const saveBtn=document.getElementById('m-mat-save-btn');
+  if(saveBtn)saveBtn.textContent='등록';
 
   // 3. 현재 필터에 선택된 값 가져오기
   const filterCoId=document.getElementById('mat-co-f')?.value||'';
@@ -2093,14 +2215,24 @@ function updateMatScentFilter(){
 async function saveMat(){
   const name=document.getElementById('m-name').value.trim();if(!name){toast('부자재명 필수','error');return;}
   const coId=document.getElementById('m-co-sel').value;if(!coId){toast('업체 선택','error');return;}
-  const code=nextMatCode();
   const minStockEl=document.getElementById('m-min-stock');
   const groupEl=document.getElementById('m-group');
   const scentEl=document.getElementById('m-scent');
-  // 1. min_stock: 입력값 있으면 그 값, 없으면 기본 1000
   const minStockVal=minStockEl&&minStockEl.value?parseInt(minStockEl.value):1000;
-  const obj={code,co_id:coId,name,type:document.getElementById('m-type').value,div:document.getElementById('m-div').value,vol:document.getElementById('m-vol').value||null,note:document.getElementById('m-note').value||null,min_stock:minStockVal,group_id:groupEl?.value||null,scent_id:scentEl?.value||null,shared:!(scentEl?.value)};
-  try{const r=await dbInsert('materials',obj);C.materials.push(r||obj);closeMo();renderMat();toast(`${name} 등록됐습니다`);}catch(e){toast('저장 실패: '+e.message,'error');}
+  const obj={co_id:coId,name,type:document.getElementById('m-type').value,div:document.getElementById('m-div').value,vol:document.getElementById('m-vol').value||null,note:document.getElementById('m-note').value||null,min_stock:minStockVal,group_id:groupEl?.value||null,scent_id:scentEl?.value||null,shared:!(scentEl?.value)};
+  try{
+    if(editMatCode){
+      await dbUpdate('materials','code',editMatCode,obj);
+      const existing=C.materials.find(m=>m.code===editMatCode);
+      if(existing)Object.assign(existing,obj);
+      closeMo();renderMat();toast(`${name} 수정됐습니다`);
+    }else{
+      const code=nextMatCode();
+      const full={code,...obj};
+      const r=await dbInsert('materials',full);C.materials.push(r||full);closeMo();renderMat();toast(`${name} 등록됐습니다`);
+    }
+    editMatCode=null;
+  }catch(e){toast('저장 실패: '+e.message,'error');}
 }
 // 2. 삭제는 admin만
 async function delMat(code){
@@ -2765,7 +2897,14 @@ function openStockEdit(matCode){
   document.getElementById('se-qty').value=qty;
   document.getElementById('se-delta').textContent='';
   document.getElementById('se-loc').innerHTML=C.locations.map(l=>`<option value="${l.code}"${l.code===firstLoc?' selected':''}>${l.code}</option>`).join('');
-  document.getElementById('se-reason').value='';
+  const reasonSel=document.getElementById('se-reason');
+  if(reasonSel)reasonSel.value='';
+  const reasonTxt=document.getElementById('se-reason-text');
+  if(reasonTxt){reasonTxt.style.display='none';reasonTxt.value='';}
+  // 사유 선택 시 기타 입력창 토글
+  if(reasonSel)reasonSel.onchange=function(){
+    if(reasonTxt)reasonTxt.style.display=this.value==='기타'?'block':'none';
+  };
   // update delta on input
   document.getElementById('se-qty').oninput=function(){
     const diff=parseInt(this.value||0)-qty;
@@ -2785,15 +2924,21 @@ function seAdjust(delta){
 async function saveStockEdit(){
   const newQty=parseInt(document.getElementById('se-qty').value);
   const newLoc=document.getElementById('se-loc').value;
-  const reason=document.getElementById('se-reason').value||'수동 수정';
+  const reasonSel=document.getElementById('se-reason');
+  const reasonTxt=document.getElementById('se-reason-text');
+  const reasonVal=reasonSel?.value||'';
+  if(!reasonVal){toast('사유를 선택하세요','error');return;}
+  const reason=reasonVal==='기타'?(reasonTxt?.value?.trim()||'기타'):reasonVal;
   const oldQty=totalStock(stockEditId);
   const oldLocs=[...new Set(C.stock.filter(s=>s.mat_code===stockEditId).map(s=>s.loc))].join(',');
   try{
-    await sb.from('stock').delete().eq('mat_code',stockEditId);
+    // 재고 전체 삭제 후 재생성
+    const delUrl=`${SUPA_URL}/rest/v1/stock?mat_code=eq.${encodeURIComponent(stockEditId)}`;
+    await fetch(delUrl,{method:'DELETE',headers:{...HEADERS,'Prefer':''}});
     C.stock=C.stock.filter(s=>s.mat_code!==stockEditId);
     if(newQty>0){const ns={id:nextInvId(),mat_code:stockEditId,qty:newQty,loc:newLoc,plt:'MANUAL',date:today()};await dbInsert('stock',ns);C.stock.push(ns);}
     await addHist('수정',stockEditId,newQty,`${oldQty}@${oldLocs}`,`${newQty}@${newLoc}`,reason);
-    closeMo();renderStock();
+    closeMo();renderStock();toast(`재고 수정 완료 (${reason})`);
   }catch(e){toast('저장 실패: '+e.message,'error');}
 }
 
@@ -3053,30 +3198,80 @@ function ordCard(o){
 
   // 최대 생산 가능 수량 (타 오더 경쟁 포함)
   const activeOrds=C.orders.filter(x=>x.status!=='완료'&&x.id!==o.id);
-  const {max,maxTotal}=calcMaxProdWithCompetition(o.prod,o.qty,activeOrds);
+  const {max,maxTotal,items:calcItems}=calcMaxProdWithCompetition(o.prod,o.qty,activeOrds);
   const hasBom=C.bom.some(b=>b.prod===o.prod);
   let maxProdBadge='';
   if(hasBom&&max!=null){
     const ratio=o.qty>0?max/o.qty:1;
     const color=max===0?'var(--red)':ratio<0.5?'var(--amber)':ratio>=1?'var(--green)':'var(--blue)';
     const bg=max===0?'#fee2e2':ratio<0.5?'#fef3c7':ratio>=1?'#dcfce7':'#eff6ff';
-    maxProdBadge=`<div style="background:${bg};border-radius:6px;padding:5px 10px;margin-top:6px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
-      <div>
-        <div style="font-size:9px;color:var(--text2)">현재 최대 생산 가능</div>
-        <div style="font-size:14px;font-weight:800;color:${color}">${fmt(max)}<span style="font-size:10px;font-weight:400">개</span></div>
+    const isShort=max<o.qty;
+
+    // 부족 부자재 목록
+    const shortItems=(calcItems||[]).filter(it=>it.canMake<o.qty).sort((a,b)=>a.canMake-b.canMake);
+    const shortDetail=shortItems.length?`
+      <div id="ord-short-${o.id}" style="display:none;margin-top:8px;border-top:1px solid ${max===0?'#fca5a5':'#fcd34d'};padding-top:8px">
+        <div style="font-size:10px;font-weight:700;color:var(--text2);margin-bottom:6px">부족 부자재 상세</div>
+        ${shortItems.map(it=>{
+          const mat=matObj(it.mat_code);
+          const scent=C.scents.find(s=>s.id===mat?.scent_id);
+          const need=it.qty*o.qty;
+          const lack=need-it.stock;
+          const pct=need>0?Math.round(it.stock/need*100):0;
+          return`<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #f1f5f9;font-size:11px">
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:600">${mat?.name||it.mat_code}
+                ${mat?.vol?`<span style="font-size:10px;background:#e0f2fe;color:#0369a1;padding:1px 4px;border-radius:3px;margin-left:3px">${mat.vol}ml</span>`:''}
+              </div>
+              <div style="display:flex;gap:6px;align-items:center;margin-top:2px;flex-wrap:wrap">
+                ${scent?`<span style="display:inline-flex;align-items:center;gap:3px;font-size:10px;color:var(--purple)"><span style="width:7px;height:7px;border-radius:50%;background:${scent.color||'#6b7280'};display:inline-block"></span>${scent.name_ko}</span>`:'<span style="font-size:10px;color:var(--text3)">공용</span>'}
+                <span style="font-size:10px;color:var(--text3);font-family:monospace">${it.mat_code}</span>
+              </div>
+              <div style="margin-top:3px;height:3px;background:#e5e7eb;border-radius:99px;width:100px">
+                <div style="height:100%;width:${Math.min(100,pct)}%;background:${pct<30?'#ef4444':'#f59e0b'};border-radius:99px"></div>
+              </div>
+            </div>
+            <div style="text-align:right;flex-shrink:0">
+              <div style="color:var(--text2);font-size:10px">재고 <strong style="color:${it.stock===0?'var(--red)':'var(--amber)'}">${fmt(it.stock)}</strong></div>
+              <div style="color:var(--text2);font-size:10px">필요 ${fmt(need)}</div>
+              <div style="font-weight:700;color:var(--red);font-size:11px">▼ ${fmt(lack)} 부족</div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>`:'';
+
+    maxProdBadge=`<div style="background:${bg};border-radius:6px;padding:7px 10px;margin-top:6px">
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+        <div>
+          <div style="font-size:9px;color:var(--text2)">현재 최대 생산 가능</div>
+          <div style="font-size:14px;font-weight:800;color:${color}">${fmt(max)}<span style="font-size:10px;font-weight:400">개</span></div>
+        </div>
+        ${maxTotal!==max?`<div>
+          <div style="font-size:9px;color:var(--text2)">단독 생산 시</div>
+          <div style="font-size:12px;font-weight:700;color:var(--blue)">${fmt(maxTotal)}<span style="font-size:10px;font-weight:400">개</span></div>
+        </div>`:''}
+        <div style="margin-left:auto;text-align:right">
+          <div style="font-size:9px;color:var(--text2)">목표 ${fmt(o.qty)}개</div>
+          ${isShort
+            ?`<div onclick="toggleOrdShort('${o.id}')" style="font-size:11px;font-weight:700;color:${max===0?'var(--red)':'var(--amber)'};cursor:pointer;text-decoration:underline;text-underline-offset:2px">
+                ${max===0?'❌ 재고 부족':'⚠️ '+fmt(o.qty-max)+'개 부족'} ▾ 상세보기
+              </div>`
+            :`<div style="font-size:11px;font-weight:700;color:var(--green)">✅ 달성 가능</div>`
+          }
+        </div>
       </div>
-      ${maxTotal!==max?`<div>
-        <div style="font-size:9px;color:var(--text2)">단독 생산 시</div>
-        <div style="font-size:12px;font-weight:700;color:var(--blue)">${fmt(maxTotal)}<span style="font-size:10px;font-weight:400">개</span></div>
-      </div>`:''}
-      <div style="font-size:9px;color:var(--text2);margin-left:auto">목표 ${fmt(o.qty)}개${max>0&&max<o.qty?` · <span style="color:var(--amber)">${fmt(o.qty-max)}개 부족</span>`:max>=o.qty?' · <span style="color:var(--green)">✅ 달성 가능</span>':' · <span style="color:var(--red)">❌ 재고 부족</span>'}</div>
+      ${shortDetail}
     </div>`;
   }
 
   const recentLogs=C.progressLogs.filter(l=>l.order_id===o.id).slice(0,3).map(l=>`<div class="ord-log-row"><span class="ord-log-date">${l.date||''}</span><span class="badge b-gray" style="font-size:10px">${l.process}</span><span style="font-weight:600;margin-left:4px">${fmt(l.qty)}개</span><span style="color:var(--text2);font-size:11px;margin-left:6px">${l.note||''}</span></div>`).join('');
   return`<div class="ord-card" style="${isDone?'background:#f9fafb;opacity:.75;':''}">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
-      <div><div style="font-size:11px;font-family:monospace;color:${isDone?'var(--gray)':'var(--blue-dk)'};font-weight:700">${o.lot||o.id}</div>
+      <div>
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
+          <span style="font-size:11px;font-family:monospace;color:${isDone?'var(--gray)':'var(--blue-dk)'};font-weight:700" id="lot-text-${o.id}">${o.lot||o.id}</span>
+          ${CU?.role==='admin'?`<button onclick="startLotEdit('${o.id}')" style="background:none;border:1px solid var(--border);border-radius:4px;padding:1px 5px;font-size:10px;color:var(--text2);cursor:pointer;line-height:1.4">✏️ LOT 수정</button>`:''}
+        </div>
         <div style="font-size:12px;font-weight:600;margin-top:2px">${coName(o.co_id)}·${prod?.name||o.prod||'-'}</div>
         <div style="font-size:11px;color:var(--text2)">목표 ${fmt(o.qty)}개 · 포장완료 ${fmt(packDone)}개${o.exp?` · EXP:${o.exp}`:''}${o.due?` · 납기:${o.due}`:''}
           ${o.due?(()=>{const diff=Math.ceil((new Date(o.due)-new Date(today()))/(1000*60*60*24));return diff<=0?'<span class="due-today">납기초과</span>':diff<=3?`<span class="due-soon">${diff}일후</span>`:'';})():''}</div>
@@ -3085,12 +3280,18 @@ function ordCard(o){
         ${sbadge(o.status)}
         ${!isDone?`<button class="btn btn-g btn-sm" onclick="openProg('${o.id}')">진행입력</button>`:''}
         <button class="btn btn-g btn-sm" onclick="chgOrdStatus('${o.id}')">${isDone?'재오픈':'상태↑'}</button>
+        ${CU?.role==='admin'?`<button class="btn btn-p btn-sm" onclick="openOrdEditModal('${o.id}')">수정</button><button class="btn btn-g btn-sm" onclick="deleteOrd('${o.id}')">🗑</button>`:''}
       </div>
     </div>
     ${maxProdBadge}
     <div style="margin-top:8px;margin-bottom:4px">${procBars}</div>
     ${recentLogs?`<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">${recentLogs}</div>`:''}
   </div>`;
+}
+function toggleOrdShort(ordId){
+  const el=document.getElementById(`ord-short-${ordId}`);
+  if(!el)return;
+  el.style.display=el.style.display==='none'?'block':'none';
 }
 // 오더 등록 - 다중 제품 지원
 let ordPendingRows=[];
@@ -3277,6 +3478,78 @@ async function chgOrdStatus(id){
   const seq=['대기','진행','완료'];const next=seq[(seq.indexOf(o.status)+1)%seq.length];
   if(!confirm(`"${o.status}" → "${next}"로 변경?`))return;
   try{await dbUpdate('orders','id',id,{status:next});o.status=next;renderOrds();}catch(e){toast('저장 실패: '+e.message,'error');}
+}
+async function deleteOrd(id){
+  if(CU?.role!=='admin'){toast('관리자만 오더를 삭제할 수 있습니다','error');return;}
+  const o=C.orders.find(x=>x.id===id);if(!o)return;
+  if(!confirm(`오더 "${o.lot||id}"를 삭제하시겠습니까?\n관련 공정 로그도 함께 삭제됩니다.`))return;
+  try{
+    // 공정 로그 삭제
+    const logUrl=`${SUPA_URL}/rest/v1/progress_logs?order_id=eq.${encodeURIComponent(id)}`;
+    await fetch(logUrl,{method:'DELETE',headers:{...HEADERS,'Prefer':''}});
+    C.progressLogs=C.progressLogs.filter(l=>l.order_id!==id);
+    await dbDelete('orders','id',id);
+    C.orders=C.orders.filter(x=>x.id!==id);
+    renderOrds();toast('오더가 삭제됐습니다','warn');
+  }catch(e){toast('삭제 실패: '+e.message,'error');}
+}
+let editOrdId=null;
+function openOrdEditModal(id){
+  if(CU?.role!=='admin'){toast('관리자만 수정할 수 있습니다','error');return;}
+  const o=C.orders.find(x=>x.id===id);if(!o)return;
+  editOrdId=id;
+  // 모달 재활용 - 간단한 수량/납기/EXP 수정용 별도 모달
+  const html=`<div class="modal" id="m-ord-edit" style="display:block;position:relative;background:#fff;border-radius:12px;padding:20px;max-width:400px;margin:auto">
+    <div class="modal-hd">오더 수정 <button class="modal-x" onclick="document.getElementById('m-ord-edit-wrap').remove()">×</button></div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:12px">${o.lot||o.id} · ${prodObj(o.prod)?.name||o.prod}</div>
+    <div class="fr c2"><div><label>생산수량</label><input id="oe-qty" type="number" value="${o.qty||0}"></div><div><label>납기일</label><input id="oe-due" type="date" value="${o.due||''}"></div></div>
+    <div class="fr c2"><div><label>EXP</label><input id="oe-exp" type="date" value="${o.exp||''}"></div><div><label>마킹정보</label><input id="oe-mark" value="${o.mark||''}"></div></div>
+    <div class="br"><button class="btn btn-p" onclick="saveOrdEdit()">저장</button><button class="btn btn-g" onclick="document.getElementById('m-ord-edit-wrap').remove()">취소</button></div>
+  </div>`;
+  const wrap=document.createElement('div');
+  wrap.id='m-ord-edit-wrap';
+  wrap.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:9999;display:flex;align-items:center;justify-content:center';
+  wrap.innerHTML=html;
+  document.body.appendChild(wrap);
+}
+async function saveOrdEdit(){
+  const o=C.orders.find(x=>x.id===editOrdId);if(!o)return;
+  const qty=parseInt(document.getElementById('oe-qty').value)||o.qty;
+  const due=document.getElementById('oe-due').value||null;
+  const exp=document.getElementById('oe-exp').value||null;
+  const mark=document.getElementById('oe-mark').value||null;
+  try{
+    await dbUpdate('orders','id',editOrdId,{qty,due,exp,mark});
+    Object.assign(o,{qty,due,exp,mark});
+    document.getElementById('m-ord-edit-wrap')?.remove();
+    renderOrds();toast('오더가 수정됐습니다');
+  }catch(e){toast('수정 실패: '+e.message,'error');}
+}
+function startLotEdit(id){
+  if(CU?.role!=='admin'){toast('관리자만 LOT를 수정할 수 있습니다','error');return;}
+  const o=C.orders.find(x=>x.id===id);if(!o)return;
+  const span=document.getElementById(`lot-text-${id}`);
+  if(!span)return;
+  const currentLot=o.lot||o.id;
+  const wrapper=span.parentElement;
+  wrapper.innerHTML=`
+    <input id="lot-inp-${id}" value="${currentLot}"
+      style="font-size:11px;font-family:monospace;color:var(--blue-dk);font-weight:700;border:1px solid var(--blue);border-radius:4px;padding:2px 6px;width:140px;background:#f0f9ff"
+      onkeydown="if(event.key==='Enter')confirmLotEdit('${id}','${currentLot}');if(event.key==='Escape')renderOrds()"
+    >
+    <button onclick="confirmLotEdit('${id}','${currentLot}')" style="background:var(--blue);color:#fff;border:none;border-radius:4px;padding:2px 8px;font-size:10px;cursor:pointer">저장</button>
+    <button onclick="renderOrds()" style="background:none;border:1px solid var(--border);border-radius:4px;padding:2px 6px;font-size:10px;cursor:pointer;color:var(--text2)">취소</button>
+  `;
+  document.getElementById(`lot-inp-${id}`)?.focus();
+  document.getElementById(`lot-inp-${id}`)?.select();
+}
+function confirmLotEdit(id,oldLot){
+  const inp=document.getElementById(`lot-inp-${id}`);
+  if(!inp)return;
+  const newLot=inp.value.trim();
+  if(!newLot){toast('LOT를 입력하세요','error');return;}
+  if(newLot===oldLot){renderOrds();return;}
+  saveLotEdit(id,oldLot,newLot);
 }
 async function openProg(id){
   currProgOrd=id;const o=C.orders.find(x=>x.id===id);if(!o)return;
@@ -3862,8 +4135,21 @@ async function saveLotEdit(ordId,oldLot,newLot){
       await dbUpdate('outbounds','id',ob.id,{items:updatedItems});
       ob.items=updatedItems;
     }
-    toast(`LOT가 "${newLot}" 으로 변경됐습니다.\n출고명세서 ${affected.length}건 업데이트 완료.`);
-    // 현재 페이지 새로고침
+    // 3. 히스토리 기록
+    const histObj={
+      type:'LOT변경',
+      mat_code:o?.prod||ordId,
+      qty:0,
+      from_loc:oldLot,
+      to_loc:newLot,
+      note:`LOT 변경: ${oldLot} → ${newLot} (오더ID: ${ordId})`,
+      date:today(),
+      user_name:CU?.name||'관리자'
+    };
+    const hr=await dbInsert('history',histObj);
+    C.history.unshift(hr||histObj);
+    toast(`LOT "${oldLot}" → "${newLot}" 변경 완료. 출고명세서 ${affected.length}건 업데이트.`);
+    // 4. 현재 페이지 새로고침
     renderLotReport();renderOrds();
   }catch(e){alert('LOT 수정 실패: '+e.message);}
 }
@@ -4532,6 +4818,126 @@ async function importData(input){
   input.value='';
 }
 
+// ══ LOT 역추적 ═══════════════════════════════════════════════
+function renderLotTrace(){
+  document.getElementById('lt-result').innerHTML='<div class="alert a-i">LOT 번호를 입력하고 역추적 버튼을 누르세요.</div>';
+}
+function traceLot(){
+  const lot=(document.getElementById('lt-lot')?.value||'').trim();
+  if(!lot){toast('LOT 번호를 입력하세요','error');return;}
+  const el=document.getElementById('lt-result');
+  const ord=C.orders.find(o=>o.lot===lot||o.id===lot);
+  if(!ord){el.innerHTML=`<div class="alert a-d">LOT "${lot}"에 해당하는 오더를 찾을 수 없습니다.</div>`;return;}
+  const prod=prodObj(ord.prod);
+  const co=C.companies.find(c=>c.id===ord.co_id);
+  const group=C.productGroups.find(g=>g.id===prod?.group_id);
+  const scent=C.scents.find(s=>s.id===prod?.scent_id);
+  const bomItems=C.bom.filter(b=>b.prod===ord.prod);
+  const matCodes=bomItems.map(b=>b.mat_code);
+  const relatedInbounds=C.inbounds.filter(ib=>matCodes.includes(ib.mat_code)).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  const relatedOutbounds=C.outbounds.filter(ob=>ob.items?.some(it=>it.ordId===ord.id||it.lot===lot));
+  const relatedHist=C.history.filter(h=>h.note&&h.note.includes(lot)).slice(0,10);
+  el.innerHTML=`
+    <div class="card" style="border-left:4px solid var(--blue);margin-bottom:12px">
+      <div class="card-hd">🔍 LOT ${lot} 추적 결과</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;font-size:12px;margin-top:8px">
+        <div><span style="color:var(--text2)">업체</span><br><strong>${co?.name||'-'}</strong></div>
+        <div><span style="color:var(--text2)">브랜드/제품군</span><br><strong>${group?.brand?group.brand+' · ':''}${group?.name||'-'}</strong></div>
+        ${scent?`<div><span style="color:var(--text2)">향</span><br><span style="display:flex;align-items:center;gap:4px"><span style="width:10px;height:10px;border-radius:50%;background:${scent.color||'#6b7280'};display:inline-block"></span><strong>${scent.name_ko}</strong></span></div>`:''}
+        <div><span style="color:var(--text2)">제품</span><br><strong>${prod?.name||ord.prod}</strong></div>
+        <div><span style="color:var(--text2)">목표수량</span><br><strong>${fmt(ord.qty)}개</strong></div>
+        <div><span style="color:var(--text2)">상태</span><br>${sbadge(ord.status)}</div>
+        ${ord.exp?`<div><span style="color:var(--text2)">EXP</span><br><strong>${ord.exp}</strong></div>`:''}
+        ${ord.due?`<div><span style="color:var(--text2)">납기</span><br><strong>${ord.due}</strong></div>`:''}
+      </div>
+    </div>
+    <div class="g2">
+      <div class="card">
+        <div class="card-hd">📥 사용 부자재 입고 이력 (${relatedInbounds.length}건)</div>
+        ${relatedInbounds.length?`<div class="tw"><table><thead><tr><th>입고일</th><th>부자재</th><th>수량</th><th>위치</th></tr></thead><tbody>
+          ${relatedInbounds.slice(0,20).map(ib=>{const m=matObj(ib.mat_code);return`<tr><td style="font-size:11px">${ib.date||'-'}</td><td style="font-size:12px"><strong>${m?.name||ib.mat_code}</strong><br><span style="font-size:10px;color:var(--text3)">${ib.mat_code}</span></td><td style="font-weight:700;color:var(--blue)">${fmt(ib.qty)}</td><td style="font-size:11px">${ib.loc||'-'}</td></tr>`;}).join('')}
+        </tbody></table></div>`:'<div style="padding:12px;font-size:12px;color:var(--text2)">입고 이력 없음</div>'}
+      </div>
+      <div class="card">
+        <div class="card-hd">📤 출고 이력 (${relatedOutbounds.length}건)</div>
+        ${relatedOutbounds.length?relatedOutbounds.map(ob=>`<div style="padding:8px 0;border-bottom:1px solid var(--border);font-size:12px"><div><strong>${ob.date||'-'}</strong> · ${fmt(ob.items?.find(it=>it.lot===lot)?.qty||0)}개</div><div style="color:var(--text2);font-size:11px">${ob.items?.find(it=>it.lot===lot)?.dest||'-'}</div></div>`).join(''):'<div style="padding:12px;font-size:12px;color:var(--text2)">출고 이력 없음</div>'}
+      </div>
+    </div>
+    ${relatedHist.length?`<div class="card" style="margin-top:12px"><div class="card-hd">📜 변경 히스토리</div>${relatedHist.map(h=>`<div style="padding:6px 0;border-bottom:1px solid var(--border);font-size:12px;display:flex;gap:8px"><span style="color:var(--text2);width:70px">${h.date||'-'}</span><span style="background:#f1f5f9;padding:1px 6px;border-radius:4px">${h.type}</span><span>${h.note||''}</span><span style="margin-left:auto;color:var(--text3)">${h.user_name||''}</span></div>`).join('')}</div>`:''}`;
+}
+// ══ 입고 예정 ═════════════════════════════════════════════════
+let inboundPlans=[];
+function renderInboundPlan(){
+  const q=(document.getElementById('ip-s')?.value||'').toLowerCase();
+  const el=document.getElementById('ip-tbody');if(!el)return;
+  const today_=today();
+  const rows=inboundPlans.filter(p=>{if(!q)return true;const m=matObj(p.mat_code);return[p.mat_code,m?.name||'',coName(m?.co_id||'')].join(' ').toLowerCase().includes(q);}).sort((a,b)=>(a.plan_date||'').localeCompare(b.plan_date||''));
+  el.innerHTML=rows.length?rows.map(p=>{
+    const m=matObj(p.mat_code);const group=C.productGroups.find(g=>g.id===m?.group_id);const scent=C.scents.find(s=>s.id===m?.scent_id);
+    const isOverdue=p.plan_date&&p.plan_date<today_&&p.status!=='입고완료';const isToday=p.plan_date===today_;
+    return`<tr style="${isOverdue?'background:#fff5f5':isToday?'background:#fffbeb':''}">
+      <td style="font-size:12px">${p.order_date||'-'}</td>
+      <td style="font-size:12px;font-weight:${isToday?'700':'400'};color:${isOverdue?'var(--red)':isToday?'var(--amber)':'inherit'}">${p.plan_date||'-'}${isOverdue?' ⚠️':isToday?' 📅':''}</td>
+      <td style="font-size:12px">${coName(m?.co_id||'')}</td>
+      <td>${group?`<div style="font-size:11px;color:var(--blue-dk)">${group.brand?group.brand+' · ':''}${group.name}</div>${scent?`<span style="font-size:10px;color:var(--purple)">● ${scent.name_ko}</span>`:'<span style="font-size:10px;color:var(--text3)">공용</span>'}`:'<span style="color:var(--text3);font-size:11px">-</span>'}</td>
+      <td><div style="font-weight:600">${m?.name||p.mat_code}</div><div style="font-size:10px;color:var(--text3)">${p.mat_code}</div></td>
+      <td style="font-weight:700;color:var(--blue)">${fmt(p.qty)}개</td>
+      <td>${p.status==='입고완료'?'<span style="color:var(--green);font-weight:600">✅ 완료</span>':'<span style="color:var(--amber)">대기</span>'}</td>
+      <td style="white-space:nowrap">
+        ${p.status!=='입고완료'?`<button class="btn btn-s btn-sm" onclick="completeInboundPlan('${p.id}')">입고처리</button>`:''}
+        <button class="btn btn-g btn-sm" onclick="deleteInboundPlan('${p.id}')">🗑</button>
+      </td></tr>`;
+  }).join(''):`<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:20px">입고 예정 없음</td></tr>`;
+}
+function openInboundPlanModal(){
+  document.getElementById('ip-order-date').value=today();
+  document.getElementById('ip-plan-date').value='';
+  document.getElementById('ip-co').innerHTML='<option value="">선택...</option>'+C.companies.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+  document.getElementById('ip-group').innerHTML='<option value="">전체</option>'+C.productGroups.map(g=>`<option value="${g.id}">${g.name}</option>`).join('');
+  document.getElementById('ip-mat').innerHTML='<option value="">선택...</option>'+C.materials.map(m=>`<option value="${m.code}">${m.name} (${m.code})</option>`).join('');
+  ['ip-qty','ip-note'].forEach(i=>{const el=document.getElementById(i);if(el)el.value='';});
+  showMo('m-ip');
+}
+function ipOnCoChange(){const coId=document.getElementById('ip-co')?.value||'';const groups=C.productGroups.filter(g=>!coId||g.co_id===coId);document.getElementById('ip-group').innerHTML='<option value="">전체</option>'+groups.map(g=>`<option value="${g.id}">${g.name}</option>`).join('');ipOnGroupChange();}
+function ipOnGroupChange(){const coId=document.getElementById('ip-co')?.value||'';const groupId=document.getElementById('ip-group')?.value||'';const mats=C.materials.filter(m=>{if(coId&&m.co_id!==coId)return false;if(groupId&&m.group_id!==groupId)return false;return true;});document.getElementById('ip-mat').innerHTML='<option value="">선택...</option>'+mats.map(m=>`<option value="${m.code}">${m.name} (${m.code})</option>`).join('');}
+async function saveInboundPlan(){
+  const planDate=document.getElementById('ip-plan-date').value;const matCode=document.getElementById('ip-mat').value;const qty=parseInt(document.getElementById('ip-qty').value);
+  if(!planDate){toast('예정 입고일 필수','error');return;}if(!matCode){toast('부자재 선택 필수','error');return;}if(!qty||qty<=0){toast('수량 필수','error');return;}
+  const obj={id:'IP-'+Date.now(),order_date:document.getElementById('ip-order-date').value,plan_date:planDate,mat_code:matCode,qty,note:document.getElementById('ip-note').value||null,status:'대기'};
+  try{await dbInsert('inbound_plans',obj);}catch(e){}
+  inboundPlans.unshift(obj);closeMo();renderInboundPlan();toast('입고 예정 등록됐습니다');
+}
+async function completeInboundPlan(id){
+  const plan=inboundPlans.find(p=>p.id===id);if(!plan)return;
+  if(!confirm(`"${matName(plan.mat_code)}" ${fmt(plan.qty)}개를 입고 처리하시겠습니까?`))return;
+  const ib={date:today(),mat_code:plan.mat_code,qty:plan.qty,plt:'PLT-'+Date.now().toString().slice(-5),loc:C.locations[0]?.code||'',status:'반영완료'};
+  try{const r=await dbInsert('inbounds',ib);C.inbounds.unshift(r||ib);const ns={id:nextInvId(),mat_code:plan.mat_code,qty:plan.qty,loc:ib.loc,plt:ib.plt,date:today()};await dbInsert('stock',ns);C.stock.push(ns);await addHist('입고',plan.mat_code,plan.qty,'',ib.loc,'입고 예정 → 입고 처리');plan.status='입고완료';try{await dbUpdate('inbound_plans','id',id,{status:'입고완료'});}catch(e){}renderInboundPlan();renderIb();toast(`입고 완료`,'success');}catch(e){toast('처리 실패: '+e.message,'error');}
+}
+async function deleteInboundPlan(id){
+  if(!confirm('입고 예정을 삭제하시겠습니까?'))return;
+  inboundPlans=inboundPlans.filter(p=>p.id!==id);
+  try{await fetch(`${SUPA_URL}/rest/v1/inbound_plans?id=eq.${encodeURIComponent(id)}`,{method:'DELETE',headers:{...HEADERS,'Prefer':''}});}catch(e){}
+  renderInboundPlan();toast('삭제됐습니다','warn');
+}
+// ══ 클라이언트 전용 뷰 ═══════════════════════════════════════
+function renderClientView(){
+  const el=document.getElementById('cv-content');if(!el)return;
+  const coId=CU?.co_id||'';
+  const myOrders=C.orders.filter(o=>!coId||o.co_id===coId).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  const myStock=C.materials.filter(m=>!coId||m.co_id===coId);
+  const shortMats=myStock.filter(m=>{const qty=totalStock(m.code);const min=m.min_stock||0;return min>0&&qty<=min;});
+  el.innerHTML=`
+    <div class="g2" style="margin-bottom:16px">
+      <div class="kpi"><div class="kpi-icon">🏭</div><div class="kpi-label">진행중 오더</div><div class="kpi-value" style="color:var(--blue)">${myOrders.filter(o=>o.status!=='완료').length}</div></div>
+      <div class="kpi"><div class="kpi-icon">⚠️</div><div class="kpi-label">재고 부족</div><div class="kpi-value" style="color:var(--red)">${shortMats.length}</div></div>
+    </div>
+    <div class="card" style="margin-bottom:16px">
+      <div class="card-hd">📋 오더 현황</div>
+      ${myOrders.length?myOrders.slice(0,20).map(o=>{const prod=prodObj(o.prod);const packDone=getProcessDone(o.id,'포장');const pct_=o.qty>0?Math.round(packDone/o.qty*100):0;return`<div style="padding:10px 0;border-bottom:1px solid var(--border)"><div style="display:flex;justify-content:space-between;margin-bottom:4px"><div><span style="font-size:11px;font-family:monospace;color:var(--blue-dk);font-weight:700">${o.lot||o.id}</span><span style="font-size:12px;font-weight:600;margin-left:8px">${prod?.name||o.prod}</span></div>${sbadge(o.status)}</div><div style="font-size:11px;color:var(--text2)">목표 ${fmt(o.qty)}개${o.due?` · 납기: ${o.due}`:''}${o.exp?` · EXP: ${o.exp}`:''}</div><div style="margin-top:6px;height:6px;background:#e5e7eb;border-radius:99px"><div style="height:100%;width:${pct_}%;background:${pct_>=100?'#22c55e':'#3b82f6'};border-radius:99px"></div></div><div style="font-size:10px;color:var(--text3);margin-top:2px">포장 완료 ${fmt(packDone)}개 (${pct_}%)</div></div>`;}).join(''):`<div style="padding:14px;font-size:12px;color:var(--text2)">진행중 오더 없음</div>`}
+    </div>
+    ${shortMats.length?`<div class="card"><div class="card-hd" style="color:var(--red)">⚠️ 재고 부족 (${shortMats.length}종)</div>${shortMats.map(m=>{const qty=totalStock(m.code);const min=m.min_stock||0;return`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:12px"><div style="flex:1"><strong>${m.name}</strong>${m.vol?`<span style="font-size:10px;background:#e0f2fe;color:#0369a1;padding:1px 4px;border-radius:3px;margin-left:4px">${m.vol}ml</span>`:''}</div><div style="text-align:right"><div style="color:var(--red);font-weight:700">${fmt(qty)}개</div><div style="color:var(--text3);font-size:10px">최소 ${fmt(min)}</div></div></div>`;}).join('')}</div>`:''
+    }`;
+}
 function showMo(id){document.getElementById('mo').classList.add('open');document.querySelectorAll('.modal').forEach(m=>m.style.display='none');document.getElementById(id).style.display='block';}
 function closeMo(){document.getElementById('mo').classList.remove('open');document.querySelectorAll('.modal').forEach(m=>m.style.display='none');}
 
