@@ -788,26 +788,57 @@ textarea{min-height:60px;resize:vertical}
     <div class="br"><button class="btn btn-d" onclick="saveIbCorrect()">정정 처리</button><button class="btn btn-g" onclick="closeMo()">취소</button></div>
   </div>
   <!-- 생산오더 등록 -->
-  <div class="modal" id="m-ord" style="display:none;max-width:660px">
+  <div class="modal" id="m-ord" style="display:none;max-width:720px">
     <div class="modal-hd">생산오더 등록 <button class="modal-x" onclick="closeMo()">×</button></div>
-    <div class="fr c2"><div><label>업체명 *</label><select id="o-co" onchange="filterOrdProd()"></select></div><div><label>제품 선택 *</label><select id="o-prod" onchange="updateLotPreview();loadProdIssues()"></select></div></div>
-    <div class="fr c3"><div><label>생산수량 *</label><input id="o-qty" type="number"></div><div><label>EXP (유통기한)</label><input id="o-exp" type="date"></div><div><label>마킹정보</label><input id="o-mark"></div></div>
-    <div class="fr c2"><div><label>납기일 (출고예정일)</label><input id="o-due" type="date"></div><div></div></div>
-    <div style="background:var(--gray-lt);border-radius:8px;padding:10px;font-size:12px;margin-bottom:10px"><strong>로트번호:</strong> <span id="lot-preview" style="font-family:monospace;color:var(--blue-dk);font-weight:700">-</span></div>
-    <!-- 기생산간 이슈 패널 -->
-    <div id="prev-issues-panel" style="display:none;margin-bottom:12px">
-      <div style="font-size:12px;font-weight:700;color:var(--amber);margin-bottom:6px">📋 기생산간 이슈 (이 제품 이전 생산 특이사항)</div>
-      <div id="prev-issues-list" style="background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:10px;max-height:140px;overflow-y:auto;font-size:12px"></div>
+
+    <!-- Step 1: 업체 + 공통 정보 -->
+    <div class="fr c3">
+      <div><label>업체 *</label><select id="o-co" onchange="ordOnCoChange()"><option value="">선택...</option></select></div>
+      <div><label>EXP (유통기한)</label><input id="o-exp" type="date"></div>
+      <div><label>납기일</label><input id="o-due" type="date"></div>
     </div>
+
+    <!-- Step 2: 제품군 선택 -->
+    <div class="fr c2">
+      <div><label>브랜드 / 제품군 *</label><select id="o-group" onchange="ordOnGroupChange()"><option value="">제품군 선택...</option></select></div>
+      <div><label>마킹정보</label><input id="o-mark" placeholder="공통 마킹"></div>
+    </div>
+
+    <!-- Step 3: 제품(향) + 수량 추가 -->
+    <div style="background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:10px">
+      <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:8px">제품(향) 추가</div>
+      <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+        <div style="flex:2;min-width:160px"><label style="font-size:11px">제품 선택</label><select id="o-prod" onchange="ordOnProdChange()"><option value="">선택...</option></select></div>
+        <div style="width:100px"><label style="font-size:11px">생산수량 *</label><input id="o-qty" type="number" min="1" placeholder="0"></div>
+        <button class="btn btn-p btn-sm" style="margin-bottom:1px;white-space:nowrap" onclick="ordAddRow()">+ 추가</button>
+      </div>
+      <!-- 추가할 제품 미리보기 -->
+      <div id="o-prod-preview" style="display:none;margin-top:8px;padding:6px 10px;background:#e0f2fe;border-radius:6px;font-size:12px"></div>
+    </div>
+
+    <!-- 추가된 오더 목록 + 실시간 최대 생산 수량 -->
+    <div id="ord-rows" style="margin-bottom:10px"></div>
+
+    <!-- 공용 부자재 경쟁 분석 -->
+    <div id="ord-shared-analysis" style="display:none;margin-bottom:10px"></div>
+
+    <!-- 공정 선택 -->
     <div class="divider"></div>
-    <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px">공정 선택 (포장 완료 = 제품 완성)</div>
+    <div style="font-size:12px;font-weight:700;color:var(--text2);margin-bottom:8px">공정 선택</div>
     <div id="process-sel" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px">
-      <label style="display:flex;align-items:center;gap:4px;font-size:13px;font-weight:400;cursor:pointer"><input type="checkbox" id="pc-충진" checked> 충진</label>
-      <label style="display:flex;align-items:center;gap:4px;font-size:13px;font-weight:400;cursor:pointer"><input type="checkbox" id="pc-라벨링" checked> 라벨링</label>
-      <label style="display:flex;align-items:center;gap:4px;font-size:13px;font-weight:400;cursor:pointer"><input type="checkbox" id="pc-기타" checked> 기타</label>
-      <label style="display:flex;align-items:center;gap:4px;font-size:13px;font-weight:400;cursor:pointer"><input type="checkbox" id="pc-포장" checked> 포장 ⭐</label>
+      <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="checkbox" id="pc-충진" checked> 충진</label>
+      <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="checkbox" id="pc-라벨링" checked> 라벨링</label>
+      <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="checkbox" id="pc-기타" checked> 기타</label>
+      <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="checkbox" id="pc-포장" checked> 포장 ⭐</label>
     </div>
-    <div class="br"><button class="btn btn-p" onclick="saveOrd()">등록</button><button class="btn btn-g" onclick="closeMo()">취소</button></div>
+    <div id="prev-issues-panel" style="display:none;margin-bottom:8px">
+      <div style="font-size:12px;font-weight:700;color:var(--amber);margin-bottom:6px">📋 기생산간 이슈</div>
+      <div id="prev-issues-list" style="background:#fffbeb;border:1px solid #fcd34d;border-radius:8px;padding:10px;max-height:120px;overflow-y:auto;font-size:12px"></div>
+    </div>
+    <div class="br">
+      <button class="btn btn-p" onclick="saveOrd()" id="ord-save-btn" disabled style="opacity:.5">📋 오더 등록 (0건)</button>
+      <button class="btn btn-g" onclick="closeMo()">취소</button>
+    </div>
   </div>
   <!-- 생산 진행 -->
   <div class="modal" id="m-prog" style="display:none">
@@ -2999,27 +3030,175 @@ function ordCard(o){
     ${recentLogs?`<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">${recentLogs}</div>`:''}
   </div>`;
 }
-function filterOrdProd(){
-  const coId=document.getElementById('o-co').value;
-  document.getElementById('o-prod').innerHTML=C.products.filter(p=>!coId||p.co_id===coId).map(p=>`<option value="${p.code}">${p.code}|${p.name||''}</option>`).join('');
-  updateLotPreview();
+// 오더 등록 - 다중 제품 지원
+let ordPendingRows=[];
+
+function ordOnCoChange(){
+  const coId=document.getElementById('o-co')?.value||'';
+  // 해당 업체의 제품군
+  const groups=C.productGroups.filter(g=>!coId||g.co_id===coId);
+  const gsel=document.getElementById('o-group');
+  gsel.innerHTML='<option value="">제품군 선택...</option>'+groups.map(g=>`<option value="${g.id}">${g.brand?g.brand+' · ':''}${g.name}</option>`).join('');
+  document.getElementById('o-prod').innerHTML='<option value="">제품 선택...</option>';
+  ordPendingRows=[];ordRenderRows();
 }
-function updateLotPreview(){const prod=document.getElementById('o-prod')?.value||'';if(prod)document.getElementById('lot-preview').textContent=genLot(prod);}
+function ordOnGroupChange(){
+  const coId=document.getElementById('o-co')?.value||'';
+  const groupId=document.getElementById('o-group')?.value||'';
+  // 해당 제품군의 제품(향)
+  const prods=C.products.filter(p=>{
+    if(coId&&p.co_id!==coId)return false;
+    if(groupId&&p.group_id!==groupId)return false;
+    return true;
+  });
+  const psel=document.getElementById('o-prod');
+  psel.innerHTML='<option value="">제품 선택...</option>'+prods.map(p=>{
+    const scent=C.scents.find(s=>s.id===p.scent_id);
+    return`<option value="${p.code}">${scent?scent.name_ko+' · ':''}${p.name||p.code}</option>`;
+  }).join('');
+  ordCalcShared();
+}
+function ordOnProdChange(){
+  const prodCode=document.getElementById('o-prod')?.value||'';
+  const prev=document.getElementById('o-prod-preview');
+  if(!prodCode){prev.style.display='none';return;}
+  const prod=prodObj(prodCode);
+  const scent=C.scents.find(s=>s.id===prod?.scent_id);
+  // 이 제품의 BOM 기반 단독 최대 생산 수량
+  const {max}=calcMaxProd(prodCode);
+  prev.style.display='block';
+  prev.innerHTML=`<span style="font-weight:600">${prod?.name||prodCode}</span>
+    ${scent?`<span style="display:inline-flex;align-items:center;gap:3px;margin:0 6px"><span style="width:8px;height:8px;border-radius:50%;background:${scent.color||'#6b7280'};display:inline-block"></span>${scent.name_ko}</span>`:''}
+    ${max!=null?`<span style="margin-left:8px;font-weight:700;color:${max===0?'var(--red)':max<100?'var(--amber)':'var(--green)'}">단독 최대: ${fmt(max)}개</span>`:'<span style="color:var(--text3)">BOM 없음</span>'}`;
+}
+function ordAddRow(){
+  const prodCode=document.getElementById('o-prod')?.value||'';
+  const qty=parseInt(document.getElementById('o-qty')?.value||0);
+  if(!prodCode){toast('제품을 선택하세요','error');return;}
+  if(!qty||qty<=0){toast('수량을 입력하세요','error');return;}
+  if(ordPendingRows.find(r=>r.prod===prodCode)){toast('이미 추가된 제품입니다','warn');return;}
+  const prod=prodObj(prodCode);
+  const scent=C.scents.find(s=>s.id===prod?.scent_id);
+  ordPendingRows.push({prod:prodCode,qty,name:prod?.name||prodCode,scentName:scent?.name_ko||'',scentColor:scent?.color||''});
+  document.getElementById('o-prod').value='';
+  document.getElementById('o-qty').value='';
+  document.getElementById('o-prod-preview').style.display='none';
+  ordRenderRows();
+  ordCalcShared();
+}
+function ordRenderRows(){
+  const el=document.getElementById('ord-rows');
+  const saveBtn=document.getElementById('ord-save-btn');
+  if(!ordPendingRows.length){
+    el.innerHTML='';
+    if(saveBtn){saveBtn.disabled=true;saveBtn.style.opacity='.5';saveBtn.textContent='📋 오더 등록 (0건)';}
+    return;
+  }
+  el.innerHTML=`<div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:6px">추가된 오더 (${ordPendingRows.length}건)</div>`+
+    ordPendingRows.map((r,i)=>{
+      const {max}=calcMaxProd(r.prod);
+      const lot=genLot(r.prod);
+      const ratio=max!=null&&r.qty>0?max/r.qty:1;
+      const stColor=max==null?'var(--text3)':max===0?'var(--red)':ratio<1?'var(--amber)':'var(--green)';
+      return`<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#fff;border:1px solid var(--border);border-radius:8px;margin-bottom:6px">
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:13px">${r.name}</div>
+          <div style="display:flex;gap:8px;align-items:center;margin-top:3px;flex-wrap:wrap">
+            ${r.scentName?`<span style="display:inline-flex;align-items:center;gap:3px;font-size:11px;color:var(--purple)"><span style="width:7px;height:7px;border-radius:50%;background:${r.scentColor||'#6b7280'};display:inline-block"></span>${r.scentName}</span>`:'<span style="font-size:10px;color:var(--text3)">공용</span>'}
+            <span style="font-size:10px;color:var(--text3);font-family:monospace">LOT: ${lot}</span>
+          </div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:15px;font-weight:700;color:var(--blue)">${fmt(r.qty)}<span style="font-size:11px;font-weight:400">개</span></div>
+          ${max!=null?`<div style="font-size:11px;font-weight:600;color:${stColor}">최대 ${fmt(max)}개</div>`:''}
+        </div>
+        <button onclick="ordPendingRows.splice(${i},1);ordRenderRows();ordCalcShared()" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:18px;padding:0 4px;flex-shrink:0">×</button>
+      </div>`;
+    }).join('');
+  if(saveBtn){saveBtn.disabled=false;saveBtn.style.opacity='1';saveBtn.textContent=`📋 오더 등록 (${ordPendingRows.length}건)`;}
+}
+function ordCalcShared(){
+  // 공용 부자재 경쟁 분석 - 이번 오더들 간의 공용 부자재 공유 계산
+  const el=document.getElementById('ord-shared-analysis');
+  if(!ordPendingRows.length){el.style.display='none';return;}
+
+  // 모든 오더의 BOM 수집
+  const allBomCodes={};
+  ordPendingRows.forEach(r=>{
+    C.bom.filter(b=>b.prod===r.prod).forEach(b=>{
+      if(!allBomCodes[b.mat_code])allBomCodes[b.mat_code]={rows:[],bom:[]};
+      allBomCodes[b.mat_code].rows.push(r);
+      allBomCodes[b.mat_code].bom.push(b);
+    });
+  });
+
+  // 공용 부자재 (2개 이상 오더가 공유)
+  const sharedMats=Object.entries(allBomCodes).filter(([,v])=>v.rows.length>1);
+  if(!sharedMats.length){el.style.display='none';return;}
+
+  el.style.display='block';
+  el.innerHTML=`<div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:12px">
+    <div style="font-size:12px;font-weight:700;color:var(--amber);margin-bottom:8px">⚠️ 공용 부자재 경쟁 분석 (${sharedMats.length}종 공유)</div>
+    ${sharedMats.map(([matCode,{rows,bom}])=>{
+      const mat=matObj(matCode);
+      const stock=totalStock(matCode);
+      const totalNeed=rows.reduce((s,r,i)=>s+(r.qty*(bom[i]?.qty||1)),0);
+      const ok=stock>=totalNeed;
+      return`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #fed7aa;font-size:12px">
+        <div style="flex:1">
+          <span style="font-weight:600">${mat?.name||matCode}</span>
+          <span style="font-size:10px;color:var(--text2);margin-left:6px">${rows.map(r=>r.scentName||'공용').join(' + ')}</span>
+        </div>
+        <div style="text-align:right">
+          <span style="color:var(--text2)">재고 ${fmt(stock)}</span>
+          <span style="color:var(--text3)"> / 총필요 ${fmt(totalNeed)}</span>
+          <span style="margin-left:6px;font-weight:700;color:${ok?'var(--green)':'var(--red)'}">${ok?'✅':'❌ '+fmt(totalNeed-stock)+'개 부족'}</span>
+        </div>
+      </div>`;
+    }).join('')}
+    <div style="margin-top:8px;font-size:11px;color:var(--amber)">
+      ℹ️ 공용 부자재는 모든 오더가 함께 소모합니다. 재고가 부족하면 일부 오더 수량을 줄이세요.
+    </div>
+  </div>`;
+}
+// 기존 호환성
+function filterOrdProd(){ordOnGroupChange();}
+function updateLotPreview(){}
 function openOrdModal(){
-  document.getElementById('o-co').innerHTML=C.companies.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
-  filterOrdProd();['o-qty','o-mark'].forEach(i=>document.getElementById(i).value='');
-  document.getElementById('o-exp').value='';
+  ordPendingRows=[];
+  document.getElementById('o-co').innerHTML='<option value="">선택...</option>'+C.companies.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+  document.getElementById('o-group').innerHTML='<option value="">제품군 선택...</option>';
+  document.getElementById('o-prod').innerHTML='<option value="">선택...</option>';
+  ['o-exp','o-due','o-mark','o-qty'].forEach(i=>{const el=document.getElementById(i);if(el)el.value='';});
   ['충진','라벨링','기타','포장'].forEach(p=>{const el=document.getElementById('pc-'+p);if(el)el.checked=true;});
+  document.getElementById('o-prod-preview').style.display='none';
+  document.getElementById('ord-shared-analysis').style.display='none';
+  ordRenderRows();
   showMo('m-ord');
 }
 async function saveOrd(){
-  const coId=document.getElementById('o-co').value;const prod=document.getElementById('o-prod').value;const qty=parseInt(document.getElementById('o-qty').value);
-  if(!prod||!qty){toast('제품 선택, 수량 필수','error');return;}
-  const lot=genLot(prod);
+  if(!ordPendingRows.length){toast('제품을 추가하세요','error');return;}
+  const coId=document.getElementById('o-co')?.value||'';
+  const exp=document.getElementById('o-exp')?.value||null;
+  const due=document.getElementById('o-due')?.value||null;
+  const mark=document.getElementById('o-mark')?.value||null;
   const procs=['충진','라벨링','기타','포장'].filter(p=>{const el=document.getElementById('pc-'+p);return el&&el.checked;});
-  const dueEl=document.getElementById('o-due');
-  const obj={id:nextOrdId(),lot,co_id:coId,prod,qty,exp:document.getElementById('o-exp').value||null,mark:document.getElementById('o-mark').value||null,due:dueEl?.value||null,status:'대기',processes:procs,outbound_status:null,outbounds:[],date:today()};
-  try{const r=await dbInsert('orders',obj);C.orders.unshift(r||obj);closeMo();renderOrds();toast(`오더 ${lot} 등록됐습니다`);}catch(e){toast('저장 실패: '+e.message,'error');}
+  const saveBtn=document.getElementById('ord-save-btn');
+  if(saveBtn){saveBtn.disabled=true;saveBtn.textContent='등록 중...';}
+  try{
+    for(const r of ordPendingRows){
+      const lot=genLot(r.prod);
+      const obj={id:nextOrdId(),lot,co_id:coId,prod:r.prod,qty:r.qty,exp,mark,due,status:'대기',processes:procs,outbound_status:null,outbounds:[],date:today()};
+      const res=await dbInsert('orders',obj);C.orders.unshift(res||obj);
+    }
+    const cnt=ordPendingRows.length;
+    ordPendingRows=[];
+    closeMo();renderOrds();
+    toast(`오더 ${cnt}건 등록됐습니다`);
+  }catch(e){
+    if(saveBtn){saveBtn.disabled=false;saveBtn.textContent=`📋 오더 등록 (${ordPendingRows.length}건)`;}
+    toast('저장 실패: '+e.message,'error');
+  }
 }
 async function chgOrdStatus(id){
   const o=C.orders.find(x=>x.id===id);if(!o)return;
