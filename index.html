@@ -364,10 +364,11 @@ textarea{min-height:60px;resize:vertical}
 <!-- 제품군 관리 -->
 <div class="page" id="page-prodgroup">
   <div class="sw">
-    <input placeholder="제품군명/브랜드 검색..." id="pg-s" oninput="renderProdGroup()" style="max-width:280px">
+    <select id="pg-co-f" onchange="renderProdGroup()" style="width:160px"><option value="">전체 업체</option></select>
+    <input placeholder="제품군명/브랜드 검색..." id="pg-s" oninput="renderProdGroup()" style="max-width:220px">
     <button class="btn btn-p" onclick="openPgModal()">+ 제품군 등록</button>
   </div>
-  <div class="card"><div class="tw"><table><thead><tr><th>코드</th><th>제품군명</th><th>시리즈</th><th>향</th><th>부자재</th><th>variant</th><th></th></tr></thead><tbody id="pg-tbody"></tbody></table></div></div>
+  <div class="card"><div class="tw"><table><thead><tr><th>코드</th><th>업체명</th><th>제품군명 / 브랜드</th><th>향</th><th>부자재</th><th>variant</th><th></th></tr></thead><tbody id="pg-tbody"></tbody></table></div></div>
 </div>
 
 <!-- 향 관리 -->
@@ -591,8 +592,20 @@ textarea{min-height:60px;resize:vertical}
   <!-- 제품군 -->
   <div class="modal" id="m-pg" style="display:none">
     <div class="modal-hd">제품군 등록/수정 <button class="modal-x" onclick="closeMo()">×</button></div>
-    <div class="fr c2"><div><label>코드 * (예: LIB-ROLL)</label><input id="pg-code"></div><div><label>제품군명 *</label><input id="pg-name"></div></div>
-    <div class="fr c2"><div><label>브랜드</label><input id="pg-brand" placeholder="예: 리베르"></div><div><label>시리즈</label><input id="pg-series" placeholder="예: 에센셜 롤온"></div></div>
+    <div class="fr">
+      <label>업체 (거래처) *</label>
+      <select id="pg-co" onchange="onPgCoChange()">
+        <option value="">업체 선택...</option>
+      </select>
+    </div>
+    <div class="fr c2">
+      <div><label>브랜드명 *</label><input id="pg-brand" placeholder="예: 리베르" oninput="autoGenPgCode()"></div>
+      <div><label>제품군명 *</label><input id="pg-name" placeholder="예: 에센셜 롤온 괄사세트" oninput="autoGenPgCode()"></div>
+    </div>
+    <div class="fr">
+      <div style="flex:1"><label>코드 (자동생성, 수정 가능)</label><input id="pg-code" placeholder="브랜드+제품군명 입력 시 자동생성"></div>
+    </div>
+    <div id="pg-code-preview" style="font-size:11px;color:var(--text2);margin-top:-6px;margin-bottom:4px"></div>
     <div class="br"><button class="btn btn-p" onclick="savePg()">저장</button><button class="btn btn-g" onclick="closeMo()">취소</button></div>
   </div>
   <!-- 향 -->
@@ -1207,18 +1220,108 @@ function renderDash(){
 }
 
 // ══ 제품군 관리 ══════════════════════════════════════════════
+function onPgCoChange(){
+  // 업체 선택 시 브랜드명 자동완성 (이미 등록된 같은 업체 제품군의 브랜드를 힌트로)
+  const coId=document.getElementById('pg-co')?.value||'';
+  if(!coId)return;
+  const existing=C.productGroups.find(g=>g.co_id===coId&&g.brand);
+  if(existing){
+    const brandEl=document.getElementById('pg-brand');
+    if(brandEl&&!brandEl.value)brandEl.value=existing.brand;
+  }
+  autoGenPgCode();
+}
+function autoGenPgCode(){
+  const brand=document.getElementById('pg-brand')?.value?.trim()||'';
+  const name=document.getElementById('pg-name')?.value?.trim()||'';
+  if(!brand||!name)return;
+  const toCode=str=>{
+    const words=str.split(/\s+/).filter(Boolean);
+    return words.map(w=>{
+      if(/^[a-zA-Z0-9]+$/.test(w))return w.slice(0,4).toUpperCase();
+      const 초성=['ㄱ','ㄲ','ㄴ','ㄷ','ㄸ','ㄹ','ㅁ','ㅂ','ㅃ','ㅅ','ㅆ','ㅇ','ㅈ','ㅉ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
+      const 초성영문={'ㄱ':'G','ㄲ':'K','ㄴ':'N','ㄷ':'D','ㄸ':'T','ㄹ':'R','ㅁ':'M','ㅂ':'B','ㅃ':'P','ㅅ':'S','ㅆ':'S','ㅇ':'','ㅈ':'J','ㅉ':'J','ㅊ':'C','ㅋ':'K','ㅌ':'T','ㅍ':'P','ㅎ':'H'};
+      const code=w.charCodeAt(0);
+      if(code>=0xAC00&&code<=0xD7A3){
+        const idx=Math.floor((code-0xAC00)/28/21);
+        return 초성영문[초성[idx]]||'X';
+      }
+      return w.slice(0,1).toUpperCase();
+    }).join('');
+  };
+  const brandCode=toCode(brand).slice(0,4);
+  const nameCode=toCode(name).slice(0,8);
+  let base=`${brandCode}-${nameCode}`;
+  let candidate=base;let n=2;
+  while(C.productGroups.find(g=>g.id===candidate&&g.id!==editPgId)){candidate=`${base}-${n}`;n++;}
+  const codeEl=document.getElementById('pg-code');
+  if(codeEl&&!editPgId)codeEl.value=candidate;
+  const preview=document.getElementById('pg-code-preview');
+  if(preview)preview.textContent=`자동생성 코드: ${candidate}`;
+}
 let editPgId=null;
+function openPgModal(id){
+  editPgId=id||null;
+  // 업체 드롭다운 채우기
+  const coSel=document.getElementById('pg-co');
+  if(coSel)coSel.innerHTML='<option value="">업체 선택...</option>'+C.companies.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
+  ['pg-code','pg-name','pg-brand'].forEach(i=>{const el=document.getElementById(i);if(el)el.value='';});
+  const preview=document.getElementById('pg-code-preview');
+  if(preview)preview.textContent='';
+  if(id){
+    const g=C.productGroups.find(x=>x.id===id);
+    if(g){
+      if(coSel)coSel.value=g.co_id||'';
+      document.getElementById('pg-code').value=g.id;
+      document.getElementById('pg-name').value=g.name||'';
+      document.getElementById('pg-brand').value=g.brand||'';
+    }
+  }
+  document.getElementById('pg-code').readOnly=!!id;
+  showMo('m-pg');
+}
+function editPg(id){openPgModal(id);}
+async function savePg(){
+  const coId=document.getElementById('pg-co')?.value||'';
+  const id=document.getElementById('pg-code').value.trim().toUpperCase();
+  const name=document.getElementById('pg-name').value.trim();
+  const brand=document.getElementById('pg-brand').value.trim();
+  if(!coId){toast('업체를 선택하세요','error');return;}
+  if(!id){toast('코드를 입력하거나 브랜드+제품군명을 입력해 자동생성하세요','error');return;}
+  if(!name){toast('제품군명 필수','error');return;}
+  if(!brand){toast('브랜드명 필수','error');return;}
+  const obj={id,name,brand,co_id:coId};
+  try{
+    if(editPgId){
+      await dbUpdate('product_groups','id',editPgId,{name,brand,co_id:coId});
+      const g=C.productGroups.find(g=>g.id===editPgId);
+      if(g){g.name=name;g.brand=brand;g.co_id=coId;}
+    }else{
+      if(C.productGroups.find(g=>g.id===id)){toast('이미 존재하는 코드입니다','error');return;}
+      await dbInsert('product_groups',obj);C.productGroups.push(obj);
+    }
+    closeMo();renderProdGroup();toast(`제품군 "${name}" 저장됐습니다`);
+  }catch(e){toast('저장 실패: '+e.message,'error');}
+}
 function renderProdGroup(){
+  // 업체 필터 드롭다운
+  const cof=document.getElementById('pg-co-f');
+  if(cof){const prev=cof.value;cof.innerHTML='<option value="">전체 업체</option>'+C.companies.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');cof.value=prev;}
+  const cf=document.getElementById('pg-co-f')?.value||'';
   const q=(document.getElementById('pg-s')?.value||'').toLowerCase();
-  const rows=C.productGroups.filter(g=>!q||[g.id,g.name,g.brand||''].join(' ').toLowerCase().includes(q));
+  const rows=C.productGroups.filter(g=>{
+    if(cf&&g.co_id!==cf)return false;
+    if(!q)return true;
+    return[g.id,g.name,g.brand||'',coName(g.co_id||'')].join(' ').toLowerCase().includes(q);
+  }).sort((a,b)=>coName(a.co_id||'').localeCompare(coName(b.co_id||''))||a.name.localeCompare(b.name));
   document.getElementById('pg-tbody').innerHTML=rows.length?rows.map(g=>{
     const matCount=C.materials.filter(m=>m.group_id===g.id).length;
     const scentCount=C.scents.filter(s=>s.group_id===g.id).length;
     const varCount=C.products.filter(p=>p.group_id===g.id).length;
     return`<tr>
       <td><span class="mono" style="color:var(--blue-dk);font-size:12px">${g.id}</span></td>
+      <td style="font-size:12px">${coName(g.co_id||'')}</td>
       <td><strong>${g.name}</strong>${g.brand?`<div style="font-size:11px;color:var(--text2)">${g.brand}</div>`:''}</td>
-      <td style="font-size:12px">${g.series||'-'}</td>
       <td><span class="badge b-purple">${scentCount}개 향</span></td>
       <td><span class="badge b-blue">${matCount}종</span></td>
       <td><span class="badge b-green">${varCount}개</span></td>
@@ -1228,26 +1331,7 @@ function renderProdGroup(){
         <button class="btn btn-g btn-sm" onclick="delPg('${g.id}')">삭제</button>
       </td>
     </tr>`;
-  }).join(''):'<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:20px">제품군 없음. + 제품군 등록 버튼을 클릭하세요.</td></tr>';
-}
-function openPgModal(id){
-  editPgId=id||null;
-  ['pg-code','pg-name','pg-brand','pg-series'].forEach(i=>document.getElementById(i).value='');
-  if(id){const g=C.productGroups.find(x=>x.id===id);if(g){document.getElementById('pg-code').value=g.id;document.getElementById('pg-name').value=g.name||'';document.getElementById('pg-brand').value=g.brand||'';document.getElementById('pg-series').value=g.series||'';}}
-  document.getElementById('pg-code').readOnly=!!id;
-  showMo('m-pg');
-}
-function editPg(id){openPgModal(id);}
-async function savePg(){
-  const id=document.getElementById('pg-code').value.trim().toUpperCase();
-  const name=document.getElementById('pg-name').value.trim();
-  if(!id||!name){toast('코드와 이름 필수','error');return;}
-  const obj={id,name,brand:document.getElementById('pg-brand').value||null,series:document.getElementById('pg-series').value||null};
-  try{
-    if(editPgId){await dbUpdate('product_groups','id',editPgId,obj);Object.assign(C.productGroups.find(g=>g.id===editPgId),obj);}
-    else{if(C.productGroups.find(g=>g.id===id)){toast('이미 존재하는 코드','error');return;}await dbInsert('product_groups',obj);C.productGroups.push(obj);}
-    closeMo();renderProdGroup();toast(`제품군 "${name}" 저장됐습니다`);
-  }catch(e){toast('저장 실패: '+e.message,'error');}
+  }).join(''):'<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:20px">제품군 없음</td></tr>';
 }
 async function delPg(id){
   if(!confirm('제품군 삭제?'))return;
