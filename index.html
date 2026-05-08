@@ -799,17 +799,17 @@ textarea{min-height:60px;resize:vertical}
     </div>
 
     <!-- Step 2: 제품군 선택 -->
-    <div class="fr c2">
-      <div><label>브랜드 / 제품군 *</label><select id="o-group" onchange="ordOnGroupChange()"><option value="">제품군 선택...</option></select></div>
-      <div><label>마킹정보</label><input id="o-mark" placeholder="공통 마킹"></div>
+    <div class="fr">
+      <label>브랜드 / 제품군 *</label><select id="o-group" onchange="ordOnGroupChange()"><option value="">제품군 선택...</option></select>
     </div>
 
-    <!-- Step 3: 제품(향) + 수량 추가 -->
+    <!-- Step 3: 제품(향) + 수량 + 마킹 추가 -->
     <div style="background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:10px">
       <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:8px">제품(향) 추가</div>
       <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
         <div style="flex:2;min-width:160px"><label style="font-size:11px">제품 선택</label><select id="o-prod" onchange="ordOnProdChange()"><option value="">선택...</option></select></div>
-        <div style="width:100px"><label style="font-size:11px">생산수량 *</label><input id="o-qty" type="number" min="1" placeholder="0"></div>
+        <div style="width:90px"><label style="font-size:11px">생산수량 *</label><input id="o-qty" type="number" min="1" placeholder="0"></div>
+        <div style="flex:1;min-width:120px"><label style="font-size:11px">마킹정보 (이 제품 전용)</label><input id="o-mark" placeholder="예: LOT별 각인 등"></div>
         <button class="btn btn-p btn-sm" style="margin-bottom:1px;white-space:nowrap" onclick="ordAddRow()">+ 추가</button>
       </div>
       <!-- 추가할 제품 미리보기 -->
@@ -3074,14 +3074,16 @@ function ordOnProdChange(){
 function ordAddRow(){
   const prodCode=document.getElementById('o-prod')?.value||'';
   const qty=parseInt(document.getElementById('o-qty')?.value||0);
+  const mark=document.getElementById('o-mark')?.value?.trim()||'';
   if(!prodCode){toast('제품을 선택하세요','error');return;}
   if(!qty||qty<=0){toast('수량을 입력하세요','error');return;}
   if(ordPendingRows.find(r=>r.prod===prodCode)){toast('이미 추가된 제품입니다','warn');return;}
   const prod=prodObj(prodCode);
   const scent=C.scents.find(s=>s.id===prod?.scent_id);
-  ordPendingRows.push({prod:prodCode,qty,name:prod?.name||prodCode,scentName:scent?.name_ko||'',scentColor:scent?.color||''});
+  ordPendingRows.push({prod:prodCode,qty,mark,name:prod?.name||prodCode,scentName:scent?.name_ko||'',scentColor:scent?.color||''});
   document.getElementById('o-prod').value='';
   document.getElementById('o-qty').value='';
+  document.getElementById('o-mark').value='';
   document.getElementById('o-prod-preview').style.display='none';
   ordRenderRows();
   ordCalcShared();
@@ -3106,6 +3108,7 @@ function ordRenderRows(){
           <div style="display:flex;gap:8px;align-items:center;margin-top:3px;flex-wrap:wrap">
             ${r.scentName?`<span style="display:inline-flex;align-items:center;gap:3px;font-size:11px;color:var(--purple)"><span style="width:7px;height:7px;border-radius:50%;background:${r.scentColor||'#6b7280'};display:inline-block"></span>${r.scentName}</span>`:'<span style="font-size:10px;color:var(--text3)">공용</span>'}
             <span style="font-size:10px;color:var(--text3);font-family:monospace">LOT: ${lot}</span>
+            ${r.mark?`<span style="font-size:10px;background:#f3f4f6;padding:1px 6px;border-radius:4px;color:var(--text2)">마킹: ${r.mark}</span>`:''}
           </div>
         </div>
         <div style="text-align:right;flex-shrink:0">
@@ -3169,7 +3172,7 @@ function openOrdModal(){
   document.getElementById('o-co').innerHTML='<option value="">선택...</option>'+C.companies.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
   document.getElementById('o-group').innerHTML='<option value="">제품군 선택...</option>';
   document.getElementById('o-prod').innerHTML='<option value="">선택...</option>';
-  ['o-exp','o-due','o-mark','o-qty'].forEach(i=>{const el=document.getElementById(i);if(el)el.value='';});
+  ['o-exp','o-due','o-qty','o-mark'].forEach(i=>{const el=document.getElementById(i);if(el)el.value='';});
   ['충진','라벨링','기타','포장'].forEach(p=>{const el=document.getElementById('pc-'+p);if(el)el.checked=true;});
   document.getElementById('o-prod-preview').style.display='none';
   document.getElementById('ord-shared-analysis').style.display='none';
@@ -3181,14 +3184,13 @@ async function saveOrd(){
   const coId=document.getElementById('o-co')?.value||'';
   const exp=document.getElementById('o-exp')?.value||null;
   const due=document.getElementById('o-due')?.value||null;
-  const mark=document.getElementById('o-mark')?.value||null;
   const procs=['충진','라벨링','기타','포장'].filter(p=>{const el=document.getElementById('pc-'+p);return el&&el.checked;});
   const saveBtn=document.getElementById('ord-save-btn');
   if(saveBtn){saveBtn.disabled=true;saveBtn.textContent='등록 중...';}
   try{
     for(const r of ordPendingRows){
       const lot=genLot(r.prod);
-      const obj={id:nextOrdId(),lot,co_id:coId,prod:r.prod,qty:r.qty,exp,mark,due,status:'대기',processes:procs,outbound_status:null,outbounds:[],date:today()};
+      const obj={id:nextOrdId(),lot,co_id:coId,prod:r.prod,qty:r.qty,exp,mark:r.mark||null,due,status:'대기',processes:procs,outbound_status:null,outbounds:[],date:today()};
       const res=await dbInsert('orders',obj);C.orders.unshift(res||obj);
     }
     const cnt=ordPendingRows.length;
