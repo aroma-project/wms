@@ -683,7 +683,7 @@ textarea{min-height:60px;resize:vertical}
     <div class="fr c2"><div><label>업체명 *</label><select id="m-co-sel"></select></div><div><label>부자재명 *</label><input id="m-name"></div></div>
     <div class="fr c2"><div><label>타입 *</label><select id="m-type"><option>용기</option><option>펌프</option><option>숄더</option><option>오버캡</option><option>라벨</option><option>카톤</option><option>포장재</option><option>기타</option></select></div><div><label>구분</label><select id="m-div"><option>공용</option><option>전용</option></select></div></div>
     <div class="fr c2"><div><label>제품군 (선택)</label><select id="m-group" onchange="filterScentsByGroup()"><option value="">없음</option></select></div><div><label>향 전용 (공용이면 비움)</label><select id="m-scent"><option value="">공용 (향 무관)</option></select></div></div>
-    <div class="fr c2"><div><label>용량(ml)</label><input id="m-vol" type="number"></div><div><label>최소재고 (경고기준)</label><input id="m-min-stock" type="number" placeholder="예: 500"></div></div>
+    <div class="fr c2"><div><label>용량(ml)</label><input id="m-vol" type="number"></div><div><label>최소재고 (경고기준, 기본 1000)</label><input id="m-min-stock" type="number" placeholder="기본: 1000"></div></div>
     <div class="fr"><label>비고</label><textarea id="m-note" style="min-height:48px"></textarea></div>
     <div class="br"><button class="btn btn-p" onclick="saveMat()">등록</button><button class="btn btn-g" onclick="closeMo()">취소</button></div>
   </div>
@@ -1500,6 +1500,7 @@ function renderProdGroup(){
   }).join(''):'<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:20px">제품군 없음</td></tr>';
 }
 async function delPg(id){
+  if(CU?.role!=='admin'){toast('관리자만 삭제할 수 있습니다','error');return;}
   if(!confirm('제품군 삭제?'))return;
   try{await dbDelete('product_groups','id',id);C.productGroups=C.productGroups.filter(g=>g.id!==id);renderProdGroup();toast('삭제됐습니다','warn');}
   catch(e){toast('삭제 실패: '+e.message,'error');}
@@ -1678,6 +1679,7 @@ async function saveSc(){
   }catch(e){toast('저장 실패: '+e.message,'error');}
 }
 async function delSc(id){
+  if(CU?.role!=='admin'){toast('관리자만 삭제할 수 있습니다','error');return;}
   const linked=C.materials.filter(m=>m.scent_id===id).length;
   if(linked>0&&!confirm(`이 향에 연결된 부자재가 ${linked}개 있습니다. 삭제하면 연결이 끊깁니다. 계속할까요?`))return;
   if(!linked&&!confirm('향을 삭제할까요?'))return;
@@ -1747,7 +1749,8 @@ async function saveCo(){
     closeMo();renderCo();toast(`업체 "${name}" 저장됐습니다`);
   }catch(e){toast('저장 실패: '+e.message,'error');}
 }
-async function delCo(id){if(!confirm('업체를 삭제?'))return;try{await dbDelete('companies','id',id);C.companies=C.companies.filter(c=>c.id!==id);renderCo();}catch(e){toast('삭제 실패: '+e.message,'error');}}
+async function delCo(id){if(CU?.role!=='admin'){toast('관리자만 삭제할 수 있습니다','error');return;}
+  if(!confirm('업체를 삭제?'))return;try{await dbDelete('companies','id',id);C.companies=C.companies.filter(c=>c.id!==id);renderCo();}catch(e){toast('삭제 실패: '+e.message,'error');}}
 
 // ══ 페이지네이션 헬퍼 ════════════════════════════════════════
 var _pages={mat:1,stock:1,ib:1,hist:1};
@@ -1833,7 +1836,7 @@ function renderMat(){
       <span style="font-weight:700;color:${qtyColor};min-width:50px;text-align:right">${fmt(qty)}개${min>0?`<span style="font-size:10px;color:var(--text3)">/${fmt(min)}</span>`:''}</span>
       <button class="btn btn-g btn-sm" onclick="showBarcode('${m.code}')">🔲</button>
       <button class="btn btn-g btn-sm" onclick="openStockEdit('${m.code}')">✏️</button>
-      <button class="btn btn-g btn-sm" onclick="delMat('${m.code}')">🗑</button>
+      ${CU?.role==='admin'?`<button class="btn btn-g btn-sm" onclick="delMat('${m.code}')">🗑</button>`:''}
     </div>`;
   };
 
@@ -1963,15 +1966,37 @@ function renderQRFallback(code){
 function filterScentsByGroup(){ updateMatScentFilter(); }
 function openMatModal(){
   if(!C.companies.length){toast('먼저 업체를 등록하세요','warn');return;}
+
+  // 3. 현재 필터에 선택된 값 가져오기
+  const filterCoId=document.getElementById('mat-co-f')?.value||'';
+  const filterGroupId=document.getElementById('mat-group-f')?.value||'';
+  const filterScentId=document.getElementById('mat-scent-f')?.value||'';
+
+  // 업체 드롭다운
   const sel=document.getElementById('m-co-sel');sel.innerHTML='';
   C.companies.forEach(c=>{const o=document.createElement('option');o.value=c.id;o.textContent=c.name;sel.appendChild(o);});
+  if(filterCoId)sel.value=filterCoId; // 필터 값 반영
+
   // 제품군 드롭다운
   const gsel=document.getElementById('m-group');
   if(gsel){
     gsel.innerHTML='<option value="">없음 (전사 공용)</option>'+C.productGroups.map(g=>`<option value="${g.id}">${g.name}${g.brand?' ('+g.brand+')':''}</option>`).join('');
+    if(filterGroupId)gsel.value=filterGroupId; // 필터 값 반영
   }
-  updateMatScentFilter(); // 초기 향 목록 업데이트
-  ['m-name','m-vol','m-note','m-min-stock'].forEach(i=>{const el=document.getElementById(i);if(el)el.value='';});
+
+  updateMatScentFilter(); // 향 목록 업데이트 (제품군 선택 반영 후)
+
+  // 향 드롭다운에 필터 값 반영
+  if(filterScentId&&filterScentId!=='__shared__'){
+    const scel=document.getElementById('m-scent');
+    if(scel)scel.value=filterScentId;
+  }
+
+  // 1. 최소재고 기본값 1000
+  document.getElementById('m-name').value='';
+  document.getElementById('m-vol').value='';
+  const noteEl=document.getElementById('m-note');if(noteEl)noteEl.value='';
+  const minEl=document.getElementById('m-min-stock');if(minEl)minEl.value='1000'; // 기본 1000
   document.getElementById('m-type').value='용기';
   document.getElementById('m-div').value='공용';
   showMo('m-mat');
@@ -1990,10 +2015,17 @@ async function saveMat(){
   const minStockEl=document.getElementById('m-min-stock');
   const groupEl=document.getElementById('m-group');
   const scentEl=document.getElementById('m-scent');
-  const obj={code,co_id:coId,name,type:document.getElementById('m-type').value,div:document.getElementById('m-div').value,vol:document.getElementById('m-vol').value||null,note:document.getElementById('m-note').value||null,min_stock:minStockEl&&minStockEl.value?parseInt(minStockEl.value):null,group_id:groupEl?.value||null,scent_id:scentEl?.value||null,shared:!(scentEl?.value)};
+  // 1. min_stock: 입력값 있으면 그 값, 없으면 기본 1000
+  const minStockVal=minStockEl&&minStockEl.value?parseInt(minStockEl.value):1000;
+  const obj={code,co_id:coId,name,type:document.getElementById('m-type').value,div:document.getElementById('m-div').value,vol:document.getElementById('m-vol').value||null,note:document.getElementById('m-note').value||null,min_stock:minStockVal,group_id:groupEl?.value||null,scent_id:scentEl?.value||null,shared:!(scentEl?.value)};
   try{const r=await dbInsert('materials',obj);C.materials.push(r||obj);closeMo();renderMat();toast(`${name} 등록됐습니다`);}catch(e){toast('저장 실패: '+e.message,'error');}
 }
-async function delMat(code){if(!confirm('삭제?'))return;try{await dbDelete('materials','code',code);C.materials=C.materials.filter(m=>m.code!==code);renderMat();}catch(e){toast('삭제 실패: '+e.message,'error');}}
+// 2. 삭제는 admin만
+async function delMat(code){
+  if(CU?.role!=='admin'){toast('관리자만 삭제할 수 있습니다','error');return;}
+  if(!confirm('삭제?'))return;
+  try{await dbDelete('materials','code',code);C.materials=C.materials.filter(m=>m.code!==code);renderMat();toast('삭제됐습니다','warn');}catch(e){toast('삭제 실패: '+e.message,'error');}
+}
 
 // ══ LOCATION ════════════════════════════════════════════════
 let editLocCode=null;
@@ -2038,7 +2070,8 @@ async function saveLoc(){
     closeMo();renderLoc();
   }catch(e){toast('저장 실패: '+e.message,'error');}
 }
-async function delLoc(code){if(!confirm('삭제?'))return;try{await dbDelete('locations','code',code);C.locations=C.locations.filter(l=>l.code!==code);renderLoc();}catch(e){toast('삭제 실패: '+e.message,'error');}}
+async function delLoc(code){if(CU?.role!=='admin'){toast('관리자만 삭제할 수 있습니다','error');return;}
+  if(!confirm('삭제?'))return;try{await dbDelete('locations','code',code);C.locations=C.locations.filter(l=>l.code!==code);renderLoc();}catch(e){toast('삭제 실패: '+e.message,'error');}}
 
 // ══ BOM ════════════════════════════════════════════════════
 let bomSelGroup='',bomSelProd='',pendingBomRows=[];
@@ -2383,6 +2416,7 @@ async function saveProdEdit(){
   try{await dbUpdate('products','code',prodCode,upd);Object.assign(p,upd);closeMo();renderBom();}catch(e){toast('저장 실패: '+e.message,'error');}
 }
 async function deleteProd(prodCode){
+  if(CU?.role!=='admin'){toast('관리자만 삭제할 수 있습니다','error');return;}
   if(!confirm(`제품 "${prodCode}" 와 BOM 전체 삭제?`))return;
   try{
     await sb.from('bom').delete().eq('prod',prodCode);C.bom=C.bom.filter(b=>b.prod!==prodCode);
@@ -2407,7 +2441,8 @@ async function copyProd(prodCode){
     bomSelProd=trimmed;renderBom();
   }catch(e){toast('복사 실패: '+e.message,'error');}
 }
-async function delBomItem(id){if(!confirm('삭제?'))return;try{await dbDelete('bom','id',id);C.bom=C.bom.filter(b=>b.id!==id);renderBom();}catch(e){toast('삭제 실패: '+e.message,'error');}}
+async function delBomItem(id){if(CU?.role!=='admin'){toast('관리자만 삭제할 수 있습니다','error');return;}
+  if(!confirm('삭제?'))return;try{await dbDelete('bom','id',id);C.bom=C.bom.filter(b=>b.id!==id);renderBom();}catch(e){toast('삭제 실패: '+e.message,'error');}}
 
 // ══ STOCK ════════════════════════════════════════════════════
 let stockEditId=null;
