@@ -838,34 +838,34 @@ const sb = {
       async insert(obj){
         const r = await (async()=>{
           const url = base;
-          const res = await fetch(url, {method:'POST', headers:HEADERS, body:JSON.stringify(obj)});
-          const text = await res.text();
-          const data = text ? JSON.parse(text) : [];
+          let res = await fetch(url, {method:'POST', headers:HEADERS, body:JSON.stringify(obj)});
+          let text = await res.text();
+          let data = text ? JSON.parse(text) : [];
           if(!res.ok) return {data:null, error:{message:(Array.isArray(data)?data[0]:data)?.message||res.statusText}};
           return {data: Array.isArray(data)?data:[data], error:null};
         })();
         return r;
       },
       async update(obj){
-        const url = base + (this._eq ? '?' + this._eq.col + '=eq.' + this._eq.val : '');
-        const res = await fetch(url, {method:'PATCH', headers:HEADERS, body:JSON.stringify(obj)});
-        const text = await res.text();
-        const data = text ? JSON.parse(text) : [];
+        let url = base + (this._eq ? '?' + this._eq.col + '=eq.' + this._eq.val : '');
+        let res = await fetch(url, {method:'PATCH', headers:HEADERS, body:JSON.stringify(obj)});
+        let text = await res.text();
+        let data = text ? JSON.parse(text) : [];
         if(!res.ok) return {data:null, error:{message:(Array.isArray(data)?data[0]:data)?.message||res.statusText}};
         return {data: Array.isArray(data)?data:[data], error:null};
       },
       async delete(){
-        const url = base + (this._eq ? '?' + this._eq.col + '=eq.' + this._eq.val : '');
-        const res = await fetch(url, {method:'DELETE', headers:{...HEADERS,'Prefer':''}});
+        let url = base + (this._eq ? '?' + this._eq.col + '=eq.' + this._eq.val : '');
+        let res = await fetch(url, {method:'DELETE', headers:{...HEADERS,'Prefer':''}});
         if(!res.ok){ const t=await res.text(); return {data:null,error:{message:t}}; }
         return {data:[], error:null};
       },
       async upsert(obj, opts={}){
         const h = {...HEADERS, 'Prefer':'resolution=merge-duplicates,return=representation'};
         if(opts.onConflict) h['Prefer'] += ',on_conflict='+opts.onConflict;
-        const res = await fetch(base, {method:'POST', headers:h, body:JSON.stringify(obj)});
-        const text = await res.text();
-        const data = text ? JSON.parse(text) : [];
+        let res = await fetch(base, {method:'POST', headers:h, body:JSON.stringify(obj)});
+        let text = await res.text();
+        let data = text ? JSON.parse(text) : [];
         if(!res.ok) return {data:null,error:{message:(Array.isArray(data)?data[0]:data)?.message||res.statusText}};
         return {data: Array.isArray(data)?data:[data], error:null};
       },
@@ -987,51 +987,70 @@ async function addHist(type,matCode,qty,from_loc,to_loc,note){
 
 // ══ LOGIN ════════════════════════════════════════════════════
 async function doLogin(){
-  const id=document.getElementById('l-id').value.trim();
-  const pw=document.getElementById('l-pw').value;
-  if(!id||!pw){
-    const el=document.getElementById('l-err');
-    el.style.display='block';el.textContent='아이디와 비밀번호를 입력하세요.';
-    return;
-  }
-  // 버튼 비활성화
-  const btn=document.getElementById('l-btn');
-  if(btn){btn.disabled=true;btn.textContent='로그인 중...';}
-  document.getElementById('l-loading').style.display='block';
-  document.getElementById('l-err').style.display='none';
-  const setMsg=t=>{const el=document.getElementById('l-loading-text');if(el)el.textContent=t;};
-  setMsg('서버 연결 중...');
   try{
-    await loadAll();
-  }catch(e){
+    const idEl=document.getElementById('l-id');
+    const pwEl=document.getElementById('l-pw');
+    const errEl=document.getElementById('l-err');
+    const loadEl=document.getElementById('l-loading');
+    const btn=document.getElementById('l-btn');
+
+    const id=(idEl?.value||'').trim();
+    const pw=pwEl?.value||'';
+
+    if(!id||!pw){
+      if(errEl){errEl.style.display='block';errEl.textContent='아이디와 비밀번호를 입력하세요.';}
+      return;
+    }
+
+    // 로딩 시작
+    if(btn){btn.disabled=true;btn.textContent='로그인 중...';}
+    if(errEl)errEl.style.display='none';
+    if(loadEl)loadEl.style.display='block';
+    const txtEl=document.getElementById('l-loading-text');
+    if(txtEl)txtEl.textContent='서버 연결 중...';
+
+    try{
+      await loadAll();
+    }catch(e){
+      if(btn){btn.disabled=false;btn.textContent='로그인';}
+      if(loadEl)loadEl.style.display='none';
+      if(errEl){errEl.style.display='block';errEl.textContent='연결 실패: '+e.message;}
+      return;
+    }
+
+    if(txtEl)txtEl.textContent='계정 확인 중...';
+    const user=C.accounts.find(a=>a.id===id&&a.pw===pw);
+
     if(btn){btn.disabled=false;btn.textContent='로그인';}
-    document.getElementById('l-loading').style.display='none';
-    const el=document.getElementById('l-err');
-    el.style.display='block';
-    el.textContent='연결 실패: '+e.message;
-    return;
+    if(loadEl)loadEl.style.display='none';
+
+    if(!user){
+      if(errEl){errEl.style.display='block';errEl.textContent='아이디 또는 비밀번호가 올바르지 않습니다.';}
+      if(pwEl){pwEl.value='';pwEl.focus();}
+      return;
+    }
+
+    // 로그인 성공
+    CU=user;
+    saveSession(user);
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('app-wrap').style.display='flex';
+    document.getElementById('nav-uname').textContent=user.name||user.id;
+    document.getElementById('nav-role').textContent={admin:'관리자',staff:'직원',client:'거래처'}[user.role]||user.role;
+    applyRole();
+    try{toast(`${user.name||user.id}님 환영합니다 👋`,'success');}catch(e){}
+    go(user.role==='client'?'cstock':'dashboard');
+
+  }catch(e){
+    // 최후 안전망 - 어떤 에러도 처리
+    console.error('Login error:', e);
+    let btn =document.getElementById('l-btn');
+    let errEl =document.getElementById('l-err');
+    let loadEl =document.getElementById('l-loading');
+    if(btn){btn.disabled=false;btn.textContent='로그인';}
+    if(loadEl)loadEl.style.display='none';
+    if(errEl){errEl.style.display='block';errEl.textContent='오류: '+e.message;}
   }
-  setMsg('계정 확인 중...');
-  const user=C.accounts.find(a=>a.id===id&&a.pw===pw);
-  if(btn){btn.disabled=false;btn.textContent='로그인';}
-  document.getElementById('l-loading').style.display='none';
-  if(!user){
-    const el=document.getElementById('l-err');
-    el.style.display='block';
-    el.textContent='아이디 또는 비밀번호가 올바르지 않습니다.';
-    document.getElementById('l-pw').value='';
-    document.getElementById('l-pw').focus();
-    return;
-  }
-  CU=user;
-  saveSession(user);
-  document.getElementById('login-screen').style.display='none';
-  document.getElementById('app-wrap').style.display='flex';
-  document.getElementById('nav-uname').textContent=user.name||user.id;
-  document.getElementById('nav-role').textContent={admin:'관리자',staff:'직원',client:'거래처'}[user.role]||user.role;
-  applyRole();
-  toast(`${user.name||user.id}님 환영합니다 👋`,'success');
-  go(user.role==='client'?'cstock':'dashboard');
 }
 function doLogout(){
   CU=null;
@@ -1043,33 +1062,41 @@ function doLogout(){
 }
 // 페이지 로드 시 세션 자동 복원
 async function tryAutoLogin(){
-  const s=loadSession();
-  if(!s)return;
-  const loadEl=document.getElementById('l-loading');
-  const txtEl=document.getElementById('l-loading-text');
-  if(loadEl)loadEl.style.display='block';
-  if(txtEl)txtEl.textContent='자동 로그인 중...';
   try{
-    await loadAll();
-    const user=C.accounts.find(a=>a.id===s.id&&a.pw===s.pw);
-    if(loadEl)loadEl.style.display='none';
-    if(user){
-      CU=user;
-      document.getElementById('login-screen').style.display='none';
-      document.getElementById('app-wrap').style.display='flex';
-      document.getElementById('nav-uname').textContent=user.name||user.id;
-      document.getElementById('nav-role').textContent={admin:'관리자',staff:'직원',client:'거래처'}[user.role]||user.role;
-      applyRole();
-      go(user.role==='client'?'cstock':'dashboard');
-    }else{
-      clearSession(); // 세션 만료된 경우 삭제
+    const s=loadSession();
+    if(!s)return;
+    const loadEl=document.getElementById('l-loading');
+    const txtEl=document.getElementById('l-loading-text');
+    if(loadEl)loadEl.style.display='block';
+    if(txtEl)txtEl.textContent='자동 로그인 중...';
+    try{
+      await loadAll();
+      const user=C.accounts.find(a=>a.id===s.id&&a.pw===s.pw);
+      if(loadEl)loadEl.style.display='none';
+      if(user){
+        CU=user;
+        document.getElementById('login-screen').style.display='none';
+        document.getElementById('app-wrap').style.display='flex';
+        document.getElementById('nav-uname').textContent=user.name||user.id;
+        document.getElementById('nav-role').textContent={admin:'관리자',staff:'직원',client:'거래처'}[user.role]||user.role;
+        applyRole();
+        go(user.role==='client'?'cstock':'dashboard');
+      }else{
+        clearSession();
+        if(loadEl)loadEl.style.display='none';
+      }
+    }catch(e){
+      clearSession();
+      try{document.getElementById('l-loading').style.display='none';}catch(e2){}
     }
   }catch(e){
-    if(loadEl)loadEl.style.display='none';
-    clearSession();
+    // 어떤 에러도 로그인 버튼을 막지 않음
+    console.warn('Auto login error:', e);
   }
 }
-window.addEventListener('load',tryAutoLogin);
+window.addEventListener('load', function(){
+  try{ tryAutoLogin(); }catch(e){ console.warn(e); }
+});
 function applyRole(){
   const isAdmin=CU.role==='admin'||CU.role==='staff';
   document.querySelectorAll('.admin-only').forEach(e=>e.style.display=isAdmin?'':'none');
@@ -1387,14 +1414,13 @@ function renderMat(){
   // 향 필터는 선택된 제품군의 향만 표시
   const sf=document.getElementById('mat-scent-f');
   if(sf){
-    const prev=sf.value;
+    let prev =sf.value;
     const visibleScents=gfv?C.scents.filter(s=>s.group_id===gfv):C.scents;
     sf.innerHTML='<option value="">전체 향</option><option value="__shared__">공용만</option>'+visibleScents.map(s=>`<option value="${s.id}">${s.name_ko}</option>`).join('');
     sf.value=prev;
   }
   const q=(document.getElementById('mat-s')?.value||'').toLowerCase();
   const tf=document.getElementById('mat-type-f')?.value||'';
-  const gfv=document.getElementById('mat-group-f')?.value||'';
   const sfv=document.getElementById('mat-scent-f')?.value||'';
   const allRows=C.materials.filter(m=>{
     if(tf&&m.type!==tf)return false;
@@ -1673,7 +1699,7 @@ function renderStock(){
   const ggf=document.getElementById('stock-group');
   if(ggf){const prev=ggf.value;ggf.innerHTML='<option value="">전체 제품군</option>'+C.productGroups.map(g=>`<option value="${g.id}">${g.name}</option>`).join('');if(prev)ggf.value=prev;}
   const coSel=document.getElementById('stock-co');
-  if(coSel){const prev=coSel.value;coSel.innerHTML='<option value="">전체 업체</option>'+C.companies.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');if(prev)coSel.value=prev;}
+  if(coSel){let prev =coSel.value;coSel.innerHTML='<option value="">전체 업체</option>'+C.companies.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');if(prev)coSel.value=prev;}
   const q=(document.getElementById('stock-s')?.value||'').toLowerCase();
   const tf=document.getElementById('stock-type')?.value||'';
   const cf=document.getElementById('stock-co')?.value||'';
@@ -2003,8 +2029,8 @@ function renderOb(){
     document.getElementById('ob-sel-count').textContent=`${obSel.size}건 선택`;
     const perItemHtml=Array.from(obSel).map(id=>{
       const o=C.orders.find(x=>x.id===id);if(!o)return'';
-      const packDone=getProcessDone(id,'포장');
-      const alreadyOut=(o.outbounds||[]).reduce((a,b)=>a+(b.qty||0),0);
+      let packDone =getProcessDone(id,'포장');
+      let alreadyOut =(o.outbounds||[]).reduce((a,b)=>a+(b.qty||0),0);
       const avail=Math.max(0,packDone-alreadyOut);
       return`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);flex-wrap:wrap">
         <div style="min-width:160px;font-size:12px"><strong>${o.lot||o.id}</strong><br><span style="color:var(--text2)">${prodObj(o.prod)?.name||o.prod}·가능 ${fmt(avail)}개</span></div>
@@ -2014,7 +2040,7 @@ function renderOb(){
     }).join('');
     document.getElementById('ob-per-item-config').innerHTML=perItemHtml;
     const dests=[];
-    obSel.forEach(id=>{const o=C.orders.find(x=>x.id===id);if(o){const co=C.companies.find(c=>c.id===o.co_id);if(co)[1,2,3,4,5].forEach(n=>{const a=co['a'+n];if(a)dests.push({label:`${co.name}-배송지${n}`,addr:a});});}});
+    obSel.forEach(id=>{let o =C.orders.find(x=>x.id===id);if(o){const co=C.companies.find(c=>c.id===o.co_id);if(co)[1,2,3,4,5].forEach(n=>{const a=co['a'+n];if(a)dests.push({label:`${co.name}-배송지${n}`,addr:a});});}});
     document.getElementById('ob-dest').innerHTML=[...new Map(dests.map(d=>[d.label,d])).values()].map(d=>`<option value="${d.addr}">${d.label}</option>`).join('');
   }else document.getElementById('ob-action').style.display='none';
 }
@@ -2869,11 +2895,11 @@ async function commitScan(){
       alert(rem>0?`⚠️ 재고 부족 (${fmt(rem)}개 부족)`:`✅ 출고: ${matName(scanMat)} ${fmt(qty)}개`);
     }else{
       let rem=qty;
-      const srcs=C.stock.filter(s=>s.mat_code===scanMat&&s.loc===selLoc);
-      for(const s of srcs){if(rem<=0)break;const t=Math.min(s.qty||0,rem);await dbUpdate('stock','id',s.id,{qty:(s.qty||0)-t});s.qty=(s.qty||0)-t;rem-=t;}
+      let srcs =C.stock.filter(s=>s.mat_code===scanMat&&s.loc===selLoc);
+      for(const s of srcs){if(rem<=0)break;let t =Math.min(s.qty||0,rem);await dbUpdate('stock','id',s.id,{qty:(s.qty||0)-t});s.qty=(s.qty||0)-t;rem-=t;}
       C.stock=C.stock.filter(s=>s.qty>0);
-      const ns={id:nextInvId(),mat_code:scanMat,qty,loc:selLoc2,plt:'PLT-MV',date:today()};
-      const r=await dbInsert('stock',ns);C.stock.push(r||ns);
+      let ns ={id:nextInvId(),mat_code:scanMat,qty,loc:selLoc2,plt:'PLT-MV',date:today()};
+      let r =await dbInsert('stock',ns);C.stock.push(r||ns);
       await addHist('이동',scanMat,qty,selLoc,selLoc2,'모바일 이동');
       toast(`이동: ${selLoc} → ${selLoc2}`);
     }
