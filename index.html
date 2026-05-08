@@ -447,7 +447,7 @@ textarea{min-height:60px;resize:vertical}
 <!-- 입고관리 -->
 <div class="page" id="page-inbound">
   <div class="sw"><input placeholder="코드/명/업체/팔레트..." id="ib-s" oninput="renderIb()"><button class="btn btn-p" onclick="openIbModal()">+ 입고 등록</button></div>
-  <div class="card"><div class="tw"><table><thead><tr><th>입고일</th><th>업체명</th><th>부자재코드</th><th>부자재명</th><th>수량</th><th>팔레트</th><th>위치</th><th>상태</th><th></th></tr></thead><tbody id="ib-tbody"></tbody></table></div></div>
+  <div class="card"><div class="tw"><table><thead><tr><th>입고일</th><th>업체명</th><th>제품군 / 향</th><th>부자재명</th><th>타입</th><th>수량</th><th>팔레트</th><th>위치</th><th>상태</th><th></th></tr></thead><tbody id="ib-tbody"></tbody></table></div></div>
 </div>
 
 <!-- 출고관리 -->
@@ -2072,6 +2072,62 @@ async function delLoc(code){if(CU?.role!=='admin'){toast('관리자만 삭제할
   if(!confirm('삭제?'))return;try{await dbDelete('locations','code',code);C.locations=C.locations.filter(l=>l.code!==code);renderLoc();}catch(e){toast('삭제 실패: '+e.message,'error');}}
 
 // ══ BOM ════════════════════════════════════════════════════
+// ── 최대 생산 가능 수량 계산 ──────────────────────────────────
+// prodCode: 제품코드, orderQty: 오더 수량 (공용 부자재 분배 계산용)
+// sharedProds: 같은 공용 부자재를 쓰는 다른 오더 목록
+function calcMaxProd(prodCode, orderQty=0){
+  const bomItems=C.bom.filter(b=>b.prod===prodCode);
+  if(!bomItems.length)return{max:null,bottleneck:null,items:[]};
+
+  const items=bomItems.map(b=>{
+    const stock=totalStock(b.mat_code);
+    const need=b.qty||1;
+    const canMake=need>0?Math.floor(stock/need):Infinity;
+    return{...b,stock,canMake,mat:matObj(b.mat_code)};
+  });
+
+  const max=items.length?Math.min(...items.map(i=>i.canMake)):0;
+  const bottleneck=items.filter(i=>i.canMake===max&&max<(orderQty||Infinity));
+
+  return{max,bottleneck,items};
+}
+
+// 같은 공용 부자재를 공유하는 오더들의 경쟁 고려한 최대 생산 수량
+function calcMaxProdWithCompetition(prodCode, orderQty, allActiveOrders){
+  const bomItems=C.bom.filter(b=>b.prod===prodCode);
+  if(!bomItems.length)return{max:null,items:[]};
+
+  const items=bomItems.map(b=>{
+    const mat=matObj(b.mat_code);
+    let availStock=totalStock(b.mat_code);
+
+    // 같은 부자재를 사용하는 다른 진행중 오더들 파악
+    const competitors=allActiveOrders.filter(o=>{
+      if(o.prod===prodCode)return false;
+      return C.bom.some(ob=>ob.prod===o.prod&&ob.mat_code===b.mat_code);
+    });
+
+    // 경쟁 오더들이 요구하는 수량 (간략히: 각 오더 목표수량 × 소요량)
+    let competitorNeed=0;
+    competitors.forEach(o=>{
+      const obom=C.bom.find(ob=>ob.prod===o.prod&&ob.mat_code===b.mat_code);
+      if(obom)competitorNeed+=(o.qty||0)*(obom.qty||1);
+    });
+
+    const myNeed=b.qty||1;
+    // 경쟁 오더 제외 후 남은 재고
+    const remaining=Math.max(0,availStock-competitorNeed);
+    const canMake=myNeed>0?Math.floor(remaining/myNeed):Infinity;
+    const canMakeTotal=myNeed>0?Math.floor(availStock/myNeed):Infinity;
+
+    return{...b,stock:availStock,canMake,canMakeTotal,mat,competitors:competitors.length};
+  });
+
+  const max=items.length?Math.min(...items.map(i=>i.canMake)):0;
+  const maxTotal=items.length?Math.min(...items.map(i=>i.canMakeTotal)):0;
+  return{max,maxTotal,items};
+}
+
 let bomSelGroup='',bomSelProd='',pendingBomRows=[];
 
 function renderBom(){
@@ -2168,25 +2224,48 @@ function renderBom(){
       const prod=prodObj(bomSelProd);
       const items=C.bom.filter(b=>b.prod===bomSelProd).sort((a,c)=>a.pri-c.pri);
       const grpColors={'용기':'blue','펌프':'teal','숄더':'amber','오버캡':'purple','라벨':'amber','카톤':'gray','포장재':'teal'};
-      detailEl.innerHTML=`
-        <div style="padding:10px 14px;background:#f0f9ff;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+
+      // 최대 생산 수량 계산
+      const activeOrds=C.orders.filter(o=>o.status!=='완료');
+      const {max,maxTotal,items:calcItems}=calcMaxProdWithCompetition(bomSelProd,0,activeOrds);
+      const maxBar=max!=null?`
+        <div style="background:${max===0?'#fee2e2':max<100?'#fef3c7':'#dcfce7'};border-radius:6px;padding:8px 12px;margin-bottom:4px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
           <div>
-            <div style="font-size:12px;font-weight:700">${prod?.name||bomSelProd}</div>
-            <div style="font-size:11px;color:var(--text2)">${prod?.code||''}</div>
+            <div style="font-size:10px;color:var(--text2)">현재 재고로 최대 생산 가능</div>
+            <div style="font-size:20px;font-weight:800;color:${max===0?'var(--red)':max<100?'var(--amber)':'var(--green)'}">${fmt(max)}<span style="font-size:12px;font-weight:400">개</span></div>
           </div>
-          <button class="btn btn-p btn-sm" onclick="openAddBomItem('${bomSelProd}')">+ 부자재 추가</button>
+          ${maxTotal!==max?`<div>
+            <div style="font-size:10px;color:var(--text2)">타 오더 경쟁 없이 단독</div>
+            <div style="font-size:16px;font-weight:700;color:var(--blue)">${fmt(maxTotal)}<span style="font-size:11px;font-weight:400">개</span></div>
+          </div>`:''}
+          <div style="margin-left:auto;font-size:11px;color:var(--text2)">${items.length}개 부자재 기준</div>
+        </div>`:'';
+
+      detailEl.innerHTML=`
+        <div style="padding:10px 14px;background:#f0f9ff;border-bottom:1px solid var(--border)">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+            <div>
+              <div style="font-size:12px;font-weight:700">${prod?.name||bomSelProd}</div>
+              <div style="font-size:11px;color:var(--text2)">${prod?.code||''}</div>
+            </div>
+            <button class="btn btn-p btn-sm" onclick="openAddBomItem('${bomSelProd}')">+ 부자재 추가</button>
+          </div>
+          ${maxBar}
         </div>
         ${items.length
           ?items.map(b=>{
             const mat=matObj(b.mat_code);
             const qty=totalStock(b.mat_code);
-            let scent =C.scents.find(s=>s.id===mat?.scent_id);
-            return`<div class="bom-detail-row">
+            const canMake=b.qty>0?Math.floor(qty/b.qty):Infinity;
+            const isBottleneck=max!=null&&canMake===max&&max<9999999;
+            let scent=C.scents.find(s=>s.id===mat?.scent_id);
+            return`<div class="bom-detail-row" style="${isBottleneck?'border-left:3px solid var(--red);background:#fff5f5':''}">
               <div style="flex:1">
-                <div style="font-weight:600;font-size:12px">${mat?.name||b.mat_code}</div>
-                <div style="font-size:11px;color:var(--text2);display:flex;gap:6px;align-items:center;margin-top:2px">
+                <div style="font-weight:600;font-size:12px">${mat?.name||b.mat_code}${isBottleneck?' <span style="color:var(--red);font-size:10px">⚠️ 병목</span>':''}</div>
+                <div style="font-size:11px;color:var(--text2);display:flex;gap:8px;align-items:center;margin-top:3px;flex-wrap:wrap">
                   <span>소요량: <strong>${b.qty}</strong></span>
-                  <span>재고: <strong style="color:${qty>0?'var(--green)':'var(--red)'}">${fmt(qty)}</strong></span>
+                  <span>재고: <strong style="color:${qty===0?'var(--red)':qty<b.qty*100?'var(--amber)':'var(--green)'}">${fmt(qty)}</strong></span>
+                  <span style="color:var(--text3)">→ <strong style="color:${canMake===0?'var(--red)':canMake<100?'var(--amber)':'var(--green)'}">${fmt(canMake)}개 생산가능</strong></span>
                   ${scent?`<span style="display:flex;align-items:center;gap:3px"><span style="width:8px;height:8px;border-radius:50%;background:${scent.color};display:inline-block"></span>${scent.name_ko}</span>`:'<span class="badge b-gray" style="font-size:10px">공용</span>'}
                 </div>
               </div>
@@ -2634,10 +2713,39 @@ async function saveStockEdit(){
 let correctIbId=null;
 function renderIb(){
   const q=(document.getElementById('ib-s')?.value||'').toLowerCase();
-  document.getElementById('ib-tbody').innerHTML=C.inbounds.slice(0,100).filter(b=>{if(!q)return true;return[b.mat_code,matName(b.mat_code),coName(matObj(b.mat_code)?.co_id||''),b.plt||''].join(' ').toLowerCase().includes(q);}).map((b,i)=>{
+  document.getElementById('ib-tbody').innerHTML=C.inbounds.slice(0,200).filter(b=>{
+    if(!q)return true;
+    const m=matObj(b.mat_code);
+    const group=C.productGroups.find(g=>g.id===m?.group_id);
+    const scent=C.scents.find(s=>s.id===m?.scent_id);
+    return[b.mat_code,m?.name||'',coName(m?.co_id||''),b.plt||'',group?.name||'',group?.brand||'',scent?.name_ko||''].join(' ').toLowerCase().includes(q);
+  }).map(b=>{
+    const m=matObj(b.mat_code);
+    const co=C.companies.find(c=>c.id===m?.co_id);
+    const group=C.productGroups.find(g=>g.id===m?.group_id);
+    const scent=C.scents.find(s=>s.id===m?.scent_id);
     const corrected=b.status==='정정됨';
-    return`<tr style="${corrected?'opacity:.5;text-decoration:line-through;':''}"><td style="font-size:12px">${b.date||''}</td><td style="font-size:12px">${coName(matObj(b.mat_code)?.co_id||'')}</td><td><span class="mono">${b.mat_code}</span></td><td>${matName(b.mat_code)}</td><td style="text-align:right;font-weight:600">${fmt(b.qty)}</td><td><span class="mono">${b.plt||'-'}</span></td><td><span class="mono">${b.loc||'-'}</span></td><td>${sbadge(b.status)}</td><td>${!corrected?`<button class="btn btn-g btn-sm" onclick="openIbCorrect(${b.id})">정정</button>`:''}</td></tr>`;
-  }).join('')||'<tr><td colspan="9" style="text-align:center;color:var(--text3);padding:20px">입고 내역 없음</td></tr>';
+    const groupCell=group
+      ?`<div style="font-size:11px;font-weight:600;color:var(--blue-dk)">${group.brand?group.brand+' · ':''}${group.name}</div>
+         ${scent?`<div style="display:inline-flex;align-items:center;gap:3px;font-size:10px;color:var(--purple)"><span style="width:7px;height:7px;border-radius:50%;background:${scent.color||'#6b7280'};display:inline-block"></span>${scent.name_ko}</div>`
+                :`<div style="font-size:10px;color:var(--text3)">공용</div>`}`
+      :`<div style="font-size:10px;color:var(--text3)">-</div>`;
+    return`<tr style="${corrected?'opacity:.5;text-decoration:line-through;':''}">
+      <td style="font-size:12px;white-space:nowrap">${b.date||''}</td>
+      <td style="font-size:12px">${co?.name||coName(m?.co_id||'')}</td>
+      <td>${groupCell}</td>
+      <td>
+        <div style="font-weight:600">${m?.name||b.mat_code}</div>
+        <div style="font-size:10px;color:var(--text3);font-family:monospace">${b.mat_code}</div>
+      </td>
+      <td style="font-size:11px">${m?.type?badge(m.type,'gray'):'-'}</td>
+      <td style="text-align:right;font-weight:700;color:var(--blue)">${fmt(b.qty)}</td>
+      <td style="font-size:11px;font-family:monospace">${b.plt||'-'}</td>
+      <td style="font-size:11px;font-family:monospace">${b.loc||'-'}</td>
+      <td>${sbadge(b.status)}</td>
+      <td>${!corrected?`<button class="btn btn-g btn-sm" onclick="openIbCorrect(${b.id})">정정</button>`:''}</td>
+    </tr>`;
+  }).join('')||'<tr><td colspan="10" style="text-align:center;color:var(--text3);padding:20px">입고 내역 없음</td></tr>';
 }
 // 입고 모달 - 단계별 선택
 // 입고 항목 목록
@@ -2706,10 +2814,18 @@ function ibAddRow(){
   if(!code){toast('부자재를 선택하세요','error');return;}
   if(!qty||qty<=0){toast('수량을 입력하세요','error');return;}
   if(!loc){toast('위치를 선택하세요','error');return;}
-  // 같은 부자재 중복 추가는 허용 (팔레트/수량 다를 수 있음)
-  ibPendingRows.push({code,qty,loc,plt,name:matName(code)});
+  const m=matObj(code);
+  const group=C.productGroups.find(g=>g.id===m?.group_id);
+  const scent=C.scents.find(s=>s.id===m?.scent_id);
+  ibPendingRows.push({
+    code, qty, loc, plt,
+    name: m?.name||code,
+    groupName: group?`${group.brand?group.brand+' · ':''}${group.name}`:'',
+    scentName: scent?.name_ko||'',
+    scentColor: scent?.color||'',
+    type: m?.type||''
+  });
   ibRenderRows();
-  // 입력 초기화 (부자재/수량만, 위치는 유지)
   document.getElementById('i-mat').value='';
   document.getElementById('i-qty').value='';
   document.getElementById('i-plt').value='PLT-'+String(C.stock.length+ibPendingRows.length+1).padStart(3,'0');
@@ -2725,14 +2841,26 @@ function ibRenderRows(){
     if(saveBtn){saveBtn.disabled=true;saveBtn.style.opacity='.5';saveBtn.textContent='📥 입고 저장 (0건)';}
     return;
   }
-  el.innerHTML=`<div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:6px">추가된 입고 항목</div>`+
-    ibPendingRows.map((r,i)=>`<div style="display:flex;align-items:center;gap:8px;padding:8px 10px;background:#fff;border:1px solid var(--border);border-radius:6px;margin-bottom:5px;font-size:12px">
-      <span style="flex:1;font-weight:600">${r.name}</span>
-      <span style="color:var(--blue);font-weight:700">${fmt(r.qty)}개</span>
-      <span style="color:var(--text2)">📍${r.loc}</span>
-      <span style="color:var(--text3);font-size:10px">${r.plt}</span>
-      <button onclick="ibPendingRows.splice(${i},1);ibRenderRows()" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:14px;padding:0 4px">×</button>
-    </div>`).join('');
+  el.innerHTML=`<div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:6px">추가된 입고 항목 (${ibPendingRows.length}건)</div>`+
+    ibPendingRows.map((r,i)=>`
+      <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#fff;border:1px solid var(--border);border-radius:8px;margin-bottom:6px">
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:13px;margin-bottom:2px">${r.name}</div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            ${r.groupName?`<span style="font-size:11px;color:var(--blue-dk);background:var(--blue-lt);padding:1px 6px;border-radius:4px">${r.groupName}</span>`:''}
+            ${r.scentName?`<span style="display:inline-flex;align-items:center;gap:3px;font-size:11px;color:var(--purple)"><span style="width:7px;height:7px;border-radius:50%;background:${r.scentColor||'#6b7280'};display:inline-block"></span>${r.scentName}</span>`
+                         :`<span style="font-size:10px;color:var(--text3)">공용</span>`}
+            ${r.type?`<span style="font-size:10px;color:var(--text2)">${r.type}</span>`:''}
+            <span style="font-size:10px;color:var(--text3);font-family:monospace">${r.code}</span>
+          </div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:15px;font-weight:700;color:var(--blue)">${fmt(r.qty)}개</div>
+          <div style="font-size:11px;color:var(--text2)">📍${r.loc}</div>
+          <div style="font-size:10px;color:var(--text3)">${r.plt}</div>
+        </div>
+        <button onclick="ibPendingRows.splice(${i},1);ibRenderRows()" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:18px;padding:0 4px;flex-shrink:0">×</button>
+      </div>`).join('');
   const total=ibPendingRows.reduce((s,r)=>s+r.qty,0);
   sumEl.style.display='block';
   sumEl.textContent=`✅ 총 ${ibPendingRows.length}개 품목, ${fmt(total)}개 입고 예정`;
@@ -2829,6 +2957,29 @@ function ordCard(o){
     const isMain=pr==='포장';const c=pp>=100?'var(--green)':pp>=50?'var(--amber)':'var(--blue)';
     return`<div style="margin-bottom:4px"><div style="display:flex;justify-content:space-between;font-size:10px;margin-bottom:1px"><span style="font-weight:${isMain?'700':'400'}">${pr}${isMain?' ⭐':''}</span><span>${fmt(d)}/${fmt(o.qty||0)}</span></div><div style="height:4px;background:#e5e7eb;border-radius:99px"><div style="height:100%;background:${c};border-radius:99px;width:${pp}%"></div></div></div>`;
   }).join('');
+
+  // 최대 생산 가능 수량 (타 오더 경쟁 포함)
+  const activeOrds=C.orders.filter(x=>x.status!=='완료'&&x.id!==o.id);
+  const {max,maxTotal}=calcMaxProdWithCompetition(o.prod,o.qty,activeOrds);
+  const hasBom=C.bom.some(b=>b.prod===o.prod);
+  let maxProdBadge='';
+  if(hasBom&&max!=null){
+    const ratio=o.qty>0?max/o.qty:1;
+    const color=max===0?'var(--red)':ratio<0.5?'var(--amber)':ratio>=1?'var(--green)':'var(--blue)';
+    const bg=max===0?'#fee2e2':ratio<0.5?'#fef3c7':ratio>=1?'#dcfce7':'#eff6ff';
+    maxProdBadge=`<div style="background:${bg};border-radius:6px;padding:5px 10px;margin-top:6px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+      <div>
+        <div style="font-size:9px;color:var(--text2)">현재 최대 생산 가능</div>
+        <div style="font-size:14px;font-weight:800;color:${color}">${fmt(max)}<span style="font-size:10px;font-weight:400">개</span></div>
+      </div>
+      ${maxTotal!==max?`<div>
+        <div style="font-size:9px;color:var(--text2)">단독 생산 시</div>
+        <div style="font-size:12px;font-weight:700;color:var(--blue)">${fmt(maxTotal)}<span style="font-size:10px;font-weight:400">개</span></div>
+      </div>`:''}
+      <div style="font-size:9px;color:var(--text2);margin-left:auto">목표 ${fmt(o.qty)}개${max>0&&max<o.qty?` · <span style="color:var(--amber)">${fmt(o.qty-max)}개 부족</span>`:max>=o.qty?' · <span style="color:var(--green)">✅ 달성 가능</span>':' · <span style="color:var(--red)">❌ 재고 부족</span>'}</div>
+    </div>`;
+  }
+
   const recentLogs=C.progressLogs.filter(l=>l.order_id===o.id).slice(0,3).map(l=>`<div class="ord-log-row"><span class="ord-log-date">${l.date||''}</span><span class="badge b-gray" style="font-size:10px">${l.process}</span><span style="font-weight:600;margin-left:4px">${fmt(l.qty)}개</span><span style="color:var(--text2);font-size:11px;margin-left:6px">${l.note||''}</span></div>`).join('');
   return`<div class="ord-card" style="${isDone?'background:#f9fafb;opacity:.75;':''}">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
@@ -2843,7 +2994,8 @@ function ordCard(o){
         <button class="btn btn-g btn-sm" onclick="chgOrdStatus('${o.id}')">${isDone?'재오픈':'상태↑'}</button>
       </div>
     </div>
-    <div style="margin-bottom:8px">${procBars}</div>
+    ${maxProdBadge}
+    <div style="margin-top:8px;margin-bottom:4px">${procBars}</div>
     ${recentLogs?`<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">${recentLogs}</div>`:''}
   </div>`;
 }
