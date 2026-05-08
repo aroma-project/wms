@@ -4135,19 +4135,8 @@ async function saveLotEdit(ordId,oldLot,newLot){
       await dbUpdate('outbounds','id',ob.id,{items:updatedItems});
       ob.items=updatedItems;
     }
-    // 3. 히스토리 기록
-    const histObj={
-      type:'LOT변경',
-      mat_code:o?.prod||ordId,
-      qty:0,
-      from_loc:oldLot,
-      to_loc:newLot,
-      note:`LOT 변경: ${oldLot} → ${newLot} (오더ID: ${ordId})`,
-      date:today(),
-      user_name:CU?.name||'관리자'
-    };
-    const hr=await dbInsert('history',histObj);
-    C.history.unshift(hr||histObj);
+    // 3. 히스토리 기록 (addHist 사용 - id 자동 생성)
+    await addHist('LOT변경', o?.prod||ordId, 0, oldLot, newLot, `LOT 변경: ${oldLot} → ${newLot} (오더ID: ${ordId})`);
     toast(`LOT "${oldLot}" → "${newLot}" 변경 완료. 출고명세서 ${affected.length}건 업데이트.`);
     // 4. 현재 페이지 새로고침
     renderLotReport();renderOrds();
