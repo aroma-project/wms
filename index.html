@@ -1286,9 +1286,33 @@ function getOrderShortages(){
   C.orders.filter(o=>o.status!=='완료').forEach(o=>{
     C.bom.filter(b=>b.prod===o.prod).forEach(b=>{
       const need=Math.ceil(o.qty*b.qty),cur=totalStock(b.mat_code);
-      if(cur<need&&!seen.has(b.mat_code)){seen.add(b.mat_code);sh.push({matCode:b.mat_code,name:matName(b.mat_code),need,cur,diff:need-cur});}
+      if(cur<need){
+        if(!seen.has(b.mat_code)){
+          seen.add(b.mat_code);
+          const mat=matObj(b.mat_code);
+          const group=C.productGroups.find(g=>g.id===mat?.group_id);
+          const scent=C.scents.find(s=>s.id===mat?.scent_id);
+          const co=C.companies.find(c=>c.id===group?.co_id||c.id===mat?.co_id);
+          // 이 부자재를 필요로 하는 오더 목록
+          const relatedOrders=C.orders.filter(o2=>o2.status!=='완료'&&C.bom.some(b2=>b2.prod===o2.prod&&b2.mat_code===b.mat_code));
+          sh.push({
+            matCode:b.mat_code,
+            name:mat?.name||b.mat_code,
+            vol:mat?.vol||null,
+            type:mat?.type||'',
+            need,cur,diff:need-cur,
+            coName:co?.name||'',
+            brand:group?.brand||'',
+            groupName:group?.name||'',
+            scentName:scent?.name_ko||'',
+            scentColor:scent?.color||'',
+            relatedOrders:relatedOrders.map(o2=>({lot:o2.lot||o2.id,prod:o2.prod,qty:o2.qty}))
+          });
+        }
+      }
     });
-  });return sh;
+  });
+  return sh;
 }
 function toggleShortageExpand(){
   const el=document.getElementById('dash-shortage');
@@ -1311,21 +1335,50 @@ function renderDash(){
   if(shortages.length){
     const showAll=shEl.dataset.expanded==='1';
     const displayed=showAll?shortages:shortages.slice(0,5);
-    shEl.innerHTML=`<div class="card" style="border-left:3px solid var(--red)">
+    shEl.innerHTML=`<div class="card" style="border-left:3px solid var(--red);padding-bottom:4px">
       <div class="card-hd" style="color:var(--red);display:flex;justify-content:space-between;align-items:center">
         <span>⚠️ 오더 연관 재고 부족 ${shortages.length}건</span>
         ${shortages.length>5?`<button class="btn btn-g btn-sm" onclick="toggleShortageExpand()" style="font-size:11px">${showAll?'접기':'전체 보기 ▼'}</button>`:''}
       </div>
-      ${displayed.map(s=>`<div class="dash-alert-row">
-        <div style="flex:1">
-          <div style="font-weight:600;font-size:12px">${s.name}</div>
-          <div style="font-size:11px;color:var(--text2)">${s.matCode}</div>
-        </div>
-        <div style="text-align:right;font-size:12px">
-          <span style="color:var(--red);font-weight:700">현재 ${fmt(s.cur)}</span>
-          <span style="color:var(--text3)"> / 필요 ${fmt(s.need)}</span>
-        </div>
-      </div>`).join('')}
+      ${displayed.map(s=>{
+        const pct=s.need>0?Math.round(s.cur/s.need*100):0;
+        const barW=Math.min(100,pct);
+        return`<div style="padding:10px 0;border-bottom:1px solid #fee2e2">
+          <!-- 업체/브랜드/제품군/향 경로 -->
+          <div style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--text2);margin-bottom:5px;flex-wrap:wrap">
+            ${s.coName?`<span style="background:#f1f5f9;padding:1px 6px;border-radius:4px;font-weight:600">${s.coName}</span><span>›</span>`:''}
+            ${s.brand?`<span>${s.brand}</span><span>›</span>`:''}
+            ${s.groupName?`<span style="color:var(--blue-dk);font-weight:600">${s.groupName}</span>`:''}
+            ${s.scentName?`<span>›</span><span style="display:inline-flex;align-items:center;gap:3px"><span style="width:7px;height:7px;border-radius:50%;background:${s.scentColor||'#6b7280'};display:inline-block"></span><span style="color:var(--purple);font-weight:600">${s.scentName}</span></span>`:'<span>›</span><span style="color:var(--text3)">공용</span>'}
+          </div>
+          <!-- 부자재명 + 재고 -->
+          <div style="display:flex;align-items:flex-start;gap:10px">
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:700;font-size:13px;line-height:1.3">
+                ${s.name}${s.vol?`<span style="font-size:10px;background:#e0f2fe;color:#0369a1;padding:1px 5px;border-radius:4px;font-weight:600;margin-left:5px">${s.vol}ml</span>`:''}
+                ${s.type?`<span style="font-size:10px;color:var(--text3);margin-left:4px">${s.type}</span>`:''}
+              </div>
+              <div style="font-size:10px;color:var(--text3);font-family:monospace;margin-top:1px">${s.matCode}</div>
+              <!-- 관련 오더 -->
+              ${s.relatedOrders.length?`<div style="margin-top:4px;display:flex;gap:4px;flex-wrap:wrap">
+                ${s.relatedOrders.slice(0,3).map(o=>`<span style="font-size:10px;background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:4px">${o.lot} (${fmt(o.qty)}개)</span>`).join('')}
+                ${s.relatedOrders.length>3?`<span style="font-size:10px;color:var(--text3)">+${s.relatedOrders.length-3}건</span>`:''}
+              </div>`:''}
+            </div>
+            <div style="text-align:right;flex-shrink:0">
+              <div style="font-size:11px;color:var(--text2)">현재</div>
+              <div style="font-size:16px;font-weight:800;color:var(--red);line-height:1">${fmt(s.cur)}<span style="font-size:10px;font-weight:400">개</span></div>
+              <div style="font-size:10px;color:var(--text3)">필요 ${fmt(s.need)}</div>
+              <div style="font-size:11px;font-weight:700;color:var(--red)">▼ ${fmt(s.diff)} 부족</div>
+            </div>
+          </div>
+          <!-- 재고 progress bar -->
+          <div style="margin-top:6px;height:4px;background:#fee2e2;border-radius:99px;overflow:hidden">
+            <div style="height:100%;width:${barW}%;background:${pct<30?'#ef4444':'#f59e0b'};border-radius:99px"></div>
+          </div>
+          <div style="font-size:9px;color:var(--text3);margin-top:1px;text-align:right">${pct}% 보유</div>
+        </div>`;
+      }).join('')}
       ${!showAll&&shortages.length>5?`<div style="font-size:12px;color:var(--blue);padding:8px 0;cursor:pointer;font-weight:600" onclick="toggleShortageExpand()">▼ 외 ${shortages.length-5}건 더 보기</div>`:''}
     </div>`;
   }else{shEl.innerHTML='';}
@@ -3089,7 +3142,8 @@ function ordAddRow(){
   if(ordPendingRows.find(r=>r.prod===prodCode)){toast('이미 추가된 제품입니다','warn');return;}
   const prod=prodObj(prodCode);
   const scent=C.scents.find(s=>s.id===prod?.scent_id);
-  ordPendingRows.push({prod:prodCode,qty,mark,name:prod?.name||prodCode,scentName:scent?.name_ko||'',scentColor:scent?.color||''});
+  const lot=genLot(prodCode); // 추가 시점에 LOT 생성
+  ordPendingRows.push({prod:prodCode,qty,mark,lot,name:prod?.name||prodCode,scentName:scent?.name_ko||'',scentColor:scent?.color||''});
   document.getElementById('o-prod').value='';
   document.getElementById('o-qty').value='';
   document.getElementById('o-mark').value='';
@@ -3108,15 +3162,22 @@ function ordRenderRows(){
   el.innerHTML=`<div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:6px">추가된 오더 (${ordPendingRows.length}건)</div>`+
     ordPendingRows.map((r,i)=>{
       const {max}=calcMaxProd(r.prod);
-      const lot=genLot(r.prod);
       const ratio=max!=null&&r.qty>0?max/r.qty:1;
       const stColor=max==null?'var(--text3)':max===0?'var(--red)':ratio<1?'var(--amber)':'var(--green)';
       return`<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#fff;border:1px solid var(--border);border-radius:8px;margin-bottom:6px">
         <div style="flex:1;min-width:0">
           <div style="font-weight:700;font-size:13px">${r.name}</div>
-          <div style="display:flex;gap:8px;align-items:center;margin-top:3px;flex-wrap:wrap">
+          <div style="display:flex;gap:8px;align-items:center;margin-top:5px;flex-wrap:wrap">
             ${r.scentName?`<span style="display:inline-flex;align-items:center;gap:3px;font-size:11px;color:var(--purple)"><span style="width:7px;height:7px;border-radius:50%;background:${r.scentColor||'#6b7280'};display:inline-block"></span>${r.scentName}</span>`:'<span style="font-size:10px;color:var(--text3)">공용</span>'}
-            <span style="font-size:10px;color:var(--text3);font-family:monospace">LOT: ${lot}</span>
+            <div style="display:flex;align-items:center;gap:4px">
+              <span style="font-size:10px;color:var(--text2);font-weight:600">LOT:</span>
+              <input
+                value="${r.lot||''}"
+                onchange="ordPendingRows[${i}].lot=this.value.trim()||ordPendingRows[${i}].lot"
+                style="font-size:11px;font-family:monospace;color:var(--blue-dk);font-weight:700;border:1px solid var(--border);border-radius:4px;padding:2px 6px;width:130px;background:#f0f9ff"
+                placeholder="LOT 직접 수정 가능"
+              >
+            </div>
             ${r.mark?`<span style="font-size:10px;background:#f3f4f6;padding:1px 6px;border-radius:4px;color:var(--text2)">마킹: ${r.mark}</span>`:''}
           </div>
         </div>
@@ -3198,7 +3259,7 @@ async function saveOrd(){
   if(saveBtn){saveBtn.disabled=true;saveBtn.textContent='등록 중...';}
   try{
     for(const r of ordPendingRows){
-      const lot=genLot(r.prod);
+      const lot=r.lot||genLot(r.prod); // row에 저장된 LOT 사용 (수정된 경우 반영)
       const obj={id:nextOrdId(),lot,co_id:coId,prod:r.prod,qty:r.qty,exp,mark:r.mark||null,due,status:'대기',processes:procs,outbound_status:null,outbounds:[],date:today()};
       const res=await dbInsert('orders',obj);C.orders.unshift(res||obj);
     }
