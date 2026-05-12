@@ -901,8 +901,20 @@ textarea{min-height:60px;resize:vertical}
     <div class="fr c2"><div><label>공정 선택</label><select id="pg-process"></select></div><div><label>날짜</label><input id="pg-date" type="date"></div></div>
     <div class="fr c2"><div><label>생산수량 *</label><input id="pg-qty" type="number"></div><div><label>특이사항</label><input id="pg-note"></div></div>
     <div style="font-size:11px;font-weight:700;color:var(--text2);margin:4px 0 6px">공수 입력 (선택사항)</div>
-    <div class="fr c2"><div><label>작업자 수 (명)</label><input id="pg-workers" type="number" min="1" placeholder="예: 3"></div><div><label>작업시간 (시간)</label><input id="pg-hours" type="number" min="0.5" step="0.5" placeholder="예: 2.5"></div></div>
-    <div id="pg-manhour-preview" style="font-size:12px;color:var(--blue-dk);font-weight:600;margin-bottom:4px"></div>
+    <div class="fr c2">
+      <div><label>작업자 수 (명)</label><input id="pg-workers" type="number" min="1" placeholder="예: 3" oninput="updateMhPreview()"></div>
+      <div>
+        <label>실제 작업시간</label>
+        <div style="display:flex;gap:6px;align-items:center">
+          <input id="pg-hours-h" type="number" min="0" max="23" placeholder="0" style="width:60px;text-align:center" oninput="updateMhPreview()">
+          <span style="font-size:12px;color:var(--text2)">시간</span>
+          <input id="pg-hours-m" type="number" min="0" max="59" step="5" placeholder="0" style="width:60px;text-align:center" oninput="updateMhPreview()">
+          <span style="font-size:12px;color:var(--text2)">분</span>
+        </div>
+      </div>
+    </div>
+    <!-- 공수 계산 결과 미리보기 -->
+    <div id="pg-manhour-preview" style="margin-bottom:4px"></div>
     <div class="br"><button class="btn btn-p" onclick="saveProgress()">추가</button><button class="btn btn-g" onclick="closeMo()">닫기</button></div>
   </div>
   <!-- 재고 수정 -->
@@ -3560,8 +3572,10 @@ async function openProg(id){
   document.getElementById('prog-process-bars').innerHTML=`<div style="background:#f8fafc;border-radius:8px;padding:12px;margin-bottom:8px">${bars}</div>`;
   document.getElementById('pg-process').innerHTML=procs.map(p=>`<option value="${p}">${p}${p==='포장'?' ⭐':''}</option>`).join('');
   document.getElementById('pg-date').value=today();document.getElementById('pg-qty').value='';document.getElementById('pg-note').value='';
-  document.getElementById('pg-workers').value='';document.getElementById('pg-hours').value='';
-  document.getElementById('pg-manhour-preview').textContent='';
+  document.getElementById('pg-workers').value='';
+  const hhEl=document.getElementById('pg-hours-h');if(hhEl)hhEl.value='';
+  const hmEl=document.getElementById('pg-hours-m');if(hmEl)hmEl.value='';
+  document.getElementById('pg-manhour-preview').innerHTML='';
   // man-hour preview
   ['pg-workers','pg-hours'].forEach(id=>{
     const el=document.getElementById(id);
@@ -3577,7 +3591,9 @@ async function saveProgress(){
   const qty=parseInt(document.getElementById('pg-qty').value);if(!qty||qty<=0){alert('수량 입력');return;}
   const process=document.getElementById('pg-process').value;
   const workers=parseInt(document.getElementById('pg-workers').value)||null;
-  const hours=parseFloat(document.getElementById('pg-hours').value)||null;
+  const hh=parseInt(document.getElementById('pg-hours-h')?.value||0)||0;
+  const hm=parseInt(document.getElementById('pg-hours-m')?.value||0)||0;
+  const hours=(hh>0||hm>0)?Math.round((hh+hm/60)*100)/100:null;
   const manHour=(workers&&hours)?Math.round(workers*hours*100)/100:null;
   const noteVal=document.getElementById('pg-note').value||null;
   const logObj={order_id:currProgOrd,process,qty,note:noteVal,date:document.getElementById('pg-date').value,user_name:CU?.name||'관리자',workers,hours,man_hour:manHour};
@@ -3610,7 +3626,7 @@ async function saveProgress(){
       const issueObj={prod:o.prod,lot:o.lot||o.id,process,note:noteVal,date:document.getElementById('pg-date').value,user_name:CU?.name||'관리자'};
       try{await dbInsert('prod_issues',issueObj);C.prodIssues=C.prodIssues||[];C.prodIssues.unshift(issueObj);}catch(e){}
     }
-    ['pg-qty','pg-workers','pg-hours'].forEach(id=>document.getElementById(id).value='');
+    ['pg-qty','pg-workers','pg-hours-h','pg-hours-m'].forEach(id=>{const el=document.getElementById(id);if(el)el.value=''});
     toast(`${process} ${fmt(qty)}개 기록됐습니다`);
     document.getElementById('pg-manhour-preview').textContent='';
     // 공정바 갱신
@@ -3905,11 +3921,26 @@ function loadProdIssues(){
 }
 // man-hour 실시간 미리보기
 function updateMhPreview(){
-  const w=parseInt(document.getElementById('pg-workers')?.value||0);
-  const h=parseFloat(document.getElementById('pg-hours')?.value||0);
+  const w=parseInt(document.getElementById('pg-workers')?.value||0)||0;
+  const hh=parseInt(document.getElementById('pg-hours-h')?.value||0)||0;
+  const hm=parseInt(document.getElementById('pg-hours-m')?.value||0)||0;
   const el=document.getElementById('pg-manhour-preview');if(!el)return;
-  if(w>0&&h>0){const mh=Math.round(w*h*100)/100;el.textContent=`→ 공수: ${mh} man-hour`;}
-  else el.textContent='';
+  if(!w&&!hh&&!hm){el.innerHTML='';return;}
+  const totalHours=hh+hm/60;
+  const mh=w>0&&totalHours>0?Math.round(w*totalHours*100)/100:null;
+  const timeStr=hh>0&&hm>0?`${hh}시간 ${hm}분`:hh>0?`${hh}시간`:`${hm}분`;
+  el.innerHTML=`<div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:10px 12px;font-size:12px">
+    <div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+      ${w>0?`<div style="text-align:center"><div style="font-size:18px;font-weight:800;color:var(--blue)">${w}<span style="font-size:11px;font-weight:400">명</span></div><div style="font-size:10px;color:var(--text2)">투입 인원</div></div><div style="color:var(--text3);font-size:16px">×</div>`:''}
+      ${totalHours>0?`<div style="text-align:center"><div style="font-size:18px;font-weight:800;color:var(--purple)">${timeStr}</div><div style="font-size:10px;color:var(--text2)">실제 작업시간</div></div>`:''}
+      ${mh?`<div style="color:var(--text3);font-size:16px">=</div>
+      <div style="text-align:center"><div style="font-size:18px;font-weight:800;color:var(--green)">${mh}<span style="font-size:11px;font-weight:400">man-h</span></div><div style="font-size:10px;color:var(--text2)">총 공수</div></div>
+      <div style="margin-left:auto;font-size:11px;color:var(--text2);background:#fff;padding:4px 8px;border-radius:6px;border:1px solid #e0f2fe">
+        💡 ${w}명이 ${timeStr} 동안 작업<br>
+        ${w>1?`1명이면 ${Math.round(w*totalHours*10)/10}시간 걸릴 작업`:''}
+      </div>`:''}
+    </div>
+  </div>`;
 }
 
 // ══ 카톤박스 라벨 ════════════════════════════════════════════
@@ -3988,44 +4019,154 @@ function renderMhReport(){
     if(to&&(o.date||'')>to)return false;
     return true;
   });
-  // Build man-hour data per order
+  // Build man-hour data per order with per-process breakdown
+  const PROCESSES=['충진','라벨링','기타','포장'];
   const mhData=ords.map(o=>{
     const logs=C.progressLogs.filter(l=>l.order_id===o.id&&l.man_hour);
-    const totalMh=logs.reduce((a,l)=>a+(l.man_hour||0),0);
+    const totalMh=Math.round(logs.reduce((a,l)=>a+(l.man_hour||0),0)*100)/100;
     const packDone=getProcessDone(o.id,'포장');
     const perUnit=packDone>0&&totalMh>0?Math.round(totalMh/packDone*10000)/10000:null;
-    return{o,logs,totalMh,packDone,perUnit};
+    // 공정별 집계 (공수, 실제시간, 투입인원)
+    const byProc={};
+    PROCESSES.forEach(p=>{
+      const pLogs=C.progressLogs.filter(l=>l.order_id===o.id&&l.process===p);
+      const mh=Math.round(pLogs.reduce((a,l)=>a+(l.man_hour||0),0)*100)/100;
+      // 실제 작업시간 = 가장 긴 단일 세션의 hours (or 평균) — 사람 수와 무관
+      const elapsed=Math.round(pLogs.reduce((a,l)=>a+(l.hours||0),0)*100)/100;
+      const maxWorkers=Math.max(0,...pLogs.map(l=>l.workers||0));
+      const sessions=pLogs.length;
+      byProc[p]={mh,elapsed,maxWorkers,sessions};
+    });
+    return{o,logs,totalMh,packDone,perUnit,byProc};
   }).filter(d=>d.logs.length>0);
   if(!mhData.length)return'<div class="alert a-i">공수 입력된 데이터가 없습니다.</div>';
   // Average by product
   const byProd={};
   mhData.forEach(d=>{const k=d.o.prod||'?';if(!byProd[k])byProd[k]=[];if(d.perUnit)byProd[k].push(d.perUnit);});
   const avgByProd={};Object.entries(byProd).forEach(([k,v])=>{avgByProd[k]=v.length?Math.round(v.reduce((a,b)=>a+b,0)/v.length*10000)/10000:null;});
-  const rows=mhData.map(d=>`<tr>
-    <td style="padding:7px 10px;font-family:monospace;font-weight:700;color:var(--blue-dk)">${d.o.lot||d.o.id}</td>
-    <td style="padding:7px 10px;font-size:12px">${d.o.date||'-'}</td>
-    <td style="padding:7px 10px;font-size:12px">${prodObj(d.o.prod)?.name||d.o.prod||'-'}</td>
-    <td style="padding:7px 10px;text-align:right">${fmt(d.o.qty)}</td>
-    <td style="padding:7px 10px;text-align:right;font-weight:600">${fmt(d.packDone)}</td>
-    <td style="padding:7px 10px;text-align:right;color:var(--blue);font-weight:600">${d.totalMh}h</td>
-    <td style="padding:7px 10px;text-align:right">${d.perUnit?d.perUnit+'h/개':'-'}</td>
-    <td style="padding:7px 10px;text-align:right;color:var(--green)">${avgByProd[d.o.prod]?avgByProd[d.o.prod]+'h/개':'-'}</td>
-  </tr>`).join('');
+
+  // 시간 포맷 헬퍼
+  const fmtH=h=>{
+    if(!h||h===0)return'-';
+    const totalMin=Math.round(h*60);
+    const hrs=Math.floor(totalMin/60);const mins=totalMin%60;
+    return hrs>0?(mins>0?`${hrs}시간 ${mins}분`:`${hrs}시간`):(`${mins}분`);
+  };
+  const fmtPerUnit=h=>{
+    if(!h)return'<span style="color:var(--text3)">-</span>';
+    const mins=Math.round(h*60);
+    const secs=Math.round(h*3600);
+    if(mins>=1)return`<span style="font-weight:700">${mins}분/개</span>`;
+    return`<span style="font-weight:700">${secs}초/개</span>`;
+  };
+  const procColor={충진:'#3b82f6',라벨링:'#8b5cf6',기타:'#f59e0b',포장:'#22c55e'};
+
+  const rows=mhData.map(d=>{
+    // 공정별 상세 카드
+    const procCards=PROCESSES.map(p=>{
+      const pd=d.byProc[p];if(!pd||!pd.mh)return'';
+      const w=pd.maxWorkers;const e=pd.elapsed;const mh=pd.mh;
+      const pct=d.totalMh>0?Math.round(mh/d.totalMh*100):0;
+      return`<div style="background:#fff;border:1px solid #e5e7eb;border-radius:6px;padding:6px 8px;min-width:120px">
+        <div style="font-size:10px;font-weight:700;color:${procColor[p]||'#666'};margin-bottom:4px">■ ${p}</div>
+        <div style="display:flex;gap:8px;align-items:flex-end">
+          ${w?`<div style="text-align:center"><div style="font-size:14px;font-weight:800;color:#1e40af">${w}<span style="font-size:9px;font-weight:400">명</span></div><div style="font-size:9px;color:var(--text3)">투입</div></div>`:''}
+          ${e?`<div style="text-align:center"><div style="font-size:13px;font-weight:700;color:#6d28d9">${fmtH(e)}</div><div style="font-size:9px;color:var(--text3)">작업시간</div></div>`:''}
+          <div style="text-align:center"><div style="font-size:13px;font-weight:700;color:${procColor[p]||'#333'}">${mh}h</div><div style="font-size:9px;color:var(--text3)">공수 (${pct}%)</div></div>
+        </div>
+        ${w&&e?`<div style="font-size:9px;color:var(--text3);margin-top:3px;padding-top:3px;border-top:1px solid #f1f5f9">${w}명×${fmtH(e)}=${mh}h</div>`:''}
+      </div>`;
+    }).filter(Boolean).join('');
+
+    // 전체 요약
+    const allW=Math.max(0,...d.logs.map(l=>l.workers||0));
+    const totalElapsed=Math.round(d.logs.reduce((a,l)=>a+(l.hours||0),0)*100)/100;
+    const reprWorkers=PROCESSES.reduce((a,p)=>a+(d.byProc[p]?.maxWorkers||0),0);
+    const avg=avgByProd[d.o.prod];
+    let effBadge='';
+    if(d.perUnit&&avg){const ratio=d.perUnit/avg;if(ratio<=0.9)effBadge=`<span style="background:#dcfce7;color:#15803d;font-size:10px;padding:1px 6px;border-radius:4px;font-weight:600;margin-left:6px">▲ 효율 좋음</span>`;else if(ratio>=1.1)effBadge=`<span style="background:#fee2e2;color:#b91c1c;font-size:10px;padding:1px 6px;border-radius:4px;font-weight:600;margin-left:6px">▼ 평균 이하</span>`;}
+
+    // ── 총공수 자연어 설명 ──────────────────────────────
+    const serialH=totalElapsed;
+    const serialDays=Math.round(serialH/8*10)/10;
+
+    // 자연어 설명 빌드
+    const procSummaries=PROCESSES.map(p=>{
+      const pd=d.byProc[p];if(!pd||!pd.mh)return null;
+      const w=pd.maxWorkers;const e=pd.elapsed;
+      if(!w&&!e)return null;
+      const parts=[];
+      if(w)parts.push(`${w}명`);
+      if(e){const hh=Math.floor(e);const mm=Math.round((e-hh)*60);parts.push(hh>0&&mm>0?`${hh}시간 ${mm}분`:hh>0?`${hh}시간`:`${mm}분`);}
+      return`<span style="display:inline-flex;align-items:center;gap:3px"><span style="width:6px;height:6px;border-radius:50%;background:${procColor[p]||'#999'};display:inline-block"></span><strong>${p}</strong> ${parts.join('/')}</span>`;
+    }).filter(Boolean);
+
+    const naturalSummary=`<div style="background:linear-gradient(135deg,#f0f9ff,#e0f2fe);border:1px solid #bae6fd;border-radius:8px;padding:10px 12px">
+      <div style="font-size:10px;font-weight:700;color:#0369a1;margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em">이번 작업 요약</div>
+      ${procSummaries.length?`<div style="display:flex;gap:8px;flex-wrap:wrap;font-size:11px;margin-bottom:8px">${procSummaries.join('<span style="color:#94a3b8;margin:0 2px">→</span>')}</div>`:''}
+      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
+        ${totalElapsed>0?`<div>
+          <div style="font-size:10px;color:#0369a1">실제 작업시간 합계</div>
+          <div style="font-size:18px;font-weight:800;color:#1e40af">${fmtH(totalElapsed)}</div>
+          <div style="font-size:10px;color:#64748b">각 공정 시간 직렬 합산</div>
+        </div>`:''}
+        ${serialDays>0?`<div>
+          <div style="font-size:10px;color:#0369a1">8시간 기준</div>
+          <div style="font-size:18px;font-weight:800;color:#0369a1">${serialDays<1?Math.round(serialH*60)+'분':serialDays+'일'}</div>
+          <div style="font-size:10px;color:#64748b">${serialDays<1?'1일 미만':'하루 8h 기준'}</div>
+        </div>`:''}
+        <div>
+          <div style="font-size:10px;color:#0369a1">총 공수 (인력×시간)</div>
+          <div style="font-size:18px;font-weight:800;color:#7c3aed">${d.totalMh}h</div>
+          <div style="font-size:10px;color:#64748b">${reprWorkers?`연인원 ${reprWorkers}명 투입`:'투입 인원 합계'}</div>
+        </div>
+      </div>
+    </div>`;
+
+    return`<tr style="border-bottom:2px solid #f1f5f9;vertical-align:top">
+      <td style="padding:10px 10px">
+        <div style="font-family:monospace;font-weight:700;color:var(--blue-dk)">${d.o.lot||d.o.id}</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:2px">${d.o.date||'-'}</div>
+      </td>
+      <td style="padding:10px 10px">
+        <div style="font-size:12px;font-weight:600">${prodObj(d.o.prod)?.name||d.o.prod||'-'}${effBadge}</div>
+        <div style="font-size:11px;color:var(--text2);margin-top:2px">목표 ${fmt(d.o.qty)} · 완료 ${fmt(d.packDone)}</div>
+        <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">${procCards}</div>
+      </td>
+      <td style="padding:10px 10px;min-width:260px">${naturalSummary}</td>
+      <td style="padding:10px 10px;text-align:right">${fmtPerUnit(d.perUnit)}</td>
+      <td style="padding:10px 10px;text-align:right;color:var(--green)">${fmtPerUnit(avgByProd[d.o.prod])}</td>
+    </tr>`;
+  }).join('');
+
+  const grandTotal=Math.round(mhData.reduce((a,d)=>a+d.totalMh,0)*100)/100;
+  const grandElapsed=Math.round(mhData.reduce((a,d)=>a+d.logs.reduce((b,l)=>b+(l.hours||0),0),0)*100)/100;
+  const grandDays=Math.round(grandElapsed/8*10)/10;
+
   return`<div style="background:#fff;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-top:16px">
-    <div style="padding:12px 16px;border-bottom:1px solid var(--border);font-size:14px;font-weight:700">⏱️ LOT별 공수 리포트</div>
+    <div style="padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+      <span style="font-size:14px;font-weight:700">⏱️ LOT별 공수 리포트</span>
+      <div style="display:flex;gap:16px;font-size:12px;flex-wrap:wrap;align-items:center">
+        <span>실제 작업시간 합계 <strong>${fmtH(grandElapsed)}</strong> (≈${grandDays}일)</span>
+        <span style="color:var(--purple)">총 공수 <strong>${grandTotal}h</strong></span>
+      </div>
+    </div>
     <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px">
       <thead><tr style="background:#f8fafc">
-        <th style="padding:9px 10px;border-bottom:1px solid var(--border)">LOT</th>
-        <th style="padding:9px 10px;border-bottom:1px solid var(--border)">생산일</th>
-        <th style="padding:9px 10px;border-bottom:1px solid var(--border)">제품명</th>
-        <th style="padding:9px 10px;border-bottom:1px solid var(--border);text-align:right">목표</th>
-        <th style="padding:9px 10px;border-bottom:1px solid var(--border);text-align:right">포장완료</th>
-        <th style="padding:9px 10px;border-bottom:1px solid var(--border);text-align:right">총공수</th>
-        <th style="padding:9px 10px;border-bottom:1px solid var(--border);text-align:right">개당공수</th>
-        <th style="padding:9px 10px;border-bottom:1px solid var(--border);text-align:right">제품평균</th>
+        <th style="padding:9px 10px;border-bottom:1px solid var(--border)">LOT / 날짜</th>
+        <th style="padding:9px 10px;border-bottom:1px solid var(--border)">제품명 · 공정별 상세</th>
+        <th style="padding:9px 10px;border-bottom:1px solid var(--border)">작업 요약 <span style="font-weight:400;color:var(--text3)">(실제 소요시간 · 공수)</span></th>
+        <th style="padding:9px 10px;border-bottom:1px solid var(--border);text-align:right">개당 공수</th>
+        <th style="padding:9px 10px;border-bottom:1px solid var(--border);text-align:right">제품 평균</th>
       </tr></thead>
       <tbody>${rows}</tbody>
     </table></div>
+    <div style="padding:10px 16px;background:#f0f9ff;font-size:11px;color:#1e40af;border-top:1px solid #bae6fd;line-height:1.7">
+      <strong>읽는 법:</strong>&nbsp;
+      <strong>실제 작업시간</strong> = 각 공정에 실제로 걸린 시간 합계 (사람 수 무관) &nbsp;·&nbsp;
+      <strong>총 공수</strong> = 투입인원 × 작업시간 (인력 투입 총량) &nbsp;·&nbsp;
+      예: 충진 5명/2시간 → 10h 공수, 포장 3명/1시간 → 3h 공수 = 실제 3시간이지만 공수 13h
+    </div>
   </div>`;
 }
 function initLotReport(){
