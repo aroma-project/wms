@@ -6196,30 +6196,67 @@ function openPackSpec(ordId){
 }
 
 async function savePackSpec(){
-  const o=C.orders.find(x=>x.id===psOrdId);if(!o)return;
-  const prod=prodObj(o.prod)||{};
-  const group=C.productGroups.find(g=>g.id===prod.group_id);
-  const scent=C.scents.find(s=>s.id===prod.scent_id);
+  const o=psOrdId?C.orders.find(x=>x.id===psOrdId):null;
+  const prodCode=o?.prod||document.getElementById('ps-prod-info')?.dataset?.prod;
+  const prod=prodCode?prodObj(prodCode):null;
+  const group=C.productGroups.find(g=>g.id===prod?.group_id);
+  const scent=C.scents.find(s=>s.id===prod?.scent_id);
   const groupSpec=document.getElementById('ps-group-spec').value;
   const scentNote=document.getElementById('ps-scent-note').value;
   const now=today();
 
-  try{
-    // 제품군 공통사양 저장
-    if(group){
+  let dbOk=true;
+  const errors=[];
+
+  // 제품군 공통사양 저장
+  if(group){
+    try{
       await dbUpdate('product_groups','id',group.id,{pack_spec:groupSpec,pack_spec_updated:now});
-      group.pack_spec=groupSpec;
-      group.pack_spec_updated=now;
+    }catch(e){
+      dbOk=false;
+      errors.push('product_groups.pack_spec: '+e.message);
     }
-    // 향별 메모 저장
-    if(scent){
+    // DB 실패해도 로컬은 항상 업데이트
+    group.pack_spec=groupSpec;
+    group.pack_spec_updated=now;
+  }
+
+  // 향별 메모 저장
+  if(scent){
+    try{
       await dbUpdate('scents','id',scent.id,{pack_note:scentNote,pack_note_updated:now});
-      scent.pack_note=scentNote;
-      scent.pack_note_updated=now;
+    }catch(e){
+      dbOk=false;
+      errors.push('scents.pack_note: '+e.message);
     }
-    closeMo();
-    toast('포장사양이 저장됐습니다');
-  }catch(e){toast('저장 실패: '+e.message,'error');}
+    scent.pack_note=scentNote;
+    scent.pack_note_updated=now;
+  }
+
+  closeMo();
+  if(dbOk){
+    toast('포장사양이 저장됐습니다','success');
+  }else{
+    toast('⚠️ DB 저장 실패 — Supabase에 컬럼 추가가 필요합니다','error',8000);
+    setTimeout(()=>{
+      if(confirm(
+        'Supabase에 컬럼이 없어 DB 저장에 실패했습니다.\n\n'+
+        'Supabase SQL Editor에서 아래 SQL을 실행해주세요:\n\n'+
+        'alter table product_groups\n'+
+        '  add column if not exists pack_spec text,\n'+
+        '  add column if not exists pack_spec_updated text;\n\n'+
+        'alter table scents\n'+
+        '  add column if not exists pack_note text,\n'+
+        '  add column if not exists pack_note_updated text;\n\n'+
+        '(로컬에는 임시 저장됐습니다. 새로고침하면 사라집니다)\n\n'+
+        '클립보드에 SQL을 복사하시겠습니까?'
+      )){
+        navigator.clipboard?.writeText(
+          'alter table product_groups\n  add column if not exists pack_spec text,\n  add column if not exists pack_spec_updated text;\n\nalter table scents\n  add column if not exists pack_note text,\n  add column if not exists pack_note_updated text;'
+        ).then(()=>toast('SQL이 클립보드에 복사됐습니다'));
+      }
+    },300);
+  }
 }
 
 // BOM 페이지에서도 열 수 있게 — 제품코드로 직접 열기
