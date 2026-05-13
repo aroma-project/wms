@@ -547,7 +547,42 @@ textarea{min-height:60px;resize:vertical}
           <input id="sm-note" placeholder="피킹, 입고 등..." style="width:110px;padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:13px">
         </div>
         <button class="btn btn-p" onclick="doSmMove()" style="align-self:flex-end">이동 처리</button>
+        <button onclick="openSmDispose()" style="align-self:flex-end;padding:7px 14px;background:#dc2626;color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer">🗑 폐기처리</button>
         <button onclick="closeSmPanel()" style="align-self:flex-end;background:none;border:none;font-size:20px;color:var(--text3);cursor:pointer;padding:0 4px">×</button>
+      </div>
+    </div>
+  </div>
+  <!-- 폐기처리 패널 -->
+  <div id="sm-dispose-panel" style="display:none;position:sticky;bottom:0;z-index:11;background:#fff5f5;border-top:2px solid #dc2626;padding:14px 16px;margin-top:4px">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+      <div>
+        <div id="sm-dispose-mat-name" style="font-weight:700;font-size:14px;color:#dc2626"></div>
+        <div style="font-size:11px;color:#ef4444;margin-top:2px">🗑 폐기처리 — 히스토리에 기록됩니다</div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:flex-end;margin-left:auto;flex-wrap:wrap">
+        <div>
+          <label style="font-size:11px;font-weight:600;display:block;margin-bottom:3px;color:#dc2626">폐기 수량</label>
+          <div style="display:flex;gap:4px;align-items:center">
+            <input id="sm-dispose-qty" type="number" min="1" placeholder="0" style="width:90px;padding:7px 10px;border:1px solid #fca5a5;border-radius:7px;font-size:13px">
+            <button onclick="smSetDisposeAllQty()" style="padding:7px 10px;background:#fee2e2;border:1px solid #fca5a5;border-radius:7px;font-size:12px;cursor:pointer;color:#dc2626;font-weight:600">전량</button>
+          </div>
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;display:block;margin-bottom:3px;color:#dc2626">폐기 위치</label>
+          <select id="sm-dispose-loc" style="padding:7px 10px;border:1px solid #fca5a5;border-radius:7px;font-size:13px;min-width:110px"></select>
+        </div>
+        <div>
+          <label style="font-size:11px;font-weight:600;display:block;margin-bottom:3px;color:#dc2626">사유</label>
+          <select id="sm-dispose-reason" style="padding:7px 10px;border:1px solid #fca5a5;border-radius:7px;font-size:13px">
+            <option value="파손">파손</option>
+            <option value="품질불량">품질불량</option>
+            <option value="유통기한만료">유통기한만료</option>
+            <option value="오염">오염</option>
+            <option value="기타">기타</option>
+          </select>
+        </div>
+        <button onclick="confirmSmDispose()" style="align-self:flex-end;padding:7px 18px;background:#dc2626;color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:700;cursor:pointer">폐기처리</button>
+        <button onclick="closeSmDispose()" style="align-self:flex-end;background:none;border:none;font-size:20px;color:var(--text3);cursor:pointer;padding:0 4px">×</button>
       </div>
     </div>
   </div>
@@ -932,32 +967,50 @@ textarea{min-height:60px;resize:vertical}
     </div>
   </div>
   <!-- 포장사양 -->
-  <div class="modal" id="m-packspec" style="display:none;max-width:540px">
+  <div class="modal" id="m-packspec" style="display:none;max-width:560px">
     <div class="modal-hd">📦 포장사양 <button class="modal-x" onclick="closeMo()">×</button></div>
     <div id="ps-prod-info" style="background:#f8fafc;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px"></div>
 
     <!-- 제품군 공통사양 -->
-    <div style="margin-bottom:14px">
-      <label style="font-size:12px;font-weight:700;display:block;margin-bottom:6px">
-        📋 제품군 공통 포장사양
-        <span id="ps-group-name" style="color:var(--blue-dk);font-weight:400;margin-left:6px"></span>
-      </label>
+    <div style="margin-bottom:10px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <label style="font-size:12px;font-weight:700">
+          📋 제품군 공통 포장사양
+          <span id="ps-group-name" style="color:var(--blue-dk);font-weight:400;margin-left:6px"></span>
+        </label>
+        <div id="ps-group-meta" style="font-size:10px;color:var(--text3)"></div>
+      </div>
       <textarea id="ps-group-spec" rows="5" placeholder="카톤 입수량, 완충재, 라벨 위치, 캡 토크, 주의사항 등 공통 사양을 입력하세요..."
         style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;line-height:1.7;resize:vertical;font-family:inherit"></textarea>
+      <!-- 이전 포장사양 이력 -->
+      <div id="ps-group-hist-wrap" style="display:none;margin-top:6px">
+        <button type="button" onclick="togglePsHist('group')"
+          style="font-size:11px;color:var(--text2);background:#f1f5f9;border:1px solid var(--border);border-radius:5px;padding:3px 10px;cursor:pointer;width:100%;text-align:left">
+          🕐 이전 포장사양 확인 ▾
+        </button>
+        <div id="ps-group-hist" style="display:none;margin-top:4px;background:#fffbeb;border:1px solid #fcd34d;border-radius:6px;padding:10px;font-size:11px;max-height:180px;overflow-y:auto"></div>
+      </div>
     </div>
 
-    <!-- 향별 추가메모 (해당 향이 있을 때만) -->
-    <div id="ps-scent-section" style="display:none;margin-bottom:14px">
-      <label style="font-size:12px;font-weight:700;display:block;margin-bottom:6px">
-        <span id="ps-scent-dot" style="display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:middle"></span>
-        <span id="ps-scent-name"></span> 향 추가메모
-      </label>
+    <!-- 향별 추가메모 -->
+    <div id="ps-scent-section" style="display:none;margin-bottom:10px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <label style="font-size:12px;font-weight:700">
+          <span id="ps-scent-dot" style="display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:4px;vertical-align:middle"></span>
+          <span id="ps-scent-name"></span> 향 추가메모
+        </label>
+        <div id="ps-scent-meta" style="font-size:10px;color:var(--text3)"></div>
+      </div>
       <textarea id="ps-scent-note" rows="3" placeholder="이 향에만 해당하는 특이사항 (색상 라벨 확인, 특별 주의사항 등)..."
         style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;line-height:1.7;resize:vertical;font-family:inherit"></textarea>
+      <div id="ps-scent-hist-wrap" style="display:none;margin-top:6px">
+        <button type="button" onclick="togglePsHist('scent')"
+          style="font-size:11px;color:var(--text2);background:#f1f5f9;border:1px solid var(--border);border-radius:5px;padding:3px 10px;cursor:pointer;width:100%;text-align:left">
+          🕐 이전 향별메모 확인 ▾
+        </button>
+        <div id="ps-scent-hist" style="display:none;margin-top:4px;background:#fffbeb;border:1px solid #fcd34d;border-radius:6px;padding:10px;font-size:11px;max-height:140px;overflow-y:auto"></div>
+      </div>
     </div>
-
-    <!-- 최근 수정 이력 -->
-    <div id="ps-history" style="font-size:11px;color:var(--text2);margin-bottom:12px"></div>
 
     <div class="br">
       <button class="btn btn-p" onclick="savePackSpec()">저장</button>
@@ -6227,7 +6280,58 @@ async function doSmMove(){
   }catch(e){toast('저장 실패: '+e.message,'error');}
 }
 
-function filterSmMat(){renderStockMove();}  // 호환성 유지
+function openSmDispose(){
+  if(!smSelMat){toast('부자재를 선택하세요','error');return;}
+  const m=matObj(smSelMat);
+  const stocks=C.stock.filter(s=>s.mat_code===smSelMat&&(s.qty||0)>0);
+  const totalQty=stocks.reduce((a,s)=>a+(s.qty||0),0);
+  if(totalQty<=0){toast('재고가 없습니다','error');return;}
+  document.getElementById('sm-dispose-mat-name').textContent=`${m?.name||smSelMat} (현재 재고: ${fmt(totalQty)}개)`;
+  document.getElementById('sm-dispose-qty').value='';
+  // 위치 드롭다운
+  const locSel=document.getElementById('sm-dispose-loc');
+  locSel.innerHTML=stocks.map(s=>`<option value="${s.loc}">${s.loc} (${fmt(s.qty)}개)</option>`).join('');
+  document.getElementById('sm-dispose-panel').style.display='block';
+  document.getElementById('sm-dispose-panel').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function closeSmDispose(){
+  document.getElementById('sm-dispose-panel').style.display='none';
+}
+function smSetDisposeAllQty(){
+  const loc=document.getElementById('sm-dispose-loc')?.value||'';
+  const stocks=C.stock.filter(s=>s.mat_code===smSelMat&&(loc?s.loc===loc:true)&&(s.qty||0)>0);
+  const total=stocks.reduce((a,s)=>a+(s.qty||0),0);
+  document.getElementById('sm-dispose-qty').value=total;
+}
+async function confirmSmDispose(){
+  if(!smSelMat){toast('부자재를 선택하세요','error');return;}
+  const qty=parseInt(document.getElementById('sm-dispose-qty').value)||0;
+  const loc=document.getElementById('sm-dispose-loc')?.value||'';
+  const reason=document.getElementById('sm-dispose-reason')?.value||'기타';
+  const m=matObj(smSelMat);
+  if(qty<=0){toast('폐기 수량을 입력하세요','error');return;}
+  const avail=C.stock.filter(s=>s.mat_code===smSelMat&&s.loc===loc).reduce((a,s)=>a+(s.qty||0),0);
+  if(qty>avail){toast(`${loc} 위치 재고(${fmt(avail)}개)보다 많습니다`,'error');return;}
+  if(!confirm(`⚠️ 폐기처리 확인\n\n부자재: ${m?.name||smSelMat}\n위치: ${loc}\n수량: ${fmt(qty)}개\n사유: ${reason}\n\n정말로 폐기처리하시겠습니까?\n이 작업은 히스토리에 기록됩니다.`))return;
+  try{
+    let rem=qty;
+    const srcs=C.stock.filter(s=>s.mat_code===smSelMat&&s.loc===loc&&(s.qty||0)>0)
+      .sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+    for(const s of srcs){
+      if(rem<=0)break;
+      const t=Math.min(s.qty||0,rem);
+      await dbUpdate('stock','id',s.id,{qty:(s.qty||0)-t});
+      s.qty=(s.qty||0)-t;rem-=t;
+    }
+    C.stock=C.stock.filter(s=>s.qty>0);
+    await addHist('수정',smSelMat,qty,`${loc}`,`폐기`,`폐기처리 - 사유: ${reason} / 위치: ${loc} / 수량: ${fmt(qty)}개`);
+    closeSmDispose();
+    renderStockMove();
+    if(typeof renderStock==='function')try{renderStock();}catch(e){}
+    if(typeof renderDash==='function')try{renderDash();}catch(e){}
+    toast(`${m?.name||smSelMat} ${fmt(qty)}개 폐기처리 완료 (${reason})`,'warn',5000);
+  }catch(e){toast('폐기처리 실패: '+e.message,'error');}
+}
 
 function renderSmHist(){
   const el=document.getElementById('sm-hist');if(!el)return;
@@ -6251,6 +6355,15 @@ function renderSmHist(){
 // ══ 포장사양 ══════════════════════════════════════════════════
 let psOrdId=null;
 
+function togglePsHist(type){
+  const hist=document.getElementById(`ps-${type}-hist`);
+  const btn=hist?.previousElementSibling;
+  if(!hist)return;
+  const isOpen=hist.style.display!=='none';
+  hist.style.display=isOpen?'none':'block';
+  if(btn)btn.textContent=isOpen?`🕐 이전 ${type==='group'?'포장사양':'향별메모'} 확인 ▾`:`🕐 이전 ${type==='group'?'포장사양':'향별메모'} 접기 ▴`;
+}
+
 function openPackSpec(ordId){
   psOrdId=ordId;
   const o=C.orders.find(x=>x.id===ordId);if(!o)return;
@@ -6259,7 +6372,6 @@ function openPackSpec(ordId){
   const scent=C.scents.find(s=>s.id===prod.scent_id);
   const co=C.companies.find(c=>c.id===o.co_id);
 
-  // 제품 정보 표시
   document.getElementById('ps-prod-info').innerHTML=`
     <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
       ${co?`<span style="background:#f1f5f9;padding:2px 8px;border-radius:4px;font-weight:600">${co.name}</span>`:''}
@@ -6274,6 +6386,26 @@ function openPackSpec(ordId){
   document.getElementById('ps-group-name').textContent=group?(group.brand?group.brand+' · ':'')+group.name:'';
   document.getElementById('ps-group-spec').value=group?.pack_spec||'';
 
+  // 공통사양 메타 (최종수정 정보)
+  const groupMeta=document.getElementById('ps-group-meta');
+  if(groupMeta&&group?.pack_spec_updated){
+    groupMeta.textContent=`최종수정: ${group.pack_spec_updated} · ${group.pack_spec_user||''}`;
+  }else if(groupMeta){groupMeta.textContent='';}
+
+  // 공통사양 이력 복원
+  const groupHistWrap=document.getElementById('ps-group-hist-wrap');
+  const groupHistEl=document.getElementById('ps-group-hist');
+  const groupHist=group?.pack_spec_hist||[];
+  if(groupHistWrap)groupHistWrap.style.display=groupHist.length?'block':'none';
+  if(groupHistEl)groupHistEl.innerHTML=groupHist.length
+    ?[...groupHist].reverse().map(h=>`<div style="margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid #fde68a">
+        <div style="display:flex;gap:8px;font-size:10px;color:#92400e;margin-bottom:4px">
+          <span>📅 ${h.date}</span><span>·</span><span>✍️ ${h.user||'관리자'}</span>
+        </div>
+        <pre style="margin:0;font-size:11px;white-space:pre-wrap;color:#444;font-family:inherit">${h.spec}</pre>
+      </div>`).join('')
+    :'<div style="color:var(--text3)">이전 이력 없음</div>';
+
   // 향별 메모
   const scentSec=document.getElementById('ps-scent-section');
   if(scent){
@@ -6281,82 +6413,76 @@ function openPackSpec(ordId){
     document.getElementById('ps-scent-dot').style.background=scent.color||'#6b7280';
     document.getElementById('ps-scent-name').textContent=scent.name_ko;
     document.getElementById('ps-scent-note').value=scent.pack_note||'';
-  }else{
-    scentSec.style.display='none';
-  }
-
-  // 최근 수정 이력
-  const histEl=document.getElementById('ps-history');
-  const histItems=[];
-  if(group?.pack_spec_updated)histItems.push(`제품군 사양 최종 수정: ${group.pack_spec_updated}`);
-  if(scent?.pack_note_updated)histItems.push(`향별 메모 최종 수정: ${scent.pack_note_updated}`);
-  histEl.textContent=histItems.join(' · ')||'';
+    const scentMeta=document.getElementById('ps-scent-meta');
+    if(scentMeta&&scent.pack_note_updated)scentMeta.textContent=`최종수정: ${scent.pack_note_updated} · ${scent.pack_note_user||''}`;
+    else if(scentMeta)scentMeta.textContent='';
+    const scentHistWrap=document.getElementById('ps-scent-hist-wrap');
+    const scentHistEl=document.getElementById('ps-scent-hist');
+    const scentHist=scent?.pack_note_hist||[];
+    if(scentHistWrap)scentHistWrap.style.display=scentHist.length?'block':'none';
+    if(scentHistEl)scentHistEl.innerHTML=scentHist.length
+      ?[...scentHist].reverse().map(h=>`<div style="margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid #fde68a">
+          <div style="display:flex;gap:8px;font-size:10px;color:#92400e;margin-bottom:4px">
+            <span>📅 ${h.date}</span><span>·</span><span>✍️ ${h.user||'관리자'}</span>
+          </div>
+          <pre style="margin:0;font-size:11px;white-space:pre-wrap;color:#444;font-family:inherit">${h.note}</pre>
+        </div>`).join('')
+      :'<div style="color:var(--text3)">이전 이력 없음</div>';
+  }else{scentSec.style.display='none';}
 
   showMo('m-packspec');
 }
 
 async function savePackSpec(){
   const o=psOrdId?C.orders.find(x=>x.id===psOrdId):null;
-  const prodCode=o?.prod||document.getElementById('ps-prod-info')?.dataset?.prod;
-  const prod=prodCode?prodObj(prodCode):null;
+  const prod=o?prodObj(o.prod):null;
   const group=C.productGroups.find(g=>g.id===prod?.group_id);
   const scent=C.scents.find(s=>s.id===prod?.scent_id);
-  const groupSpec=document.getElementById('ps-group-spec').value;
-  const scentNote=document.getElementById('ps-scent-note').value;
+  const newGroupSpec=document.getElementById('ps-group-spec').value;
+  const newScentNote=document.getElementById('ps-scent-note').value;
   const now=today();
-
+  const user=CU?.name||'관리자';
   let dbOk=true;
-  const errors=[];
 
-  // 제품군 공통사양 저장
+  // 제품군 — 변경됐으면 이전 내용 이력으로 보존
   if(group){
+    const prevSpec=group.pack_spec||'';
+    const changed=prevSpec.trim()!==newGroupSpec.trim();
+    const hist=changed&&prevSpec?[...(group.pack_spec_hist||[]),{spec:prevSpec,date:group.pack_spec_updated||now,user:group.pack_spec_user||user}]:group.pack_spec_hist||[];
+    // 최근 10개만 보존
+    const trimHist=hist.slice(-10);
     try{
-      await dbUpdate('product_groups','id',group.id,{pack_spec:groupSpec,pack_spec_updated:now});
-    }catch(e){
-      dbOk=false;
-      errors.push('product_groups.pack_spec: '+e.message);
-    }
-    // DB 실패해도 로컬은 항상 업데이트
-    group.pack_spec=groupSpec;
-    group.pack_spec_updated=now;
+      await dbUpdate('product_groups','id',group.id,{
+        pack_spec:newGroupSpec,pack_spec_updated:now,pack_spec_user:user,pack_spec_hist:JSON.stringify(trimHist)
+      });
+    }catch(e){dbOk=false;}
+    group.pack_spec=newGroupSpec;group.pack_spec_updated=now;group.pack_spec_user=user;group.pack_spec_hist=trimHist;
   }
 
-  // 향별 메모 저장
-  if(scent){
+  // 향별 메모 — 변경됐으면 이력 보존
+  if(scent&&document.getElementById('ps-scent-section')?.style.display!=='none'){
+    const prevNote=scent.pack_note||'';
+    const changed=prevNote.trim()!==newScentNote.trim();
+    const hist=changed&&prevNote?[...(scent.pack_note_hist||[]),{note:prevNote,date:scent.pack_note_updated||now,user:scent.pack_note_user||user}]:scent.pack_note_hist||[];
+    const trimHist=hist.slice(-10);
     try{
-      await dbUpdate('scents','id',scent.id,{pack_note:scentNote,pack_note_updated:now});
-    }catch(e){
-      dbOk=false;
-      errors.push('scents.pack_note: '+e.message);
-    }
-    scent.pack_note=scentNote;
-    scent.pack_note_updated=now;
+      await dbUpdate('scents','id',scent.id,{
+        pack_note:newScentNote,pack_note_updated:now,pack_note_user:user,pack_note_hist:JSON.stringify(trimHist)
+      });
+    }catch(e){dbOk=false;}
+    scent.pack_note=newScentNote;scent.pack_note_updated=now;scent.pack_note_user=user;scent.pack_note_hist=trimHist;
   }
 
   closeMo();
-  if(dbOk){
-    toast('포장사양이 저장됐습니다','success');
-  }else{
-    toast('⚠️ DB 저장 실패 — Supabase에 컬럼 추가가 필요합니다','error',8000);
+  if(dbOk){toast('포장사양이 저장됐습니다','success');}
+  else{
+    toast('⚠️ DB 저장 실패 — Supabase에 컬럼 추가가 필요합니다','error',6000);
     setTimeout(()=>{
-      if(confirm(
-        'Supabase에 컬럼이 없어 DB 저장에 실패했습니다.\n\n'+
-        'Supabase SQL Editor에서 아래 SQL을 실행해주세요:\n\n'+
-        'alter table product_groups\n'+
-        '  add column if not exists pack_spec text,\n'+
-        '  add column if not exists pack_spec_updated text;\n\n'+
-        'alter table scents\n'+
-        '  add column if not exists pack_note text,\n'+
-        '  add column if not exists pack_note_updated text;\n\n'+
-        '(로컬에는 임시 저장됐습니다. 새로고침하면 사라집니다)\n\n'+
-        '클립보드에 SQL을 복사하시겠습니까?'
-      )){
-        navigator.clipboard?.writeText(
-          'alter table product_groups\n  add column if not exists pack_spec text,\n  add column if not exists pack_spec_updated text;\n\nalter table scents\n  add column if not exists pack_note text,\n  add column if not exists pack_note_updated text;'
-        ).then(()=>toast('SQL이 클립보드에 복사됐습니다'));
-      }
+      if(confirm('Supabase SQL Editor에서 아래 SQL을 실행해주세요:\n\nalter table product_groups\n  add column if not exists pack_spec text,\n  add column if not exists pack_spec_updated text,\n  add column if not exists pack_spec_user text,\n  add column if not exists pack_spec_hist jsonb;\n\nalter table scents\n  add column if not exists pack_note text,\n  add column if not exists pack_note_updated text,\n  add column if not exists pack_note_user text,\n  add column if not exists pack_note_hist jsonb;\n\n클립보드에 복사하시겠습니까?'))
+        navigator.clipboard?.writeText('alter table product_groups\n  add column if not exists pack_spec text,\n  add column if not exists pack_spec_updated text,\n  add column if not exists pack_spec_user text,\n  add column if not exists pack_spec_hist jsonb;\n\nalter table scents\n  add column if not exists pack_note text,\n  add column if not exists pack_note_updated text,\n  add column if not exists pack_note_user text,\n  add column if not exists pack_note_hist jsonb;');
     },300);
   }
+
 }
 
 // BOM 페이지에서도 열 수 있게 — 제품코드로 직접 열기
