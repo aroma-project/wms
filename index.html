@@ -7536,9 +7536,22 @@ async function saveInboundPlan(){
 }
 async function completeInboundPlan(id){
   const plan=inboundPlans.find(p=>p.id===id);if(!plan)return;
-  if(!confirm(`"${matName(plan.mat_code)}" ${fmt(plan.qty)}개를 입고 처리하시겠습니까?`))return;
-  const ib={date:today(),mat_code:plan.mat_code,qty:plan.qty,plt:'PLT-'+Date.now().toString().slice(-5),loc:C.locations[0]?.code||'',status:'반영완료'};
-  try{const r=await dbInsert('inbounds',ib);C.inbounds.unshift(r||ib);const ns={id:nextInvId(),mat_code:plan.mat_code,qty:plan.qty,loc:ib.loc,plt:ib.plt,date:today()};await dbInsert('stock',ns);C.stock.push(ns);await addHist('입고',plan.mat_code,plan.qty,'',ib.loc,'입고 예정 → 입고 처리');plan.status='입고완료';try{await dbUpdate('inbound_plans','id',id,{status:'입고완료'});}catch(e){}renderInboundPlan();renderIb();toast(`입고 완료`,'success');}catch(e){toast('처리 실패: '+e.message,'error');}
+  const m=matObj(plan.mat_code);
+  const autoLoc=C.locations.find(l=>l.code==='입고대기'||l.zone==='입고대기')?.code||'입고대기';
+  if(!confirm(`"${m?.name||plan.mat_code}" ${fmt(plan.qty)}개를\n위치 [${autoLoc}]에 입고 처리하시겠습니까?`))return;
+  const ib={date:today(),mat_code:plan.mat_code,qty:plan.qty,plt:'PLT-'+Date.now().toString().slice(-5),loc:autoLoc,status:'반영완료'};
+  try{
+    const r=await dbInsert('inbounds',ib);C.inbounds.unshift(r||ib);
+    const ns={id:nextInvId(),mat_code:plan.mat_code,qty:plan.qty,loc:autoLoc,plt:ib.plt,date:today()};
+    await dbInsert('stock',ns);C.stock.push(ns);
+    await addHist('입고',plan.mat_code,plan.qty,'',autoLoc,`입고 예정 → 입고 처리 (위치: ${autoLoc})`);
+    plan.status='입고완료';
+    try{await dbUpdate('inbound_plans','id',id,{status:'입고완료'});}catch(e){}
+    renderInboundPlan();renderIb();
+    if(typeof renderStock==='function')try{renderStock();}catch(e){}
+    if(typeof renderDash==='function')try{renderDash();}catch(e){}
+    toast(`입고 완료 — ${m?.name||plan.mat_code} ${fmt(plan.qty)}개 → ${autoLoc}`,'success');
+  }catch(e){toast('처리 실패: '+e.message,'error');}
 }
 async function deleteInboundPlan(id){
   if(!confirm('입고 예정을 삭제하시겠습니까?'))return;
