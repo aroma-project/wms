@@ -672,6 +672,21 @@ textarea{min-height:60px;resize:vertical}
     <select id="cert-co" onchange="renderCertList()" style="width:130px"><option value="">전체 업체</option></select>
     <input id="cert-s" placeholder="LOT/제품명 검색..." oninput="renderCertList()" style="flex:1;min-width:140px">
   </div>
+  <!-- 향수/방향제 탭 -->
+  <div style="display:flex;gap:0;margin-top:12px;border-bottom:2px solid var(--border)">
+    <button id="cert-tab-C" onclick="setCertTab('C')"
+      style="padding:9px 24px;font-size:13px;font-weight:700;border:none;background:none;cursor:pointer;color:var(--text2);border-bottom:3px solid transparent;margin-bottom:-2px">
+      🌸 향수 (C)
+    </button>
+    <button id="cert-tab-A" onclick="setCertTab('A')"
+      style="padding:9px 24px;font-size:13px;font-weight:700;border:none;background:none;cursor:pointer;color:var(--text2);border-bottom:3px solid transparent;margin-bottom:-2px">
+      🌿 방향제 (A)
+    </button>
+    <button id="cert-tab-all" onclick="setCertTab('')"
+      style="padding:9px 24px;font-size:13px;font-weight:700;border:none;background:none;cursor:pointer;color:var(--text2);border-bottom:3px solid transparent;margin-bottom:-2px">
+      전체
+    </button>
+  </div>
   <div id="cert-list" style="margin-top:10px"></div>
 </div>
 
@@ -5915,44 +5930,67 @@ async function saveLotEdit(ordId,oldLot,newLot){
     renderLotReport();renderOrds();
   }catch(e){alert('LOT 수정 실패: '+e.message);}
 }
+let certTabKind='C';
+
+function setCertTab(kind){
+  certTabKind=kind;
+  ['C','A','all'].forEach(k=>{
+    const btn=document.getElementById('cert-tab-'+k);if(!btn)return;
+    const active=(k===kind)||(k==='all'&&kind==='');
+    btn.style.color=active?'var(--nav)':'var(--text2)';
+    btn.style.borderBottomColor=active?'var(--nav)':'transparent';
+    btn.style.background=active?'#f0f4ff':'none';
+  });
+  renderCertList();
+}
+
 function initCertList(){
-  // 연도 드롭다운
   const yearSel=document.getElementById('cert-year');
   if(yearSel&&yearSel.options.length<=1){
     const years=[...new Set(C.orders.map(o=>(o.date||'').slice(0,4)).filter(Boolean))].sort().reverse();
     years.forEach(y=>{const op=document.createElement('option');op.value=y;op.textContent=y+'년';yearSel.appendChild(op);});
-    if(years.length)yearSel.value=years[0]; // 최신 연도 기본 선택
+    if(years.length)yearSel.value=years[0];
   }
-  // 업체 드롭다운
   const coSel=document.getElementById('cert-co');
   if(coSel&&coSel.options.length<=1)
     C.companies.forEach(c=>{const op=document.createElement('option');op.value=c.id;op.textContent=c.name;coSel.appendChild(op);});
-  renderCertList();
+  setCertTab(certTabKind);
 }
 
 function renderCertList(){
   const year=document.getElementById('cert-year')?.value||'';
   const coF=document.getElementById('cert-co')?.value||'';
   const q=(document.getElementById('cert-s')?.value||'').toLowerCase();
+  const kind=certTabKind||''; // 'C'=향수, 'A'=방향제, ''=전체
 
   const ords=C.orders.filter(o=>{
     if(year&&!(o.date||'').startsWith(year))return false;
     if(coF&&o.co_id!==coF)return false;
+    // 제품 종류 필터
+    if(kind){
+      const prod=prodObj(o.prod);
+      if((prod?.kind||'A')!==kind)return false;
+    }
     if(q){
       const prod=prodObj(o.prod);
       if(![o.lot||o.id,prod?.name||'',coName(o.co_id)].join(' ').toLowerCase().includes(q))return false;
     }
     return true;
   }).sort((a,b)=>{
-    // LOT 번호 내림차순 (APC6MA05 > APC6MA04 > ... > APC6MA01)
     const la=o=>o.lot||o.id;
     return la(b).localeCompare(la(a));
   });
 
   const el=document.getElementById('cert-list');
-  if(!ords.length){el.innerHTML='<div class="alert a-i">해당 조건의 LOT가 없습니다.</div>';return;}
+  if(!ords.length){
+    const kindLabel=kind==='C'?'향수':kind==='A'?'방향제':'';
+    el.innerHTML=`<div class="alert a-i">해당 조건의 LOT가 없습니다.${kindLabel?' ('+kindLabel+' 탭)':''}</div>`;
+    return;
+  }
+  const tabLabel=kind==='C'?'🌸 향수':kind==='A'?'🌿 방향제':'전체';
+  const headerExtra=`<span style="font-size:11px;background:${kind==='C'?'#f0e6ff':kind==='A'?'#e6f7e6':'#f1f5f9'};color:${kind==='C'?'#7c3aed':kind==='A'?'#166534':'#475569'};padding:1px 8px;border-radius:99px;margin-left:8px">${tabLabel}</span>`;
 
-  // 월별 구분 — 행 생성 시 월이 바뀌면 월 셀에 표시, 같은 달이면 빈 셀
+  // 월별 구분
   let lastMonth='';
   const tbodyRows=ords.map(o=>{
     const prod=prodObj(o.prod)||{};
@@ -5995,7 +6033,7 @@ function renderCertList(){
 
   el.innerHTML=`<div style="background:#fff;border:1px solid var(--border);border-radius:10px;overflow:hidden">
     <div style="background:#1e1b4b;color:#fff;padding:10px 16px;font-size:13px;font-weight:700;display:flex;justify-content:space-between;align-items:center">
-      <span>완제품 시험 성적서 목록</span>
+      <span>완제품 시험 성적서 목록${headerExtra}</span>
       <span style="font-size:11px;opacity:.7">${ords.length}건${year?' · '+year+'년':''}</span>
     </div>
     <div style="overflow-x:auto">
@@ -7401,7 +7439,7 @@ function ipAddRow(){
 
   const row=document.createElement('div');
   row.id=`ip-row-${idx}`;
-  row.style.cssText='display:grid;grid-template-columns:1fr 90px 90px auto;gap:6px;align-items:center;background:#f8fafc;border:1px solid var(--border);border-radius:7px;padding:8px 10px';
+  row.style.cssText='display:grid;grid-template-columns:1fr 90px auto;gap:6px;align-items:center;background:#f8fafc;border:1px solid var(--border);border-radius:7px;padding:8px 10px';
   row.innerHTML=`
     <div>
       <select id="ip-mat-${idx}" onchange="ipRowMatChange(${idx})"
@@ -7413,8 +7451,6 @@ function ipAddRow(){
     </div>
     <input id="ip-qty-${idx}" type="number" min="1" placeholder="수량"
       style="padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:13px;text-align:right">
-    <input id="ip-rowloc-${idx}" placeholder="위치(선택)"
-      style="padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px">
     <button onclick="ipRemoveRow(${idx})"
       style="padding:4px 8px;background:none;border:1px solid #fca5a5;color:#dc2626;border-radius:5px;cursor:pointer;font-size:14px;line-height:1">×</button>`;
   document.getElementById('ip-rows').appendChild(row);
@@ -7488,7 +7524,8 @@ async function saveInboundPlan(){
 
   let successCount=0;
   for(const it of items){
-    const obj={id:'IP-'+Date.now()+'-'+Math.random().toString(36).slice(2,5),order_date:orderDate,plan_date:planDate,mat_code:it.matCode,qty:it.qty,note,status:'대기'};
+    const autoLoc=C.locations.find(l=>l.code==='입고대기'||l.zone==='입고대기')?.code||'입고대기';
+    const obj={id:'IP-'+Date.now()+'-'+Math.random().toString(36).slice(2,5),order_date:orderDate,plan_date:planDate,mat_code:it.matCode,qty:it.qty,note,status:'대기',loc:autoLoc};
     try{await dbInsert('inbound_plans',obj);}catch(e){}
     inboundPlans.unshift(obj);
     successCount++;
