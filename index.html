@@ -2688,6 +2688,74 @@ function calcGroupedMaxProd(ordId){
   return{max,maxAlone,items,groupOrds,isGrouped,totalGroupQty};
 }
 
+// BOM 제품군 수정
+function openEditPg(groupId){
+  if(CU?.role!=='admin'){toast('관리자만 수정할 수 있습니다','error');return;}
+  const g=C.productGroups.find(x=>x.id===groupId);if(!g)return;
+  document.getElementById('pg-edit-wrap')?.remove();
+  const wrap=document.createElement('div');
+  wrap.id='pg-edit-wrap';
+  wrap.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center';
+  wrap.innerHTML=`<div style="background:#fff;border-radius:12px;padding:24px;width:400px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+    <div style="font-size:15px;font-weight:700;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center">
+      ✏️ 제품군 수정
+      <button onclick="document.getElementById('pg-edit-wrap').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#aaa;line-height:1">×</button>
+    </div>
+    <div style="font-size:11px;font-family:monospace;color:var(--blue-dk);margin-bottom:12px">${g.id}</div>
+    <div style="margin-bottom:10px">
+      <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">제품군명 *</label>
+      <input id="pge-name" value="${(g.name||'').replace(/"/g,'&quot;')}" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+    </div>
+    <div style="margin-bottom:10px">
+      <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">브랜드</label>
+      <input id="pge-brand" value="${(g.brand||'').replace(/"/g,'&quot;')}" placeholder="브랜드명 (없으면 비움)" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+    </div>
+    <div style="margin-bottom:18px">
+      <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">연결 업체</label>
+      <select id="pge-co" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+        <option value="">선택 없음</option>
+        ${C.companies.map(c=>`<option value="${c.id}" ${g.co_id===c.id?'selected':''}>${c.name}</option>`).join('')}
+      </select>
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button onclick="document.getElementById('pg-edit-wrap').remove()" style="padding:9px 18px;border:1px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;font-size:13px">취소</button>
+      <button onclick="saveEditPg('${groupId}')" style="padding:9px 20px;border:none;border-radius:8px;background:var(--nav);color:#fff;cursor:pointer;font-size:13px;font-weight:600">저장</button>
+    </div>
+  </div>`;
+  document.body.appendChild(wrap);
+  setTimeout(()=>document.getElementById('pge-name')?.focus(),50);
+}
+async function saveEditPg(groupId){
+  const name=document.getElementById('pge-name')?.value?.trim();
+  const brand=document.getElementById('pge-brand')?.value?.trim()||null;
+  const co_id=document.getElementById('pge-co')?.value||null;
+  if(!name){toast('제품군명을 입력하세요','error');return;}
+  try{
+    await dbUpdate('product_groups','id',groupId,{name,brand,co_id});
+    const g=C.productGroups.find(x=>x.id===groupId);
+    if(g){g.name=name;g.brand=brand;g.co_id=co_id;}
+    document.getElementById('pg-edit-wrap')?.remove();
+    renderBom();
+    toast(`"${name}" 수정됐습니다`,'success');
+  }catch(e){toast('수정 실패: '+e.message,'error');}
+}
+async function deletePg(groupId){
+  if(CU?.role!=='admin'){toast('관리자만 삭제할 수 있습니다','error');return;}
+  const g=C.productGroups.find(x=>x.id===groupId);if(!g)return;
+  const prodCount=C.products.filter(p=>p.group_id===groupId).length;
+  if(prodCount>0){
+    toast(`제품 ${prodCount}개가 연결되어 있어 삭제할 수 없습니다. 제품을 먼저 삭제하세요.`,'error',5000);
+    return;
+  }
+  if(!confirm(`제품군 "${g.name}"을 삭제하시겠습니까?\n연결된 향, BOM 데이터도 확인하세요.`))return;
+  try{
+    await dbDelete('product_groups','id',groupId);
+    C.productGroups=C.productGroups.filter(x=>x.id!==groupId);
+    if(bomSelGroup===groupId){bomSelGroup='';bomSelProd='';}
+    renderBom();
+    toast(`"${g.name}" 삭제됐습니다`,'warn');
+  }catch(e){toast('삭제 실패: '+e.message,'error');}
+}
 let bomSelGroup='',bomSelProd='',pendingBomRows=[];
 
 function renderBom(){
@@ -2731,10 +2799,16 @@ function renderBom(){
           <div style="padding:7px 10px;background:#1e1b4b;color:#fff;font-size:11px;font-weight:700">🏢 ${co?.name||'미분류'}</div>
           ${sortedBrands.map(brand=>`
             ${brand!=='__none__'?`<div style="padding:5px 14px;background:#3730a3;color:#fff;font-size:11px;font-weight:600">▸ ${brand}</div>`:''}
-            ${brands[brand].map(g=>`<div class="bom-row ${bomSelGroup===g.id?'active':''}" onclick="bomSelGroup='${g.id}';bomSelProd='';renderBom()" style="padding-left:${brand!=='__none__'?'22px':'14px'}">
-              <div style="flex:1">
+            ${brands[brand].map(g=>`<div class="bom-row ${bomSelGroup===g.id?'active':''}" style="padding-left:${brand!=='__none__'?'22px':'14px'};display:flex;align-items:center;gap:4px">
+              <div style="flex:1;cursor:pointer" onclick="bomSelGroup='${g.id}';bomSelProd='';renderBom()">
                 <div style="font-size:12px;font-weight:600">${g.name}</div>
                 <div style="font-size:10px;opacity:.7">${C.products.filter(p=>p.group_id===g.id).length}개 제품</div>
+              </div>
+              <div style="display:flex;gap:2px;flex-shrink:0" onclick="event.stopPropagation()">
+                <button onclick="openEditPg('${g.id}')" title="제품군 수정"
+                  style="padding:2px 5px;font-size:10px;border:1px solid rgba(255,255,255,.3);border-radius:3px;background:none;color:#fff;cursor:pointer">✏️</button>
+                <button onclick="deletePg('${g.id}')" title="제품군 삭제"
+                  style="padding:2px 5px;font-size:10px;border:1px solid rgba(255,100,100,.4);border-radius:3px;background:rgba(220,38,38,.2);color:#fca5a5;cursor:pointer">🗑</button>
               </div>
             </div>`).join('')}
           `).join('')}
