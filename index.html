@@ -1117,15 +1117,21 @@ textarea{min-height:60px;resize:vertical}
     <div id="ac-menu-perms" style="display:none;margin-top:4px">
       <label style="font-size:12px;font-weight:600;color:var(--text2);display:block;margin-bottom:8px">노출 메뉴 선택 (직원용)</label>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 16px;background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:12px">
-        ${[
-          ['dashboard','대시보드'],['stock','재고현황'],['inbound','입고관리'],
-          ['inbound-plan','입고 예정'],['outbound','출고관리'],['stockmove','위치이동'],
-          ['order','발주·생산오더'],['picking','피킹리스트'],['history','히스토리'],
-          ['lot-trace','LOT 역추적'],['report-lot','LOT 생산내역'],['report-cert','완제품시험성적서'],
-          ['report-history','출고내역 리포트'],['bom','BOM 관리'],['material','부자재마스터'],
-        ].map(([k,label])=>`<label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;padding:3px 0">
-          <input type="checkbox" id="ac-menu-${k}" value="${k}" style="width:14px;height:14px;accent-color:var(--blue)"> ${label}
-        </label>`).join('')}
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;padding:3px 0"><input type="checkbox" id="ac-menu-dashboard" value="dashboard" style="width:14px;height:14px;accent-color:var(--blue)"> 대시보드</label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;padding:3px 0"><input type="checkbox" id="ac-menu-stock" value="stock" style="width:14px;height:14px;accent-color:var(--blue)"> 재고현황</label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;padding:3px 0"><input type="checkbox" id="ac-menu-inbound" value="inbound" style="width:14px;height:14px;accent-color:var(--blue)"> 입고관리</label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;padding:3px 0"><input type="checkbox" id="ac-menu-inbound-plan" value="inbound-plan" style="width:14px;height:14px;accent-color:var(--blue)"> 입고 예정</label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;padding:3px 0"><input type="checkbox" id="ac-menu-outbound" value="outbound" style="width:14px;height:14px;accent-color:var(--blue)"> 출고관리</label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;padding:3px 0"><input type="checkbox" id="ac-menu-stockmove" value="stockmove" style="width:14px;height:14px;accent-color:var(--blue)"> 위치이동</label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;padding:3px 0"><input type="checkbox" id="ac-menu-order" value="order" style="width:14px;height:14px;accent-color:var(--blue)"> 발주·생산오더</label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;padding:3px 0"><input type="checkbox" id="ac-menu-picking" value="picking" style="width:14px;height:14px;accent-color:var(--blue)"> 피킹리스트</label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;padding:3px 0"><input type="checkbox" id="ac-menu-history" value="history" style="width:14px;height:14px;accent-color:var(--blue)"> 히스토리</label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;padding:3px 0"><input type="checkbox" id="ac-menu-lot-trace" value="lot-trace" style="width:14px;height:14px;accent-color:var(--blue)"> LOT 역추적</label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;padding:3px 0"><input type="checkbox" id="ac-menu-report-lot" value="report-lot" style="width:14px;height:14px;accent-color:var(--blue)"> LOT 생산내역</label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;padding:3px 0"><input type="checkbox" id="ac-menu-report-cert" value="report-cert" style="width:14px;height:14px;accent-color:var(--blue)"> 완제품시험성적서</label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;padding:3px 0"><input type="checkbox" id="ac-menu-report-history" value="report-history" style="width:14px;height:14px;accent-color:var(--blue)"> 출고내역 리포트</label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;padding:3px 0"><input type="checkbox" id="ac-menu-bom" value="bom" style="width:14px;height:14px;accent-color:var(--blue)"> BOM 관리</label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer;padding:3px 0"><input type="checkbox" id="ac-menu-material" value="material" style="width:14px;height:14px;accent-color:var(--blue)"> 부자재마스터</label>
       </div>
       <div style="margin-top:6px;display:flex;gap:8px">
         <button type="button" onclick="accMenuSelectAll(true)" style="font-size:11px;color:var(--blue);background:none;border:none;cursor:pointer;padding:0">전체 선택</button>
@@ -3660,7 +3666,14 @@ function ordCard(o){
   }
 
   const recentLogs=C.progressLogs.filter(l=>l.order_id===o.id).slice(0,3).map(l=>`<div class="ord-log-row"><span class="ord-log-date">${l.date||''}</span><span class="badge b-gray" style="font-size:10px">${l.process}</span><span style="font-weight:600;margin-left:4px">${fmt(l.qty)}개</span><span style="color:var(--text2);font-size:11px;margin-left:6px">${l.note||''}</span></div>`).join('');
-  return`<div class="ord-card" style="${isDone?'background:#f3f4f6;border-color:#d1d5db;opacity:.8;filter:grayscale(0.3)':''}">
+  const isProgress=o.status==='진행';
+  const cardStyle=isDone
+    ?'background:#f3f4f6;border-color:#d1d5db;opacity:.8;filter:grayscale(0.3)'
+    :isProgress
+    ?'background:#eff6ff;border-left:4px solid #3b82f6;border-color:#93c5fd'
+    :'';
+  return`<div class="ord-card" style="${cardStyle}">
+    ${isProgress?`<div style="height:3px;background:linear-gradient(90deg,#3b82f6,#06b6d4);border-radius:2px 2px 0 0;margin:-14px -14px 10px -14px"></div>`:''}
     <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;${isDone?'opacity:.75':''}">
       <div>
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:2px">
@@ -3670,7 +3683,7 @@ function ordCard(o){
         </div>
         <div style="font-size:12px;font-weight:600;margin-top:2px">${coName(o.co_id)}·${prod?.name||o.prod||'-'}</div>
         <div style="font-size:11px;color:var(--text2)">목표 ${fmt(o.qty)}개 · 포장완료 ${fmt(packDone)}개${o.exp?` · EXP:${o.exp}`:''}${o.due?` · 납기:${o.due}`:''}
-          ${o.due?(()=>{const diff=Math.ceil((new Date(o.due)-new Date(today()))/(1000*60*60*24));return diff<=0?'<span class="due-today">납기초과</span>':diff<=3?`<span class="due-soon">${diff}일후</span>`:'';})():''}</div>
+          ${o.due&&o.status!=='완료'?(()=>{const diff=Math.ceil((new Date(o.due)-new Date(today()))/(1000*60*60*24));return diff<=0?'<span class="due-today">납기초과</span>':diff<=3?`<span class="due-soon">${diff}일후</span>`:'';})():''}</div>
       </div>
       <div style="display:flex;gap:4px;align-items:center;flex-shrink:0">
         ${sbadge(o.status)}
@@ -5499,6 +5512,10 @@ function renderMhReport(){
       <td style="padding:10px 10px">
         <div style="font-family:monospace;font-weight:700;color:var(--blue-dk)">${d.o.lot||d.o.id}</div>
         <div style="font-size:10px;color:var(--text3);margin-top:2px">${d.o.date||'-'}</div>
+        <button onclick="toggleMhDetail('mhd-${d.o.id}')"
+          style="margin-top:5px;padding:2px 7px;font-size:10px;background:#f1f5f9;border:1px solid var(--border);border-radius:4px;cursor:pointer;color:var(--text2)">
+          상세보기 ▾
+        </button>
       </td>
       <td style="padding:10px 10px">
         <div style="font-size:12px;font-weight:600">${prodObj(d.o.prod)?.name||d.o.prod||'-'}${effBadge}</div>
@@ -5508,6 +5525,11 @@ function renderMhReport(){
       <td style="padding:10px 10px;min-width:260px">${naturalSummary}</td>
       <td style="padding:10px 10px;text-align:right">${fmtPerUnit(d.perUnit)}</td>
       <td style="padding:10px 10px;text-align:right;color:var(--green)">${fmtPerUnit(avgByProd[d.o.prod])}</td>
+    </tr>
+    <tr id="mhd-${d.o.id}" style="display:none;background:#f8fafc">
+      <td colspan="5" style="padding:0 10px 14px 10px">
+        ${buildLotDetailHtml(d.o)}
+      </td>
     </tr>`);
   }); // end forEach
 
@@ -5668,6 +5690,84 @@ function toggleLotDetail(){
   sec.style.display=isOpen?'none':'block';
   icon.textContent=isOpen?'▶':'▼';
   btn.querySelector('span:last-child').textContent=isOpen?'클릭하여 펼치기':'클릭하여 접기';
+}
+
+function toggleMhDetail(id){
+  const el=document.getElementById(id);if(!el)return;
+  const isOpen=el.style.display!=='none';
+  el.style.display=isOpen?'none':'table-row';
+  // 버튼 텍스트 변경
+  const btn=el.previousElementSibling?.querySelector('button');
+  if(btn)btn.textContent=isOpen?'상세보기 ▾':'접기 ▴';
+}
+
+// ④ 동일 제품 과거 생산 이력 HTML 생성
+function buildLotDetailHtml(o){
+  const logs=C.progressLogs.filter(l=>l.order_id===o.id).sort((a,b)=>(a.date||'').localeCompare(b.date||'')||(a.id||0)-(b.id||0));
+  const PROCESSES=['충진','라벨링','기타','포장'];
+  const procColor={충진:'#3b82f6',라벨링:'#8b5cf6',기타:'#f59e0b',포장:'#22c55e'};
+
+  // 일자별 공정 로그
+  const byDate={};
+  logs.forEach(l=>{const d=l.date||'?';if(!byDate[d])byDate[d]=[];byDate[d].push(l);});
+  const logRows=Object.entries(byDate).map(([date,dayLogs])=>{
+    const entries=dayLogs.map(l=>`
+      <span style="display:inline-flex;align-items:center;gap:3px;background:#fff;border:1px solid #e5e7eb;padding:2px 7px;border-radius:4px;margin:2px;font-size:11px">
+        <span style="width:7px;height:7px;border-radius:50%;background:${procColor[l.process]||'#999'};display:inline-block"></span>
+        <strong style="color:${procColor[l.process]||'#333'}">${l.process}</strong>
+        ${fmt(l.qty)}개
+        ${l.workers?`<span style="color:var(--text3)">${l.workers}명</span>`:''}
+        ${l.man_hour?`<span style="color:var(--purple)">${l.man_hour}h</span>`:''}
+        ${l.note?`<span style="color:var(--text3)">· ${l.note}</span>`:''}
+      </span>`).join('');
+    return`<div style="display:flex;gap:8px;align-items:flex-start;padding:5px 0;border-bottom:1px solid #f1f5f9">
+      <div style="font-size:11px;font-weight:600;color:var(--text2);width:78px;flex-shrink:0;padding-top:4px">${date}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:2px">${entries}</div>
+    </div>`;
+  }).join('');
+
+  // 동일 제품 과거 LOT 이력
+  const sameProductOrds=C.orders.filter(x=>x.prod===o.prod&&x.id!==o.id)
+    .sort((a,b)=>(b.date||'').localeCompare(a.date||'')).slice(0,5);
+  const histRows=sameProductOrds.map(prev=>{
+    const prevLogs=C.progressLogs.filter(l=>l.order_id===prev.id);
+    const prevPack=prevLogs.filter(l=>l.process==='포장').reduce((a,l)=>a+(l.qty||0),0);
+    const prevMh=Math.round(prevLogs.reduce((a,l)=>a+(l.man_hour||0),0)*100)/100;
+    const prevPerUnit=prevPack>0&&prevMh>0?Math.round(prevMh/prevPack*10000)/10000:null;
+    return`<tr style="border-bottom:1px solid #f1f5f9;font-size:11px">
+      <td style="padding:5px 8px;font-family:monospace;color:var(--blue-dk);font-weight:600">${prev.lot||prev.id}</td>
+      <td style="padding:5px 8px;color:var(--text2)">${prev.date||'-'}</td>
+      <td style="padding:5px 8px;text-align:right">${fmt(prev.qty)}</td>
+      <td style="padding:5px 8px;text-align:right;color:var(--green);font-weight:600">${fmt(prevPack)}</td>
+      <td style="padding:5px 8px;text-align:right;color:var(--purple)">${prevMh?prevMh+'h':'-'}</td>
+      <td style="padding:5px 8px;text-align:right">${prevPerUnit?Math.round(prevPerUnit*60)+'분/개':'-'}</td>
+      <td style="padding:5px 8px;text-align:center">${sbadge(prev.status)}</td>
+    </tr>`;
+  }).join('');
+
+  return`<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:4px">
+    <!-- 일자별 공정 상세 -->
+    <div>
+      <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid var(--border)">📅 일자별 공정 기록</div>
+      ${logRows||'<div style="font-size:11px;color:var(--text3)">기록 없음</div>'}
+    </div>
+    <!-- 동일 제품 과거 이력 -->
+    <div>
+      <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:6px;padding-bottom:4px;border-bottom:1px solid var(--border)">🔁 동일 제품 과거 LOT 이력 (최근 5건)</div>
+      ${sameProductOrds.length?`<table style="width:100%;border-collapse:collapse">
+        <thead><tr style="background:#f1f5f9">
+          <th style="padding:5px 8px;font-size:10px;font-weight:600;text-align:left">LOT</th>
+          <th style="padding:5px 8px;font-size:10px;font-weight:600">생산일</th>
+          <th style="padding:5px 8px;font-size:10px;font-weight:600;text-align:right">목표</th>
+          <th style="padding:5px 8px;font-size:10px;font-weight:600;text-align:right">포장완료</th>
+          <th style="padding:5px 8px;font-size:10px;font-weight:600;text-align:right">총공수</th>
+          <th style="padding:5px 8px;font-size:10px;font-weight:600;text-align:right">개당공수</th>
+          <th style="padding:5px 8px;font-size:10px;font-weight:600;text-align:center">상태</th>
+        </tr></thead>
+        <tbody>${histRows}</tbody>
+      </table>`:'<div style="font-size:11px;color:var(--text3)">과거 생산 이력 없음 (첫 생산)</div>'}
+    </div>
+  </div>`;
 }
 
 // LOT 수정 모달
