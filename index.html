@@ -963,17 +963,36 @@ textarea{min-height:60px;resize:vertical}
       <label style="font-size:12px;font-weight:600;color:var(--text2)">배송지 (최대 5곳)</label>
       <div style="font-size:11px;color:var(--text3);margin-top:2px">거래명세서 출력 시 선택됩니다</div>
     </div>
-    ${[1,2,3,4,5].map(n=>`
     <div style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px">
-      <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:6px">배송지 ${n}</div>
-      <div class="fr"><label style="font-size:11px">주소</label><input id="co-a${n}" placeholder="배송 주소"></div>
-      <div class="fr c2">
-        <div><label style="font-size:11px">담당자</label><input id="co-a${n}-contact" placeholder="이름/직책"></div>
-        <div><label style="font-size:11px">연락처</label><input id="co-a${n}-tel" placeholder="010-0000-0000"></div>
-      </div>
-      <div class="fr"><label style="font-size:11px">전달사항</label><input id="co-a${n}-note" placeholder="층수, 입고 방법, 주의사항 등"></div>
-    </div>`).join('')}
-    
+      <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:6px">배송지 1</div>
+      <div class="fr"><label style="font-size:11px">주소</label><input id="co-a1" placeholder="배송 주소"></div>
+      <div class="fr c2"><div><label style="font-size:11px">담당자</label><input id="co-a1-contact" placeholder="이름/직책"></div><div><label style="font-size:11px">연락처</label><input id="co-a1-tel" placeholder="010-0000-0000"></div></div>
+      <div class="fr"><label style="font-size:11px">전달사항</label><input id="co-a1-note" placeholder="층수, 입고 방법, 주의사항 등"></div>
+    </div>
+    <div style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px">
+      <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:6px">배송지 2</div>
+      <div class="fr"><label style="font-size:11px">주소</label><input id="co-a2" placeholder="배송 주소"></div>
+      <div class="fr c2"><div><label style="font-size:11px">담당자</label><input id="co-a2-contact" placeholder="이름/직책"></div><div><label style="font-size:11px">연락처</label><input id="co-a2-tel" placeholder="010-0000-0000"></div></div>
+      <div class="fr"><label style="font-size:11px">전달사항</label><input id="co-a2-note" placeholder="층수, 입고 방법, 주의사항 등"></div>
+    </div>
+    <div style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px">
+      <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:6px">배송지 3</div>
+      <div class="fr"><label style="font-size:11px">주소</label><input id="co-a3" placeholder="배송 주소"></div>
+      <div class="fr c2"><div><label style="font-size:11px">담당자</label><input id="co-a3-contact" placeholder="이름/직책"></div><div><label style="font-size:11px">연락처</label><input id="co-a3-tel" placeholder="010-0000-0000"></div></div>
+      <div class="fr"><label style="font-size:11px">전달사항</label><input id="co-a3-note" placeholder="층수, 입고 방법, 주의사항 등"></div>
+    </div>
+    <div style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px">
+      <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:6px">배송지 4</div>
+      <div class="fr"><label style="font-size:11px">주소</label><input id="co-a4" placeholder="배송 주소"></div>
+      <div class="fr c2"><div><label style="font-size:11px">담당자</label><input id="co-a4-contact" placeholder="이름/직책"></div><div><label style="font-size:11px">연락처</label><input id="co-a4-tel" placeholder="010-0000-0000"></div></div>
+      <div class="fr"><label style="font-size:11px">전달사항</label><input id="co-a4-note" placeholder="층수, 입고 방법, 주의사항 등"></div>
+    </div>
+    <div style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px">
+      <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:6px">배송지 5</div>
+      <div class="fr"><label style="font-size:11px">주소</label><input id="co-a5" placeholder="배송 주소"></div>
+      <div class="fr c2"><div><label style="font-size:11px">담당자</label><input id="co-a5-contact" placeholder="이름/직책"></div><div><label style="font-size:11px">연락처</label><input id="co-a5-tel" placeholder="010-0000-0000"></div></div>
+      <div class="fr"><label style="font-size:11px">전달사항</label><input id="co-a5-note" placeholder="층수, 입고 방법, 주의사항 등"></div>
+    </div>
     <div class="br"><button class="btn btn-p" onclick="saveCo()">저장</button><button class="btn btn-g" onclick="closeMo()">취소</button></div>
   </div>
   <!-- 부자재 -->
