@@ -201,11 +201,79 @@ textarea{min-height:60px;resize:vertical}
 .spinner{width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .6s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .page{display:none}.page.active{display:block}
+
+/* ── 모바일 전용 최적화 ── */
 @media(max-width:768px){
+  /* 레이아웃 */
   .nav{transform:translateX(-100%)}.nav.open{transform:translateX(0)}
-  .main{margin-left:0}.g3{grid-template-columns:repeat(2,1fr)}
-  .fr.c3{grid-template-columns:1fr 1fr}.content{padding:14px}.topbar{padding:0 14px}
+  .main{margin-left:0}
+  .content{padding:12px}
+  .topbar{padding:0 12px}
   .bom-tree{grid-template-columns:1fr}
+
+  /* 그리드 */
+  .g3{grid-template-columns:1fr 1fr}
+  .g2{grid-template-columns:1fr}
+  .fr.c3,.fr.c2{grid-template-columns:1fr}
+
+  /* 폰트/간격 확대 */
+  body{font-size:15px}
+  input,select,textarea{font-size:16px;padding:10px 12px;min-height:44px}
+  .btn{font-size:14px;padding:10px 16px;min-height:44px}
+  .btn-sm{font-size:13px;padding:7px 12px;min-height:38px}
+  label{font-size:14px;font-weight:600;margin-bottom:5px;display:block}
+
+  /* 카드 */
+  .card{padding:14px;border-radius:10px;margin-bottom:12px}
+  .card-hd{font-size:15px;margin-bottom:12px}
+  .ord-card{padding:14px;margin-bottom:12px}
+
+  /* KPI */
+  .kpi{padding:16px}
+  .kpi-value{font-size:26px}
+  .kpi-label{font-size:13px}
+
+  /* 테이블 */
+  table{font-size:13px}
+  .stock-table td{padding:10px 8px;font-size:13px}
+
+  /* 모달 */
+  .modal{padding:18px;margin:10px;max-height:88vh;border-radius:14px}
+  .modal-hd{font-size:16px;margin-bottom:14px}
+
+  /* 네비게이션 */
+  .nav-item{font-size:15px;padding:12px 14px;margin:2px 8px}
+  .nav-icon{width:20px;height:20px}
+
+  /* 검색바 */
+  .sw{gap:8px;flex-wrap:wrap}
+  .sw input{font-size:16px;min-height:44px}
+  .sw select{min-height:44px;font-size:15px}
+
+  /* 히스토리 카드 */
+  .hist-card{padding:12px}
+
+  /* 배지 */
+  .badge{font-size:12px;padding:3px 8px}
+
+  /* 캘린더 (이번달만) */
+  #dash-cal{grid-template-columns:1fr}
+  #dash-cal > div:first-child,
+  #dash-cal > div:last-child{display:none}
+
+  /* 대형 버튼 터치 영역 */
+  button{min-height:36px}
+
+  /* 오더카드 버튼 래핑 */
+  .ord-card .btn-sm{font-size:12px;padding:6px 10px;min-height:34px}
+}
+
+/* 초소형 화면 */
+@media(max-width:390px){
+  .content{padding:10px}
+  body{font-size:14px}
+  .kpi-value{font-size:22px}
+  .g3{grid-template-columns:1fr}
 }
 @media print{
   .nav,.topbar,.btn,.br,.sw,#nav-toggle,.no-print{display:none!important}
@@ -934,6 +1002,10 @@ textarea{min-height:60px;resize:vertical}
     <div class="fr c2">
       <div><label>향 *</label><select id="b-scent" onchange="onBomScentChange()"><option value="">향 선택...</option></select></div>
       <div><label>제품종류</label><select id="b-kind"><option value="A">화장품</option><option value="C">방향제</option></select></div>
+    </div>
+    <div class="fr c2">
+      <div><label>용량(ml) *</label><input id="b-vol" type="number" min="1" placeholder="예: 50, 100, 200" style="font-weight:700"></div>
+      <div><label>용량 단위</label><select id="b-vol-unit"><option value="ml">ml</option><option value="g">g</option><option value="개">개(PCS)</option></select></div>
     </div>
     <!-- 자동생성된 제품코드/명 -->
     <div id="bom-prod-preview" style="display:none;background:var(--blue-lt);border-radius:8px;padding:10px;font-size:12px;margin-bottom:10px">
@@ -1910,6 +1982,8 @@ function renderDash(){
 function renderProdCal(){
   const calEl=document.getElementById('dash-cal');if(!calEl)return;
   const T=new Date();const todayStr=today();
+  const isMobile=window.innerWidth<=768;
+
   function addD(ds,n){const d=new Date(ds);d.setDate(d.getDate()+n);return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
   function ds(y,m,d){return`${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;}
   const evMap={};
@@ -1925,22 +1999,28 @@ function renderProdCal(){
     if(o.date&&o.status==='진행'){if(!evMap[o.date])evMap[o.date]=[];evMap[o.date].push({type:'prod',lot,name,co:coN,status:'진행',qty:o.qty,due:o.due});}
     if(o.date&&o.status==='완료'){if(!evMap[o.date])evMap[o.date]=[];evMap[o.date].push({type:'done',lot,name,co:coN,status:'완료',qty:o.qty,due:o.due});}
   });
+
   const DOW=['일','월','화','수','목','금','토'];
   const MON=['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
-  const months=[
+  const months=isMobile?[
+    {y:T.getFullYear(),m:T.getMonth(),faded:false}
+  ]:[
     {y:T.getMonth()===0?T.getFullYear()-1:T.getFullYear(),m:T.getMonth()===0?11:T.getMonth()-1,faded:true},
     {y:T.getFullYear(),m:T.getMonth(),faded:false},
     {y:T.getMonth()===11?T.getFullYear()+1:T.getFullYear(),m:T.getMonth()===11?0:T.getMonth()+1,faded:true},
   ];
+
+  calEl.style.gridTemplateColumns=isMobile?'1fr':'repeat(3,1fr)';
+
   calEl.innerHTML=months.map(({y,m,faded})=>{
     const first=new Date(y,m,1).getDay();
     const dIM=new Date(y,m+1,0).getDate();
     const dIP=new Date(y,m,0).getDate();
     const total=Math.ceil((first+dIM)/7)*7;
     let html=`<div style="border:0.5px solid var(--border,#e2e8f0);border-radius:8px;overflow:hidden">
-      <div style="padding:6px 10px;background:${faded?'var(--color-background-secondary,#f5f5f5)':'#1e1b4b'};color:${faded?'var(--text3,#aaa)':'#fff'};font-size:12px;font-weight:600;text-align:center">${y}년 ${MON[m]}</div>
+      <div style="padding:${isMobile?'10':'6'}px 10px;background:${faded?'var(--color-background-secondary,#f5f5f5)':'#1e1b4b'};color:${faded?'var(--text3,#aaa)':'#fff'};font-size:${isMobile?'15':'12'}px;font-weight:700;text-align:center">${y}년 ${MON[m]}</div>
       <div style="display:grid;grid-template-columns:repeat(7,1fr);background:var(--color-background-secondary,#f8fafc)">`;
-    DOW.forEach((d,i)=>{html+=`<div style="text-align:center;padding:4px 0;font-size:9px;font-weight:600;color:${i===0?'#e24b4a':i===6?'#185fa5':'var(--text2,#888)'}">${d}</div>`;});
+    DOW.forEach((d,i)=>{html+=`<div style="text-align:center;padding:${isMobile?'6':'4'}px 0;font-size:${isMobile?'12':'9'}px;font-weight:600;color:${i===0?'#e24b4a':i===6?'#185fa5':'var(--text2,#888)'}">${d}</div>`;});
     html+='</div><div style="display:grid;grid-template-columns:repeat(7,1fr)">';
     for(let i=0;i<total;i++){
       let day,yr=y,mo=m,isO=false;
@@ -1949,26 +2029,81 @@ function renderProdCal(){
       else day=i-first+1;
       const dow=i%7;const dk=ds(yr,mo,day);const isToday=dk===todayStr;
       const evs=(!isO&&evMap[dk])||[];
-      let nc=`font-size:10px;text-align:center;width:18px;height:18px;display:flex;align-items:center;justify-content:center;border-radius:50%;margin:0 auto 1px;`;
-      if(isToday)nc+=`background:#1d9e75;color:#fff;font-weight:600;`;
+      const cellH=isMobile?'min-height:52px':'min-height:48px';
+      let nc=`font-size:${isMobile?'12':'10'}px;text-align:center;width:${isMobile?'22':'18'}px;height:${isMobile?'22':'18'}px;display:flex;align-items:center;justify-content:center;border-radius:50%;margin:0 auto 1px;`;
+      if(isToday)nc+=`background:#1d9e75;color:#fff;font-weight:700;`;
       else if(isO)nc+=`color:var(--text3,#ccc);`;
       else if(dow===0)nc+=`color:#e24b4a;`;
       else if(dow===6)nc+=`color:#185fa5;`;
       else nc+=`color:var(--text2,#555);`;
-      html+=`<div style="min-height:48px;border-right:0.5px solid var(--border,#f1f5f9);border-bottom:0.5px solid var(--border,#f1f5f9);padding:3px 2px;${isO?'background:rgba(0,0,0,.02)':''}${dow===6?';border-right:none':''}">
+
+      // 모바일: 클릭 시 팝업
+      const clickHandler=evs.length&&isMobile?`onclick="showCalPopup(event,'${dk}')"`:'';
+      html+=`<div ${clickHandler} style="${cellH};border-right:0.5px solid var(--border,#f1f5f9);border-bottom:0.5px solid var(--border,#f1f5f9);padding:${isMobile?'4':'3'}px 2px;${isO?'background:rgba(0,0,0,.02)':''}${dow===6?';border-right:none':''}${evs.length&&isMobile?';cursor:pointer;background:'+(isO?'rgba(0,0,0,.02)':'#fafeff'):''}">
         <div style="${nc}">${day}</div>`;
-      evs.slice(0,2).forEach(ev=>{
-        const bg=ev.type==='prod'?'#e1f5ee':ev.type==='done'?'#f1efe8':ev.type==='warn'?'#fcebeb':'#faeeda';
-        const col=ev.type==='prod'?'#085041':ev.type==='done'?'#5f5e5a':ev.type==='warn'?'#791f1f':'#633806';
-        const icon=ev.type==='prod'?'▶':ev.type==='done'?'✓':ev.type==='warn'?'⚠':'📅';
-        const tip=`${ev.lot}: ${ev.name} (${ev.co}) ${(ev.qty||0).toLocaleString()}개 ${ev.status}${ev.due?' | 납기:'+ev.due:''}`;
-        html+=`<div title="${tip}" style="font-size:8px;padding:1px 3px;border-radius:2px;margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:${bg};color:${col};line-height:1.4">${icon} ${ev.lot}</div>`;
-      });
-      if(evs.length>2)html+=`<div style="font-size:8px;color:var(--text3,#aaa)">+${evs.length-2}</div>`;
+      if(isMobile){
+        // 모바일: 점만 표시
+        if(evs.length){
+          const colors=evs.map(ev=>ev.type==='prod'?'#1d9e75':ev.type==='done'?'#9ca3af':ev.type==='warn'?'#e24b4a':'#f59e0b');
+          html+=`<div style="display:flex;justify-content:center;gap:2px;flex-wrap:wrap;padding:0 1px">`;
+          colors.slice(0,3).forEach(c=>{html+=`<div style="width:6px;height:6px;border-radius:50%;background:${c};flex-shrink:0"></div>`;});
+          html+='</div>';
+        }
+      }else{
+        evs.slice(0,2).forEach(ev=>{
+          const bg=ev.type==='prod'?'#e1f5ee':ev.type==='done'?'#f1efe8':ev.type==='warn'?'#fcebeb':'#faeeda';
+          const col=ev.type==='prod'?'#085041':ev.type==='done'?'#5f5e5a':ev.type==='warn'?'#791f1f':'#633806';
+          const icon=ev.type==='prod'?'▶':ev.type==='done'?'✓':ev.type==='warn'?'⚠':'📅';
+          const tip=`${ev.lot}: ${ev.name} (${ev.co}) ${(ev.qty||0).toLocaleString()}개 ${ev.status}${ev.due?' | 납기:'+ev.due:''}`;
+          html+=`<div title="${tip}" style="font-size:8px;padding:1px 3px;border-radius:2px;margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:${bg};color:${col};line-height:1.4">${icon} ${ev.lot}</div>`;
+        });
+        if(evs.length>2)html+=`<div style="font-size:8px;color:var(--text3,#aaa)">+${evs.length-2}</div>`;
+      }
       html+='</div>';
     }
     return html+'</div></div>';
   }).join('');
+}
+
+function showCalPopup(e,dateKey){
+  document.getElementById('cal-popup')?.remove();
+  const evMap2={};
+  const todayStr=today();
+  C.orders.forEach(o=>{
+    const prod=prodObj(o.prod)||{};const coN=coName(o.co_id)||'';
+    const lot=o.lot||o.id;const name=prod.name||o.prod||'';
+    if(o.due===dateKey)evMap2[dateKey]=(evMap2[dateKey]||[]).concat({type:o.due<todayStr&&o.status!=='완료'?'warn':'due',lot,name,co:coN,status:o.status,qty:o.qty,due:o.due});
+    if(o.date===dateKey&&o.status==='진행')evMap2[dateKey]=(evMap2[dateKey]||[]).concat({type:'prod',lot,name,co:coN,status:'진행',qty:o.qty,due:o.due});
+    if(o.date===dateKey&&o.status==='완료')evMap2[dateKey]=(evMap2[dateKey]||[]).concat({type:'done',lot,name,co:coN,status:'완료',qty:o.qty,due:o.due});
+  });
+  const evs=evMap2[dateKey]||[];if(!evs.length)return;
+  const typeLabel={prod:'생산진행',done:'완료',warn:'납기임박',due:'납기일'};
+  const typeBg={prod:'#e1f5ee',done:'#f1efe8',warn:'#fcebeb',due:'#faeeda'};
+  const typeCol={prod:'#085041',done:'#5f5e5a',warn:'#791f1f',due:'#633806'};
+  const pop=document.createElement('div');
+  pop.id='cal-popup';
+  pop.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:flex-end;justify-content:center';
+  pop.innerHTML=`<div style="background:#fff;border-radius:16px 16px 0 0;padding:20px;width:100%;max-height:70vh;overflow-y:auto;box-shadow:0 -4px 20px rgba(0,0,0,.2)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div style="font-size:16px;font-weight:700">${dateKey}</div>
+      <button onclick="document.getElementById('cal-popup').remove()" style="background:none;border:none;font-size:24px;color:#888;cursor:pointer;padding:0">×</button>
+    </div>
+    ${evs.map(ev=>`<div style="background:${typeBg[ev.type]};border-radius:10px;padding:12px 14px;margin-bottom:8px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+        <span style="font-size:11px;font-weight:700;color:${typeCol[ev.type]};background:rgba(255,255,255,.6);padding:1px 6px;border-radius:4px">${typeLabel[ev.type]}</span>
+        <span style="font-size:12px;color:#555">${ev.status}</span>
+      </div>
+      <div style="font-family:monospace;font-size:14px;font-weight:800;color:#1e40af;margin-bottom:2px">${ev.lot}</div>
+      <div style="font-size:14px;font-weight:600;color:#111">${ev.name}</div>
+      <div style="font-size:12px;color:#555;margin-top:4px;display:flex;gap:10px;flex-wrap:wrap">
+        <span>${ev.co}</span>
+        <span>수량 ${(ev.qty||0).toLocaleString()}개</span>
+        ${ev.due?`<span>납기: ${ev.due}</span>`:''}
+      </div>
+    </div>`).join('')}
+  </div>`;
+  pop.onclick=function(e){if(e.target===pop)pop.remove();};
+  document.body.appendChild(pop);
 }
 
 function onPgCoChange(){
@@ -3027,9 +3162,12 @@ function renderBom(){
       prodListEl.innerHTML=prods.length
         ?prods.map(p=>{
           const scent=C.scents.find(s=>s.id===p.scent_id);
+          const volDisplay=p.vol?`<span style="background:#dbeafe;color:#1d4ed8;padding:1px 5px;border-radius:3px;font-size:10px;font-weight:700">${p.vol}${p.vol_unit||'ml'}</span>`:'';
           return`<div class="bom-row ${bomSelProd===p.code?'active':''}" onclick="bomSelProd='${p.code}';renderBom()">
             <div style="flex:1">
-              <div style="font-size:12px;font-weight:600">${p.name||p.code}</div>
+              <div style="font-size:12px;font-weight:600;display:flex;align-items:center;gap:5px;flex-wrap:wrap">
+                ${p.name||p.code} ${volDisplay}
+              </div>
               <div style="font-size:10px;opacity:.75;margin-top:2px;display:flex;align-items:center;gap:4px">
                 ${scent?`<span style="width:8px;height:8px;border-radius:50%;background:${scent.color||'#6b7280'};display:inline-block"></span>${scent.name_ko}`:'공용'}
               </div>
@@ -3129,13 +3267,28 @@ function onBomScentChange(){
   const groupId=document.getElementById('b-group')?.value||'';
   const scentId=document.getElementById('b-scent')?.value||'';
   if(!groupId||!scentId){document.getElementById('bom-prod-preview').style.display='none';return;}
-  // 자동 제품코드 생성
   const group=C.productGroups.find(g=>g.id===groupId);
   const scent=C.scents.find(s=>s.id===scentId);
   const autoCode=groupId+'-'+scentId;
   document.getElementById('bom-auto-code').textContent=autoCode;
   const existing=C.products.find(p=>p.code===autoCode);
   document.getElementById('b-prodname').value=existing?.name||(group?.name||'')+(scent?' '+scent.name_ko:'');
+  // 기존 제품의 vol 불러오기
+  const volEl=document.getElementById('b-vol');
+  const volUnitEl=document.getElementById('b-vol-unit');
+  if(volEl){
+    if(existing?.vol){
+      volEl.value=existing.vol;
+      // 용기 부자재에서 vol 참조 시도
+    }else{
+      // 용기 타입 부자재에서 자동 추출
+      const bomItems=C.bom.filter(b=>b.prod===autoCode);
+      const containerMat=bomItems.map(b=>matObj(b.mat_code)).find(m=>m?.type==='용기'&&m?.vol);
+      if(containerMat?.vol)volEl.value=containerMat.vol;
+      else volEl.value='';
+    }
+  }
+  if(volUnitEl&&existing?.vol_unit)volUnitEl.value=existing.vol_unit||'ml';
   document.getElementById('bom-prod-preview').style.display='block';
   loadBomMaterials();
 }
@@ -3214,7 +3367,7 @@ function openBomModal(){
   document.getElementById('b-group').innerHTML='<option value="">제품군 선택...</option>';
   document.getElementById('b-scent').innerHTML='<option value="">향 선택...</option>';
   document.getElementById('bom-prod-preview').style.display='none';
-  ['b-prodname','b-mat-qty','b-mat-pri'].forEach(i=>{const el=document.getElementById(i);if(el)el.value='';});
+  ['b-prodname','b-mat-qty','b-mat-pri','b-vol'].forEach(i=>{const el=document.getElementById(i);if(el)el.value='';});;
   let el =document.getElementById('bom-add-rows');if(el)el.innerHTML='';
   const ss=document.getElementById('bom-shared-section');if(ss)ss.style.display='none';
   const sc=document.getElementById('bom-scent-section');if(sc)sc.style.display='none';
@@ -3261,8 +3414,16 @@ async function saveBom(){
   try{
     // 제품 등록 (없으면 새로)
     if(!C.products.find(p=>p.code===prodCode)){
-      const pobj={code:prodCode,co_id:coId,name:prodName,kind:document.getElementById('b-kind').value,group_id:groupId,scent_id:scentId};
+      const volVal=parseFloat(document.getElementById('b-vol')?.value)||null;
+      const volUnit=document.getElementById('b-vol-unit')?.value||'ml';
+      const pobj={code:prodCode,co_id:coId,name:prodName,kind:document.getElementById('b-kind').value,group_id:groupId,scent_id:scentId,vol:volVal,vol_unit:volUnit};
       await dbInsert('products',pobj);C.products.push(pobj);
+    }else{
+      // 기존 제품 vol 업데이트
+      const volVal=parseFloat(document.getElementById('b-vol')?.value)||null;
+      const volUnit=document.getElementById('b-vol-unit')?.value||'ml';
+      await dbUpdate('products','code',prodCode,{vol:volVal,vol_unit:volUnit});
+      const ep=C.products.find(p=>p.code===prodCode);if(ep){ep.vol=volVal;ep.vol_unit=volUnit;}
     }
     // 기존 BOM 삭제 후 재등록
     const existingBom=C.bom.filter(b=>b.prod===prodCode);
