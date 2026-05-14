@@ -520,7 +520,7 @@ textarea{min-height:60px;resize:vertical}
 <!-- 위치마스터 -->
 <div class="page" id="page-location">
   <div class="sw"><input placeholder="위치코드/구역..." id="loc-s" oninput="renderLoc()"><button class="btn btn-p" onclick="openLocModal()">+ 위치 등록</button></div>
-  <div class="card"><div class="tw"><table><thead><tr><th>위치코드</th><th>구역</th><th>현재 보관 부자재</th><th style="text-align:right">총 재고</th><th></th></tr></thead><tbody id="loc-tbody"></tbody></table></div></div>
+  <div class="card"><div class="tw"><table><thead><tr><th>위치코드</th><th>구역</th><th></th></tr></thead><tbody id="loc-tbody"></tbody></table></div></div>
 </div>
 
 <!-- BOM -->
@@ -2888,72 +2888,40 @@ function locSortKey(code){
 }
 function renderLoc(){
   const q=(document.getElementById('loc-s')?.value||'').toLowerCase();
-
-  // 위치마스터 기준 위치 + stock에 실제 존재하는 위치 합집합
   const masterCodes=new Set(C.locations.map(l=>l.code));
+
+  // 재고에 실재하지만 마스터에 없는 위치 (경고용)
   const stockLocs=[...new Set(C.stock.filter(s=>s.qty>0&&!s.mat_code?.startsWith('FG-')).map(s=>s.loc))];
-  const ghostLocs=stockLocs.filter(loc=>!masterCodes.has(loc)); // 마스터에 없는 실재 위치
+  const ghostLocs=stockLocs.filter(loc=>!masterCodes.has(loc));
 
-  // 마스터 위치 + 고아 위치 합쳐서 정렬
   const sorted=[...C.locations].sort((a,b)=>locSortKey(a.code).localeCompare(locSortKey(b.code)));
+  const zoneCol=code=>/[가-힣]/.test(code)?'purple':code==='피킹존'?'green':code==='임시보관'?'amber':'blue';
 
-  const masterRows=sorted.filter(l=>!q||[l.code,l.zone].join(' ').toLowerCase().includes(q)).map(l=>{
-    const stocks=C.stock.filter(s=>s.loc===l.code&&s.qty>0&&!s.mat_code?.startsWith('FG-'));
-    const totalQty=stocks.reduce((a,s)=>a+(s.qty||0),0);
-    const items=stocks.map(s=>{const m=matObj(s.mat_code);return m?`${m.name}`:s.mat_code;}).slice(0,4).join(', ')||'-';
-    const zoneColor=/[가-힣]/.test(l.code)?'purple':l.zone==='피킹존'?'green':l.zone==='임시보관'?'amber':'blue';
-    return`<tr>
+  const masterRows=sorted
+    .filter(l=>!q||[l.code,l.zone||''].join(' ').toLowerCase().includes(q))
+    .map(l=>`<tr>
       <td><span class="mono">${l.code}</span></td>
-      <td>${badge(l.zone,zoneColor)}</td>
-      <td style="font-size:12px;color:var(--text2)">${items}</td>
-      <td style="text-align:right;font-weight:${totalQty>0?'700':'400'};color:${totalQty>0?'var(--blue)':'var(--text3)'}">${totalQty>0?fmt(totalQty)+'개':'-'}</td>
+      <td>${badge(l.zone||'-',zoneCol(l.zone||l.code))}</td>
       <td><button class="btn btn-g btn-sm" onclick="editLoc('${l.code}')">수정</button> <button class="btn btn-g btn-sm" onclick="delLoc('${l.code}')">삭제</button></td>
-    </tr>`;
-  }).join('');
+    </tr>`).join('');
 
-  // 마스터에 없는 실재 위치 (경고 표시)
-  const ghostRows=ghostLocs.filter(loc=>!q||(loc||'').toLowerCase().includes(q)).map(loc=>{
-    const stocks=C.stock.filter(s=>s.loc===loc&&s.qty>0&&!s.mat_code?.startsWith('FG-'));
-    const totalQty=stocks.reduce((a,s)=>a+(s.qty||0),0);
-    const items=stocks.map(s=>{const m=matObj(s.mat_code);return m?m.name:s.mat_code;}).slice(0,4).join(', ')||'-';
-    return`<tr style="background:#fff7ed">
-      <td><span class="mono" style="color:#c2410c">${loc||'(없음)'}</span>
-        <span style="font-size:9px;background:#fed7aa;color:#9a3412;padding:1px 5px;border-radius:3px;margin-left:4px">위치마스터 미등록</span>
-      </td>
-      <td><span class="badge b-amber">미등록</span></td>
-      <td style="font-size:12px;color:var(--text2)">${items}</td>
-      <td style="text-align:right;font-weight:700;color:#c2410c">${fmt(totalQty)}개</td>
-      <td>
-        <button class="btn btn-sm" style="background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;font-size:11px"
-          onclick="addLocFromStock('${loc}')">위치 등록</button>
-      </td>
-    </tr>`;
-  }).join('');
+  // 미등록 위치 행 (경고)
+  const ghostRows=ghostLocs
+    .filter(loc=>!q||(loc||'').toLowerCase().includes(q))
+    .map(loc=>{
+      const qty=C.stock.filter(s=>s.loc===loc&&s.qty>0&&!s.mat_code?.startsWith('FG-')).reduce((a,s)=>a+(s.qty||0),0);
+      return`<tr style="background:#fff7ed">
+        <td><span class="mono" style="color:#c2410c">${loc||'(없음)'}</span>
+          <span style="font-size:9px;background:#fed7aa;color:#9a3412;padding:1px 5px;border-radius:3px;margin-left:5px">미등록 — 재고 ${fmt(qty)}개</span>
+        </td>
+        <td><span class="badge b-amber">미등록</span></td>
+        <td><button class="btn btn-sm" style="background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;font-size:11px"
+            onclick="addLocFromStock('${loc}')">+ 위치마스터에 등록</button></td>
+      </tr>`;
+    }).join('');
 
-  const thead=`<thead><tr style="background:#f8fafc">
-    <th style="padding:9px 12px;text-align:left">위치코드</th>
-    <th style="padding:9px 12px">구역</th>
-    <th style="padding:9px 12px;text-align:left">보관 부자재</th>
-    <th style="padding:9px 12px;text-align:right">총 재고</th>
-    <th style="padding:9px 12px"></th>
-  </tr></thead>`;
-
-  document.getElementById('loc-tbody').innerHTML=
-    `${thead}<tbody>${masterRows}${ghostRows}</tbody>` ||
-    '<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:20px">위치 없음</td></tr>';
-
-  // 미등록 위치 있으면 안내
-  if(ghostLocs.length){
-    const warn=document.getElementById('loc-ghost-warn');
-    if(!warn){
-      const tbl=document.getElementById('loc-tbody').closest('table')||document.getElementById('loc-tbody').parentElement;
-      const div=document.createElement('div');
-      div.id='loc-ghost-warn';
-      div.style.cssText='background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:12px;color:#92400e;font-weight:600;display:flex;align-items:center;gap:8px';
-      div.innerHTML=`⚠️ 위치마스터에 등록되지 않은 위치에 재고 ${ghostLocs.length}곳이 있습니다. 아래 주황 행에서 "위치 등록" 버튼으로 추가하세요.`;
-      tbl?.parentElement?.insertBefore(div,tbl);
-    }
-  }
+  document.getElementById('loc-tbody').innerHTML=masterRows+ghostRows||
+    '<tr><td colspan="3" style="text-align:center;color:var(--text3);padding:20px">위치 없음</td></tr>';
 }
 function openLocModal(code){
   editLocCode=code||null;
@@ -7091,11 +7059,14 @@ function renderStockMove(){
       style="cursor:pointer;transition:background .1s;${isSelected?'background:#eff6ff;outline:2px solid var(--blue);outline-offset:-2px':''}"
       onmouseover="if('${m.code}'!==smSelMat)this.style.background='#f8faff'"
       onmouseout="if('${m.code}'!==smSelMat)this.style.background=''">
-      <td style="padding:10px 14px;border-bottom:1px solid #f1f5f9;min-width:200px">
-        <div style="font-weight:600;font-size:13px">${m.name||m.code}</div>
+      <td style="padding:10px 14px;border-bottom:1px solid #f1f5f9;min-width:220px">
+        <!-- 업체명 강조 -->
+        <div style="font-size:11px;font-weight:700;color:#fff;background:#1e1b4b;display:inline-block;padding:1px 7px;border-radius:4px;margin-bottom:4px">${coName(m.co_id)||'미분류'}</div>
+        ${group?.brand?`<span style="font-size:11px;color:var(--blue-dk);font-weight:600;margin-left:4px">${group.brand}</span>`:''}
+        <div style="font-weight:700;font-size:13px;color:#111">${m.name||m.code}</div>
         <div style="font-size:10px;color:var(--text3);margin-top:2px;display:flex;gap:6px;flex-wrap:wrap">
           ${m.vol?`<span style="background:#e0f2fe;color:#0369a1;padding:0 5px;border-radius:3px">${m.vol}ml</span>`:''}
-          ${group?`<span style="color:var(--blue-dk)">${group.name}</span>`:''}
+          ${group?`<span>${group.name}</span>`:''}
           ${scent?`<span style="display:inline-flex;align-items:center;gap:2px"><span style="width:6px;height:6px;border-radius:50%;background:${scent.color||'#6b7280'};display:inline-block"></span>${scent.name_ko}</span>`:'<span style="color:var(--text3)">공용</span>'}
         </div>
       </td>
