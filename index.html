@@ -520,7 +520,7 @@ textarea{min-height:60px;resize:vertical}
 <!-- 위치마스터 -->
 <div class="page" id="page-location">
   <div class="sw"><input placeholder="위치코드/구역..." id="loc-s" oninput="renderLoc()"><button class="btn btn-p" onclick="openLocModal()">+ 위치 등록</button></div>
-  <div class="card"><div class="tw"><table><thead><tr><th>위치코드</th><th>구역</th><th>현재 보관 부자재</th><th></th></tr></thead><tbody id="loc-tbody"></tbody></table></div></div>
+  <div class="card"><div class="tw"><table><thead><tr><th>위치코드</th><th>구역</th><th>현재 보관 부자재</th><th style="text-align:right">총 재고</th><th></th></tr></thead><tbody id="loc-tbody"></tbody></table></div></div>
 </div>
 
 <!-- BOM -->
@@ -597,10 +597,12 @@ textarea{min-height:60px;resize:vertical}
   </div>
   <!-- 부자재 × 위치 재고 테이블 -->
   <div class="card" style="padding:0;overflow:hidden">
-    <div style="background:#1e1b4b;color:#fff;padding:10px 16px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px">
+    <div style="background:#1e1b4b;color:#fff;padding:10px 16px;font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
       🔄 재고 위치 현황 &amp; 이동
       <span style="font-size:11px;font-weight:400;opacity:.7;margin-left:4px">행을 클릭하면 이동 패널이 열립니다</span>
+      <button onclick="diagStock()" style="margin-left:auto;padding:3px 10px;background:rgba(239,68,68,.3);border:1px solid rgba(239,68,68,.5);color:#fca5a5;border-radius:5px;font-size:11px;cursor:pointer;font-weight:600">🔍 재고 진단</button>
     </div>
+    <div id="sm-diag-result" style="display:none"></div>
     <div id="sm-table-wrap" style="overflow-x:auto"></div>
   </div>
   <!-- 인라인 이동 패널 -->
@@ -2553,17 +2555,24 @@ function renderMat(){
   // 필터 드롭다운 populate
   const cof=document.getElementById('mat-co-f');
   if(cof){const prev=cof.value;cof.innerHTML='<option value="">전체 업체</option>'+C.companies.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');cof.value=prev;}
+  const cfv=document.getElementById('mat-co-f')?.value||'';
   const gf=document.getElementById('mat-group-f');
-  if(gf){let prev =gf.value;gf.innerHTML='<option value="">전체 제품군</option>'+C.productGroups.map(g=>`<option value="${g.id}">${g.name}${g.brand?' ('+g.brand+')':''}</option>`).join('');gf.value=prev;}
+  if(gf){
+    const prev=gf.value;
+    // 업체 선택 시 해당 업체 제품군만 표시
+    const visibleGroups=cfv?C.productGroups.filter(g=>g.co_id===cfv):C.productGroups;
+    gf.innerHTML='<option value="">전체 제품군</option>'+visibleGroups.map(g=>`<option value="${g.id}">${g.name}${g.brand?' ('+g.brand+')':''}</option>`).join('');
+    // 이전 선택값이 현재 목록에 없으면 초기화
+    gf.value=(visibleGroups.find(g=>g.id===prev)?prev:'');
+  }
   const sf=document.getElementById('mat-scent-f');
   const gfv=document.getElementById('mat-group-f')?.value||'';
   if(sf){
-    let prev =sf.value;
+    let prev=sf.value;
     const visibleScents=gfv?C.scents.filter(s=>s.group_id===gfv):C.scents;
     sf.innerHTML='<option value="">전체 향</option><option value="__shared__">공용만</option>'+visibleScents.map(s=>`<option value="${s.id}">${s.name_ko}</option>`).join('');
     sf.value=prev;
   }
-  const cfv=document.getElementById('mat-co-f')?.value||'';
   const sfv=document.getElementById('mat-scent-f')?.value||'';
   const tf=document.getElementById('mat-type-f')?.value||'';
   const q=(document.getElementById('mat-s')?.value||'').toLowerCase();
@@ -2879,12 +2888,72 @@ function locSortKey(code){
 }
 function renderLoc(){
   const q=(document.getElementById('loc-s')?.value||'').toLowerCase();
+
+  // 위치마스터 기준 위치 + stock에 실제 존재하는 위치 합집합
+  const masterCodes=new Set(C.locations.map(l=>l.code));
+  const stockLocs=[...new Set(C.stock.filter(s=>s.qty>0&&!s.mat_code?.startsWith('FG-')).map(s=>s.loc))];
+  const ghostLocs=stockLocs.filter(loc=>!masterCodes.has(loc)); // 마스터에 없는 실재 위치
+
+  // 마스터 위치 + 고아 위치 합쳐서 정렬
   const sorted=[...C.locations].sort((a,b)=>locSortKey(a.code).localeCompare(locSortKey(b.code)));
-  document.getElementById('loc-tbody').innerHTML=sorted.filter(l=>!q||[l.code,l.zone].join(' ').toLowerCase().includes(q)).map(l=>{
-    const items=C.stock.filter(s=>s.loc===l.code).map(s=>{const m=matObj(s.mat_code);return m?`${coName(m.co_id)} ${m.name}`:s.mat_code;}).slice(0,3).join(', ')||'-';
+
+  const masterRows=sorted.filter(l=>!q||[l.code,l.zone].join(' ').toLowerCase().includes(q)).map(l=>{
+    const stocks=C.stock.filter(s=>s.loc===l.code&&s.qty>0&&!s.mat_code?.startsWith('FG-'));
+    const totalQty=stocks.reduce((a,s)=>a+(s.qty||0),0);
+    const items=stocks.map(s=>{const m=matObj(s.mat_code);return m?`${m.name}`:s.mat_code;}).slice(0,4).join(', ')||'-';
     const zoneColor=/[가-힣]/.test(l.code)?'purple':l.zone==='피킹존'?'green':l.zone==='임시보관'?'amber':'blue';
-    return`<tr><td><span class="mono">${l.code}</span></td><td>${badge(l.zone,zoneColor)}</td><td style="font-size:12px;color:var(--text2)">${items}</td><td><button class="btn btn-g btn-sm" onclick="editLoc('${l.code}')">수정</button> <button class="btn btn-g btn-sm" onclick="delLoc('${l.code}')">삭제</button></td></tr>`;
-  }).join('')||'<tr><td colspan="4" style="text-align:center;color:var(--text3);padding:20px">위치 없음</td></tr>';
+    return`<tr>
+      <td><span class="mono">${l.code}</span></td>
+      <td>${badge(l.zone,zoneColor)}</td>
+      <td style="font-size:12px;color:var(--text2)">${items}</td>
+      <td style="text-align:right;font-weight:${totalQty>0?'700':'400'};color:${totalQty>0?'var(--blue)':'var(--text3)'}">${totalQty>0?fmt(totalQty)+'개':'-'}</td>
+      <td><button class="btn btn-g btn-sm" onclick="editLoc('${l.code}')">수정</button> <button class="btn btn-g btn-sm" onclick="delLoc('${l.code}')">삭제</button></td>
+    </tr>`;
+  }).join('');
+
+  // 마스터에 없는 실재 위치 (경고 표시)
+  const ghostRows=ghostLocs.filter(loc=>!q||(loc||'').toLowerCase().includes(q)).map(loc=>{
+    const stocks=C.stock.filter(s=>s.loc===loc&&s.qty>0&&!s.mat_code?.startsWith('FG-'));
+    const totalQty=stocks.reduce((a,s)=>a+(s.qty||0),0);
+    const items=stocks.map(s=>{const m=matObj(s.mat_code);return m?m.name:s.mat_code;}).slice(0,4).join(', ')||'-';
+    return`<tr style="background:#fff7ed">
+      <td><span class="mono" style="color:#c2410c">${loc||'(없음)'}</span>
+        <span style="font-size:9px;background:#fed7aa;color:#9a3412;padding:1px 5px;border-radius:3px;margin-left:4px">위치마스터 미등록</span>
+      </td>
+      <td><span class="badge b-amber">미등록</span></td>
+      <td style="font-size:12px;color:var(--text2)">${items}</td>
+      <td style="text-align:right;font-weight:700;color:#c2410c">${fmt(totalQty)}개</td>
+      <td>
+        <button class="btn btn-sm" style="background:#fff7ed;border:1px solid #fed7aa;color:#9a3412;font-size:11px"
+          onclick="addLocFromStock('${loc}')">위치 등록</button>
+      </td>
+    </tr>`;
+  }).join('');
+
+  const thead=`<thead><tr style="background:#f8fafc">
+    <th style="padding:9px 12px;text-align:left">위치코드</th>
+    <th style="padding:9px 12px">구역</th>
+    <th style="padding:9px 12px;text-align:left">보관 부자재</th>
+    <th style="padding:9px 12px;text-align:right">총 재고</th>
+    <th style="padding:9px 12px"></th>
+  </tr></thead>`;
+
+  document.getElementById('loc-tbody').innerHTML=
+    `${thead}<tbody>${masterRows}${ghostRows}</tbody>` ||
+    '<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:20px">위치 없음</td></tr>';
+
+  // 미등록 위치 있으면 안내
+  if(ghostLocs.length){
+    const warn=document.getElementById('loc-ghost-warn');
+    if(!warn){
+      const tbl=document.getElementById('loc-tbody').closest('table')||document.getElementById('loc-tbody').parentElement;
+      const div=document.createElement('div');
+      div.id='loc-ghost-warn';
+      div.style.cssText='background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:10px 14px;margin-bottom:10px;font-size:12px;color:#92400e;font-weight:600;display:flex;align-items:center;gap:8px';
+      div.innerHTML=`⚠️ 위치마스터에 등록되지 않은 위치에 재고 ${ghostLocs.length}곳이 있습니다. 아래 주황 행에서 "위치 등록" 버튼으로 추가하세요.`;
+      tbl?.parentElement?.insertBefore(div,tbl);
+    }
+  }
 }
 function openLocModal(code){
   editLocCode=code||null;
@@ -2893,6 +2962,18 @@ function openLocModal(code){
   if(code){const l=C.locations.find(x=>x.code===code);if(l)document.getElementById('l-zone').value=l.zone;}
   showMo('m-loc');
 }
+function addLocFromStock(locCode){
+  // 미등록 위치를 위치마스터에 즉시 추가
+  const zone=prompt(`"${locCode}"을 위치마스터에 추가합니다.\n구역명을 입력하세요 (예: 랙A, 입고대기, 피킹존):`,'');
+  if(zone===null)return;
+  const obj={code:locCode,zone:zone||locCode};
+  dbInsert('locations',obj).then(r=>{
+    C.locations.push(r||obj);
+    renderLoc();
+    toast(`"${locCode}" 위치마스터에 추가됐습니다`,'success');
+  }).catch(e=>toast('추가 실패: '+e.message,'error'));
+}
+
 function editLoc(code){openLocModal(code);}
 async function saveLoc(){
   const code=document.getElementById('l-code').value.trim();if(!code){alert('위치코드 필수');return;}
@@ -3488,11 +3569,16 @@ function openProdEdit(prodCode){
   const p=prodObj(prodCode);if(!p){toast('제품을 찾을 수 없습니다','error');return;}
   const scent=C.scents.find(s=>s.id===p.scent_id);
   const group=C.productGroups.find(g=>g.id===p.group_id);
+  // 용기 부자재에서 vol 자동 참조
+  const bomContainer=C.bom.find(b=>b.prod===prodCode&&matObj(b.mat_code)?.type==='용기');
+  const autoVol=matObj(bomContainer?.mat_code)?.vol||'';
+  const curVol=p.vol||autoVol||'';
+  const curUnit=p.vol_unit||'ml';
   document.getElementById('prod-edit-wrap')?.remove();
   const wrap=document.createElement('div');
   wrap.id='prod-edit-wrap';
   wrap.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center';
-  wrap.innerHTML=`<div style="background:#fff;border-radius:12px;padding:24px;width:420px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+  wrap.innerHTML=`<div style="background:#fff;border-radius:12px;padding:24px;width:440px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,.3)">
     <div style="font-size:15px;font-weight:700;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center">
       ✏️ 제품 수정<button onclick="document.getElementById('prod-edit-wrap').remove()" style="background:none;border:none;font-size:22px;cursor:pointer;color:#aaa;line-height:1">×</button>
     </div>
@@ -3505,7 +3591,21 @@ function openProdEdit(prodCode){
     </div>
     <div style="margin-bottom:12px">
       <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">제품명 *</label>
-      <input id="pe-name" value="${(p.name||'').replace(/"/g,'&quot;')}" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px" onkeydown="if(event.key==='Enter')saveProdEditInline('${prodCode}')">
+      <input id="pe-name" value="${(p.name||'').replace(/"/g,'&quot;')}" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px">
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+      <div>
+        <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">용량 *</label>
+        <input id="pe-vol" type="number" min="0" step="0.1" value="${curVol}" placeholder="예: 50, 100" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;font-weight:700">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">단위</label>
+        <select id="pe-vol-unit" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+          <option value="ml" ${curUnit==='ml'?'selected':''}>ml</option>
+          <option value="g" ${curUnit==='g'?'selected':''}>g</option>
+          <option value="개" ${curUnit==='개'?'selected':''}>개(PCS)</option>
+        </select>
+      </div>
     </div>
     <div style="margin-bottom:18px">
       <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">제품 종류</label>
@@ -3514,6 +3614,7 @@ function openProdEdit(prodCode){
         <option value="C" ${p.kind==='C'?'selected':''}>방향제 (C)</option>
       </select>
     </div>
+    ${autoVol&&!p.vol?`<div style="font-size:11px;color:var(--text2);margin-bottom:12px;background:#f0f9ff;padding:6px 10px;border-radius:6px">💡 용기 부자재에서 ${autoVol}ml 자동 감지됨</div>`:''}
     <div style="display:flex;gap:8px;justify-content:flex-end">
       <button onclick="document.getElementById('prod-edit-wrap').remove()" style="padding:9px 18px;border:1px solid var(--border);border-radius:8px;background:#fff;cursor:pointer;font-size:13px">취소</button>
       <button onclick="saveProdEditInline('${prodCode}')" style="padding:9px 20px;border:none;border-radius:8px;background:var(--nav);color:#fff;cursor:pointer;font-size:13px;font-weight:600">저장</button>
@@ -3525,14 +3626,16 @@ function openProdEdit(prodCode){
 async function saveProdEditInline(prodCode){
   const name=document.getElementById('pe-name')?.value?.trim();
   const kind=document.getElementById('pe-kind')?.value||'A';
+  const vol=parseFloat(document.getElementById('pe-vol')?.value)||null;
+  const vol_unit=document.getElementById('pe-vol-unit')?.value||'ml';
   if(!name){toast('제품명을 입력하세요','error');return;}
   try{
-    await dbUpdate('products','code',prodCode,{name,kind});
+    await dbUpdate('products','code',prodCode,{name,kind,vol,vol_unit});
     const p=C.products.find(x=>x.code===prodCode);
-    if(p){p.name=name;p.kind=kind;}
+    if(p){p.name=name;p.kind=kind;p.vol=vol;p.vol_unit=vol_unit;}
     document.getElementById('prod-edit-wrap')?.remove();
     renderBom();
-    toast(`"${name}" 수정됐습니다`,'success');
+    toast(`"${name}" ${vol?vol+vol_unit+' ':''} 수정됐습니다`,'success');
   }catch(e){toast('수정 실패: '+e.message,'error');}
 }
 async function deleteProd(prodCode){
@@ -7016,6 +7119,101 @@ function renderStockMove(){
       <tbody>${rows}</tbody>
     </table>`;
   renderSmHist();
+}
+
+// ── 재고 진단 ────────────────────────────────────────────────
+function diagStock(){
+  const el=document.getElementById('sm-diag-result');if(!el)return;
+  const issues=[];
+  const locCodes=new Set(C.locations.map(l=>l.code));
+
+  // 1. 위치마스터에 없는 위치
+  C.stock.filter(s=>s.qty>0&&!locCodes.has(s.loc)&&!s.mat_code?.startsWith('FG-')).forEach(s=>{
+    issues.push({type:'위치오류',level:'error',
+      msg:`[${matName(s.mat_code)}] 위치 "${s.loc}"이 위치마스터에 없음`,
+      detail:`재고ID: ${s.id} / 수량: ${fmt(s.qty)}개`,
+      fix:`fixStockLoc('${s.id}')`,fixLabel:'위치 수정'});
+  });
+
+  // 2. 같은 부자재+위치에 레코드 중복
+  const byMatLoc={};
+  C.stock.filter(s=>s.qty>0&&!s.mat_code?.startsWith('FG-')).forEach(s=>{
+    const key=s.mat_code+'||'+s.loc;
+    if(!byMatLoc[key])byMatLoc[key]=[];
+    byMatLoc[key].push(s);
+  });
+  Object.entries(byMatLoc).forEach(([key,stocks])=>{
+    if(stocks.length>1){
+      const [matCode,loc]=key.split('||');
+      const total=stocks.reduce((a,s)=>a+(s.qty||0),0);
+      issues.push({type:'중복레코드',level:'warn',
+        msg:`[${matName(matCode)}] ${loc}에 ${stocks.length}개 레코드 분산`,
+        detail:`총 ${fmt(total)}개 (${stocks.map(s=>fmt(s.qty)+'개').join(', ')})`,
+        fix:`mergeStockRecords('${matCode}','${loc}')`,fixLabel:'통합'});
+    }
+  });
+
+  // 3. 부자재마스터에 없는 재고
+  C.stock.filter(s=>s.qty>0&&!s.mat_code?.startsWith('FG-')).forEach(s=>{
+    if(!matObj(s.mat_code)){
+      issues.push({type:'고아재고',level:'error',
+        msg:`부자재 코드 "${s.mat_code}"가 마스터에 없음`,
+        detail:`재고ID: ${s.id} / 위치: ${s.loc} / 수량: ${fmt(s.qty)}개`,
+        fix:'',fixLabel:''});
+    }
+  });
+
+  // 4. 음수 재고
+  C.stock.filter(s=>s.qty<0).forEach(s=>{
+    issues.push({type:'음수재고',level:'error',
+      msg:`[${matName(s.mat_code)}] 재고 음수: ${s.qty}개`,
+      detail:`재고ID: ${s.id} / 위치: ${s.loc}`,
+      fix:'',fixLabel:''});
+  });
+
+  if(!issues.length){
+    el.style.display='block';
+    el.innerHTML=`<div style="padding:14px 16px;background:#dcfce7;color:#166534;font-size:13px;font-weight:600">✅ 재고 정합성 이상 없음 (${C.stock.length}개 레코드 검사)</div>`;
+    setTimeout(()=>{el.style.display='none';},4000);
+    return;
+  }
+  const errCount=issues.filter(i=>i.level==='error').length;
+  const warnCount=issues.filter(i=>i.level==='warn').length;
+  el.style.display='block';
+  el.innerHTML=`<div style="padding:14px 16px;background:#fff7ed;border-bottom:1px solid #fed7aa">
+    <div style="font-size:13px;font-weight:700;color:#9a3412;margin-bottom:10px">⚠️ 재고 이상 발견: 오류 ${errCount}건 · 경고 ${warnCount}건</div>
+    ${issues.map(iss=>`<div style="background:${iss.level==='error'?'#fee2e2':'#fef3c7'};border:1px solid ${iss.level==='error'?'#fca5a5':'#fcd34d'};border-radius:7px;padding:10px 12px;margin-bottom:8px;display:flex;gap:10px;align-items:flex-start">
+      <div style="flex:1">
+        <div style="font-size:11px;font-weight:700;color:${iss.level==='error'?'#991b1b':'#92400e'};margin-bottom:3px">[${iss.type}]</div>
+        <div style="font-size:13px;font-weight:600;color:#111;margin-bottom:2px">${iss.msg}</div>
+        <div style="font-size:11px;color:#555">${iss.detail}</div>
+      </div>
+      ${iss.fix?`<button onclick="${iss.fix}" style="flex-shrink:0;padding:5px 12px;background:#1e1b4b;color:#fff;border:none;border-radius:6px;font-size:12px;cursor:pointer;font-weight:600">${iss.fixLabel}</button>`:''}
+    </div>`).join('')}
+    <button onclick="document.getElementById('sm-diag-result').style.display='none'" style="margin-top:4px;padding:6px 14px;background:none;border:1px solid #d97706;color:#92400e;border-radius:6px;font-size:12px;cursor:pointer">닫기</button>
+  </div>`;
+}
+function fixStockLoc(stockId){
+  const s=C.stock.find(x=>x.id===stockId);if(!s)return;
+  const newLoc=prompt('새 위치 코드 입력 (현재: '+s.loc+')\n\n위치 목록:\n'+C.locations.map(l=>l.code).join(', '));
+  if(!newLoc)return;
+  if(!C.locations.find(l=>l.code===newLoc)){toast('위치마스터에 없는 코드입니다','error');return;}
+  dbUpdate('stock','id',stockId,{loc:newLoc}).then(()=>{
+    s.loc=newLoc;toast('위치 수정 완료','success');diagStock();renderStockMove();if(typeof renderLoc==='function')renderLoc();
+  }).catch(e=>toast('수정 실패: '+e.message,'error'));
+}
+async function mergeStockRecords(matCode,loc){
+  if(!confirm('['+matName(matCode)+'] '+loc+' 중복 레코드를 하나로 통합하시겠습니까?'))return;
+  const stocks=C.stock.filter(s=>s.mat_code===matCode&&s.loc===loc&&s.qty>0);
+  if(stocks.length<=1){toast('통합할 레코드가 없습니다','warn');return;}
+  const total=stocks.reduce((a,s)=>a+(s.qty||0),0);
+  const keep=stocks[0];
+  try{
+    await dbUpdate('stock','id',keep.id,{qty:total});keep.qty=total;
+    for(const s of stocks.slice(1)){await dbDelete('stock','id',s.id);C.stock=C.stock.filter(x=>x.id!==s.id);}
+    toast('통합 완료: '+fmt(total)+'개 ('+stocks.length+'개→1개)','success');
+    diagStock();renderStockMove();if(typeof renderLoc==='function')renderLoc();
+  }catch(e){toast('통합 실패: '+e.message,'error');}
 }
 
 function smSelectMat(code){
