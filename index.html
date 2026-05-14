@@ -982,7 +982,7 @@ textarea{min-height:60px;resize:vertical}
     </div>
   </div>
   <!-- 포장사양 -->
-  <div class="modal" id="m-packspec" style="display:none;max-width:560px">
+  <div class="modal" id="m-packspec" style="display:none;max-width:760px;max-height:92vh">
     <div class="modal-hd">📦 포장사양 <button class="modal-x" onclick="closeMo()">×</button></div>
     <div id="ps-prod-info" style="background:#f8fafc;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px"></div>
 
@@ -995,8 +995,8 @@ textarea{min-height:60px;resize:vertical}
         </label>
         <div id="ps-group-meta" style="font-size:10px;color:var(--text3)"></div>
       </div>
-      <textarea id="ps-group-spec" rows="5" placeholder="카톤 입수량, 완충재, 라벨 위치, 캡 토크, 주의사항 등 공통 사양을 입력하세요..."
-        style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;line-height:1.7;resize:vertical;font-family:inherit"></textarea>
+      <textarea id="ps-group-spec" rows="10" placeholder="카톤 입수량, 완충재, 라벨 위치, 캡 토크, 주의사항 등 공통 사양을 입력하세요..."
+        style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;line-height:1.8;resize:vertical;font-family:inherit;min-height:180px"></textarea>
       <!-- 이전 포장사양 이력 -->
       <div id="ps-group-hist-wrap" style="display:none;margin-top:6px">
         <button type="button" onclick="togglePsHist('group')"
@@ -1016,8 +1016,8 @@ textarea{min-height:60px;resize:vertical}
         </label>
         <div id="ps-scent-meta" style="font-size:10px;color:var(--text3)"></div>
       </div>
-      <textarea id="ps-scent-note" rows="3" placeholder="이 향에만 해당하는 특이사항 (색상 라벨 확인, 특별 주의사항 등)..."
-        style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;line-height:1.7;resize:vertical;font-family:inherit"></textarea>
+      <textarea id="ps-scent-note" rows="5" placeholder="이 향에만 해당하는 특이사항 (색상 라벨 확인, 특별 주의사항 등)..."
+        style="width:100%;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;line-height:1.8;resize:vertical;font-family:inherit;min-height:100px"></textarea>
       <div id="ps-scent-hist-wrap" style="display:none;margin-top:6px">
         <button type="button" onclick="togglePsHist('scent')"
           style="font-size:11px;color:var(--text2);background:#f1f5f9;border:1px solid var(--border);border-radius:5px;padding:3px 10px;cursor:pointer;width:100%;text-align:left">
@@ -4742,7 +4742,7 @@ function renderObDone(){
     if(cf&&!ob.items?.find(i=>i.coId===cf))return false;if(!q)return true;
     return[ob.id,ob.date,...(ob.items||[]).map(i=>i.prodName||''),...(ob.items||[]).map(i=>coName(i.coId))].join(' ').toLowerCase().includes(q);
   });
-  document.getElementById('ob-done-list').innerHTML=rows.length?rows.map(ob=>`<div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:13px;margin-bottom:8px"><div style="display:flex;justify-content:space-between;align-items:flex-start"><div><div style="font-size:12px;font-weight:700;color:var(--teal)">${ob.id}</div><div style="font-size:12px;color:var(--text2)">${ob.date}·${[...new Set((ob.items||[]).map(i=>coName(i.coId)))].join(', ')}</div><div style="font-size:11px;color:var(--text3)">📍 ${ob.dest||'-'}</div><div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px">${(ob.items||[]).map(it=>`<span style="font-size:11px;background:var(--teal-lt);color:var(--teal);padding:2px 8px;border-radius:99px">${it.prodName||it.prod} ${fmt(it.qty)}개</span>`).join('')}</div></div><div style="display:flex;gap:6px;flex-shrink:0;align-items:center">${sbadge(ob.status)}<button class="btn btn-g btn-sm" onclick="showReceiptById('${ob.id}')">🖨️ 명세서</button><button class="btn btn-g btn-sm" title="명세서를 이미지로 복사 (카카오톡/메일 붙여넣기)" onclick="copyReceiptImage('${ob.id}')">📷</button></div></div></div>`).join(''):'<div class="alert a-i">출고 완료 내역 없음</div>';
+  document.getElementById('ob-done-list').innerHTML=rows.length?rows.map(ob=>`<div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:13px;margin-bottom:8px"><div style="display:flex;justify-content:space-between;align-items:flex-start"><div><div style="font-size:12px;font-weight:700;color:var(--teal)">${ob.id}</div><div style="font-size:12px;color:var(--text2)">${ob.date}·${[...new Set((ob.items||[]).map(i=>coName(i.coId)))].join(', ')}</div><div style="font-size:11px;color:var(--text3)">📍 ${ob.dest||'-'}</div><div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px">${(ob.items||[]).map(it=>`<span style="font-size:11px;background:var(--teal-lt);color:var(--teal);padding:2px 8px;border-radius:99px">${it.prodName||it.prod} ${fmt(it.qty)}개</span>`).join('')}</div></div><div style="display:flex;gap:6px;flex-shrink:0;align-items:center">${sbadge(ob.status)}<button class="btn btn-g btn-sm" onclick="showReceiptById('${ob.id}')">🖨️ 명세서</button><button class="btn btn-g btn-sm" title="팔레트 라벨 출력 (A4 가로)" onclick="printPalletLabel('${ob.id}')">📦 팔레트</button><button class="btn btn-g btn-sm" title="명세서를 이미지로 복사 (카카오톡/메일 붙여넣기)" onclick="copyReceiptImage('${ob.id}')">📷</button></div></div></div>`).join(''):'<div class="alert a-i">출고 완료 내역 없음</div>';
 }
 let _receiptObId=null;
 // 비고 자동저장 (localStorage)
@@ -4759,6 +4759,119 @@ function applyReceiptNoteAndPrint(){
     :'<span style="color:#ccc">_________________________</span>';
   window.print();
 }
+function printPalletLabel(obId){
+  const ob=C.outbounds.find(x=>x.id===obId);if(!ob)return;
+
+  const itemCards=(ob.items||[]).map((it,idx)=>{
+    const ord=C.orders.find(o=>o.id===it.ordId)||{};
+    const prod=prodObj(it.prod)||{};
+    const group=C.productGroups.find(g=>g.id===prod.group_id);
+    const co=C.companies.find(c=>c.id===it.coId)||{};
+    const vol=it.vol||matObj(C.bom.find(b=>b.prod===it.prod&&matObj(b.mat_code)?.type==='용기')?.mat_code)?.vol||'';
+    const per=parseInt(localStorage.getItem(`receipt-carton-${obId}-${idx}`))||it.cartonPer||0;
+    const boxes=per?Math.floor(it.qty/per)+(it.qty%per>0?1:0):null;
+    const boxDesc=per?(()=>{const f=Math.floor(it.qty/per);const r=it.qty%per;return r>0?`${f}박스 + ${r}개 (${per}개입)`:f+'박스 ('+per+'개입)';})():'';
+
+    return`<div style="border:3px solid #000;border-radius:8px;padding:20px 24px;break-inside:avoid;position:relative">
+      <!-- 번호 -->
+      <div style="position:absolute;top:-14px;left:16px;background:#000;color:#fff;font-size:13px;font-weight:900;padding:2px 12px;border-radius:99px">No.${idx+1}</div>
+
+      <div style="display:grid;grid-template-columns:1fr auto;gap:16px;align-items:start">
+        <div>
+          <!-- 업체 · 브랜드 -->
+          <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
+            <span style="background:#000;color:#fff;font-size:12px;font-weight:700;padding:2px 10px;border-radius:4px">${co.name||'-'}</span>
+            ${group?.brand?`<span style="font-size:12px;color:#555;font-weight:600">${group.brand}</span>`:''}
+          </div>
+          <!-- 제품명 -->
+          <div style="font-size:22px;font-weight:900;color:#000;line-height:1.2;margin-bottom:6px">${it.prodName||it.prod||'-'}</div>
+          <!-- 규격 -->
+          <div style="display:flex;gap:12px;font-size:14px;color:#333;margin-bottom:10px;flex-wrap:wrap">
+            ${vol?`<span style="background:#e0f2fe;color:#0369a1;padding:2px 10px;border-radius:4px;font-weight:700">${vol}ml</span>`:''}
+            ${ord.exp?`<span>EXP: <strong>${ord.exp}</strong></span>`:''}
+          </div>
+          <!-- LOT -->
+          <div style="font-size:15px;font-weight:700;font-family:monospace;color:#1e40af;background:#eff6ff;padding:4px 12px;border-radius:4px;display:inline-block">
+            LOT: ${it.lot||ord.lot||'-'}
+          </div>
+        </div>
+
+        <!-- 수량 영역 -->
+        <div style="text-align:right;min-width:160px">
+          <div style="font-size:11px;color:#666;margin-bottom:2px">총 수량</div>
+          <div style="font-size:40px;font-weight:900;color:#000;line-height:1">${fmt(it.qty)}</div>
+          <div style="font-size:13px;color:#555;margin-top:2px">EA</div>
+          ${boxes?`<div style="margin-top:10px;border-top:2px solid #000;padding-top:8px">
+            <div style="font-size:11px;color:#666;margin-bottom:2px">박스</div>
+            <div style="font-size:30px;font-weight:900;color:#000;line-height:1">${boxes}</div>
+            <div style="font-size:11px;color:#555;margin-top:2px">${boxDesc}</div>
+          </div>`:''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  const totalQty=(ob.items||[]).reduce((a,i)=>a+(i.qty||0),0);
+  const coNames=[...new Set((ob.items||[]).map(i=>coName(i.coId)))].join(', ');
+
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <title>팔레트 라벨 ${ob.id}</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',sans-serif;background:#fff;color:#000;padding:16px}
+    @media print{
+      @page{size:A4 landscape;margin:8mm}
+      body{padding:0}
+      button{display:none!important}
+    }
+  </style>
+  </head><body>
+
+  <!-- 인쇄 버튼 -->
+  <div style="margin-bottom:12px;display:flex;gap:8px">
+    <button onclick="window.print()" style="padding:8px 20px;background:#000;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:700">🖨️ 인쇄 (A4 가로)</button>
+    <button onclick="window.close()" style="padding:8px 14px;background:#f3f4f6;border:1px solid #ddd;border-radius:6px;cursor:pointer;font-size:13px">닫기</button>
+  </div>
+
+  <!-- 헤더 -->
+  <div style="display:grid;grid-template-columns:1fr auto;align-items:center;border:3px solid #000;border-radius:8px;padding:12px 20px;margin-bottom:12px">
+    <div style="display:flex;align-items:center;gap:16px">
+      <div style="background:#000;color:#fff;padding:8px 14px;border-radius:6px;font-size:15px;font-weight:900;line-height:1.3">aroma<br>project.</div>
+      <div>
+        <div style="font-size:22px;font-weight:900;letter-spacing:.1em">팔 레 트 라 벨</div>
+        <div style="font-size:12px;color:#555;margin-top:3px">${coNames}</div>
+      </div>
+    </div>
+    <div style="text-align:right">
+      <div style="font-size:11px;color:#888">출고번호</div>
+      <div style="font-size:14px;font-weight:700;font-family:monospace">${ob.id}</div>
+      <div style="font-size:11px;color:#888;margin-top:4px">출고일</div>
+      <div style="font-size:16px;font-weight:800">${ob.date}</div>
+      <div style="margin-top:6px;background:#000;color:#fff;padding:3px 12px;border-radius:4px;font-size:12px">
+        총 ${fmt(totalQty)}EA
+      </div>
+    </div>
+  </div>
+
+  <!-- 품목 카드 -->
+  <div style="display:grid;grid-template-columns:${(ob.items||[]).length===1?'1fr':(ob.items||[]).length===2?'1fr 1fr':'1fr 1fr 1fr'};gap:12px">
+    ${itemCards}
+  </div>
+
+  <!-- 출고지 -->
+  <div style="margin-top:12px;border:2px solid #000;border-radius:6px;padding:10px 16px;display:flex;align-items:center;gap:12px">
+    <span style="font-size:12px;font-weight:700;white-space:nowrap">📍 배송지</span>
+    <span style="font-size:14px;font-weight:600">${ob.dest||'-'}</span>
+  </div>
+
+  <script>setTimeout(()=>window.print(),400)<\/script>
+  </body></html>`;
+
+  const w=window.open('','_blank','width=1100,height=780');
+  if(w){w.document.write(html);w.document.close();}
+  else toast('팝업이 차단됐습니다. 팝업 허용 후 다시 시도하세요','warn');
+}
+
 function showReceiptById(id){const ob=C.outbounds.find(x=>x.id===id);if(ob)showReceipt(ob);}
 
 async function copyReceiptImage(id){
