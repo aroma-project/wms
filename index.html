@@ -6756,6 +6756,10 @@ function renderMhReport(){
       <strong>총 공수</strong> = 투입인원 × 작업시간 (인력 투입 총량) &nbsp;·&nbsp;
       예: 충진 5명/2시간 → 10h 공수, 포장 3명/1시간 → 3h 공수 = 실제 3시간이지만 공수 13h
     </div>
+    <div style="padding:10px 16px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px">
+      <button onclick="printCostReport()" style="padding:7px 16px;background:#1e1b4b;color:#fff;border:none;border-radius:7px;cursor:pointer;font-size:13px;font-weight:600">💰 생산 비용 리포트</button>
+      <span style="font-size:11px;color:var(--text2)">시급 15,000원 · 월 고정비 1,000만원 기준으로 비용을 자동 산출합니다</span>
+    </div>
   </div>`;
 }
 function initLotReport(){
