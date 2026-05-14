@@ -4549,17 +4549,38 @@ function printWorkJournal(ordId){
   const o=C.orders.find(x=>x.id===ordId);if(!o)return;
   const prod=prodObj(o.prod)||{};
   const co=C.companies.find(c=>c.id===o.co_id)||{};
+  const group=C.productGroups.find(g=>g.id===prod.group_id);
+  const scent=C.scents.find(s=>s.id===prod.scent_id);
   const procs=o.processes||['충진','라벨링','기타','포장'];
   const logs=C.progressLogs.filter(l=>l.order_id===ordId).sort((a,b)=>(a.date||'').localeCompare(b.date||''));
-  // 공정별 기존 입력된 로그
   const byProc={};
   procs.forEach(p=>{byProc[p]=logs.filter(l=>l.process===p);});
 
-  // 각 공정 섹션
+  // 포장사양 섹션
+  const packSpec=group?.pack_spec||'';
+  const scentNote=scent?.pack_note||'';
+  const packSpecHtml=(packSpec||scentNote)?`
+  <div style="border:1px solid #555;border-radius:3px;padding:6px 10px;margin-bottom:8px;background:#fffef0">
+    <div style="font-size:10px;font-weight:700;color:#555;margin-bottom:5px;border-bottom:1px solid #ddd;padding-bottom:3px">
+      📦 포장사양
+      <span style="font-weight:400;font-size:9px;color:#888;margin-left:6px">${group?(group.brand?group.brand+' · ':'')+group.name:''}</span>
+    </div>
+    <div style="display:grid;grid-template-columns:${scentNote?'1fr 1fr':'1fr'};gap:8px">
+      ${packSpec?`<div>
+        <div style="font-size:9px;color:#888;margin-bottom:3px">공통 사양</div>
+        <div style="font-size:10px;line-height:1.6;white-space:pre-wrap;color:#111">${packSpec}</div>
+      </div>`:''}
+      ${scentNote?`<div style="border-left:2px solid #d97706;padding-left:8px">
+        <div style="font-size:9px;color:#92400e;margin-bottom:3px">● ${scent?.name_ko||''} 향 추가메모</div>
+        <div style="font-size:10px;line-height:1.6;white-space:pre-wrap;color:#111">${scentNote}</div>
+      </div>`:''}
+    </div>
+  </div>`:'';
+
+  // 공정 섹션 (빈 행 2행으로 줄여 A4 적합하게)
   const procSections=procs.map(p=>{
     const pLogs=byProc[p]||[];
     const totalDone=pLogs.reduce((a,l)=>a+(l.qty||0),0);
-    // 기 입력된 날짜 행
     const existingRows=pLogs.map(l=>`
       <tr style="background:#f9fbe7">
         <td style="border:1px solid #ccc;padding:3px 6px;font-size:10px;text-align:center">${l.date||''}</td>
@@ -4567,38 +4588,30 @@ function printWorkJournal(ordId){
         <td style="border:1px solid #ccc;padding:3px 6px;font-size:10px">${l.workers?l.workers+'명':''}${l.hours?' '+l.hours+'h':''}</td>
         <td style="border:1px solid #ccc;padding:3px 6px;font-size:10px">${l.note||''}</td>
       </tr>`).join('');
-    // 빈 입력 행 (5행)
-    const blankRows=Array(3).fill(0).map((_,i)=>`
-      <tr style="height:26px">
-        <td style="border:1px solid #ccc;padding:3px 6px"></td>
-        <td style="border:1px solid #ccc;padding:3px 6px"></td>
-        <td style="border:1px solid #ccc;padding:3px 6px"></td>
-        <td style="border:1px solid #ccc;padding:3px 6px"></td>
+    const blankRows=Array(2).fill(0).map(()=>`
+      <tr style="height:22px">
+        <td style="border:1px solid #ccc"></td><td style="border:1px solid #ccc"></td>
+        <td style="border:1px solid #ccc"></td><td style="border:1px solid #ccc"></td>
       </tr>`).join('');
     return`
-      <div style="margin-bottom:8px;break-inside:avoid">
-        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-          <div style="background:${p==='포장'?'#111':'#374151'};color:#fff;padding:3px 10px;border-radius:3px;font-size:11px;font-weight:700">
-            ${p}${p==='포장'?' ⭐':''}
-          </div>
-          ${totalDone>0?`<div style="font-size:11px;color:#555">기 완료: <strong>${fmt(totalDone)}개</strong></div>`:''}
+      <div style="margin-bottom:6px;break-inside:avoid">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:3px">
+          <div style="background:${p==='포장'?'#111':'#374151'};color:#fff;padding:2px 9px;border-radius:3px;font-size:10px;font-weight:700">${p}${p==='포장'?' ⭐':''}</div>
+          ${totalDone>0?`<div style="font-size:10px;color:#555">기완료: <strong>${fmt(totalDone)}개</strong></div>`:''}
           <div style="flex:1;border-bottom:1px dashed #ccc"></div>
         </div>
         <table style="width:100%;border-collapse:collapse">
           <thead><tr style="background:#f5f5f5">
-            <th style="border:1px solid #ccc;padding:4px 6px;font-size:10px;width:80px;text-align:center">작업일자</th>
-            <th style="border:1px solid #ccc;padding:4px 6px;font-size:10px;width:70px;text-align:center">수량(EA)</th>
-            <th style="border:1px solid #ccc;padding:4px 6px;font-size:10px;width:80px;text-align:center">인원/시간</th>
-            <th style="border:1px solid #ccc;padding:4px 6px;font-size:10px;text-align:center">특이사항/메모</th>
+            <th style="border:1px solid #ccc;padding:3px 6px;font-size:9px;width:76px;text-align:center">작업일자</th>
+            <th style="border:1px solid #ccc;padding:3px 6px;font-size:9px;width:66px;text-align:center">수량(EA)</th>
+            <th style="border:1px solid #ccc;padding:3px 6px;font-size:9px;width:76px;text-align:center">인원/시간</th>
+            <th style="border:1px solid #ccc;padding:3px 6px;font-size:9px;text-align:center">특이사항/메모</th>
           </tr></thead>
-          <tbody>
-            ${existingRows}
-            ${blankRows}
+          <tbody>${existingRows}${blankRows}
             <tr style="background:#f5f5f5">
-              <td style="border:1px solid #ccc;padding:4px 6px;font-size:10px;font-weight:700;text-align:center">합 계</td>
-              <td style="border:1px solid #ccc;padding:4px 6px;font-weight:700;text-align:right">${totalDone>0?fmt(totalDone):''}</td>
-              <td style="border:1px solid #ccc;padding:4px 6px"></td>
-              <td style="border:1px solid #ccc;padding:4px 6px"></td>
+              <td style="border:1px solid #ccc;padding:3px 6px;font-size:9px;font-weight:700;text-align:center">합 계</td>
+              <td style="border:1px solid #ccc;padding:3px 6px;font-weight:700;font-size:10px;text-align:right">${totalDone>0?fmt(totalDone):''}</td>
+              <td style="border:1px solid #ccc"></td><td style="border:1px solid #ccc"></td>
             </tr>
           </tbody>
         </table>
@@ -4609,66 +4622,55 @@ function printWorkJournal(ordId){
   <title>작업일지 ${o.lot||o.id}</title>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',sans-serif;font-size:11px;color:#000;padding:12px;max-width:210mm;margin:0 auto}
-    table{border-collapse:collapse;width:100%}
-    @media print{
-      @page{size:A4;margin:8mm}
-      body{padding:0;font-size:10px}
-      button{display:none!important}
-    }
+    body{font-family:'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',sans-serif;font-size:11px;color:#000;padding:10px;max-width:210mm;margin:0 auto}
+    @media print{@page{size:A4;margin:7mm}body{padding:0;font-size:10px}button{display:none!important}}
   </style>
   </head><body>
 
-  <div style="text-align:right;margin-bottom:6px">
-    <button onclick="window.print()" style="padding:6px 16px;background:#1e1b4b;color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:12px">🖨️ 인쇄(A4)</button>
-    <button onclick="window.close()" style="padding:6px 12px;background:#f3f4f6;border:1px solid #ddd;border-radius:5px;cursor:pointer;font-size:12px;margin-left:5px">닫기</button>
+  <div style="text-align:right;margin-bottom:5px">
+    <button onclick="window.print()" style="padding:5px 14px;background:#1e1b4b;color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:12px">🖨️ 인쇄(A4)</button>
+    <button onclick="window.close()" style="padding:5px 10px;background:#f3f4f6;border:1px solid #ddd;border-radius:5px;cursor:pointer;font-size:12px;margin-left:4px">닫기</button>
   </div>
 
   <!-- 헤더 -->
-  <div style="border:2px solid #111;border-radius:4px;overflow:hidden;margin-bottom:8px">
-    <div style="background:#111;color:#fff;padding:6px 12px;display:flex;align-items:center;justify-content:space-between">
-      <div style="font-size:14px;font-weight:900;letter-spacing:.05em">aroma project. &nbsp;작 업 일 지</div>
-      <div style="font-size:10px;opacity:.7">출력일: ${today()}</div>
+  <div style="border:2px solid #111;border-radius:4px;overflow:hidden;margin-bottom:7px">
+    <div style="background:#111;color:#fff;padding:5px 12px;display:flex;align-items:center;justify-content:space-between">
+      <div style="font-size:13px;font-weight:900;letter-spacing:.05em">aroma project. &nbsp;작 업 일 지</div>
+      <div style="font-size:9px;opacity:.7">출력일: ${today()}</div>
     </div>
     <div style="display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid #333">
-      ${[
-        ['LOT 번호', o.lot||o.id, true],
-        ['업체명', co.name||'-', false],
-        ['납기일', o.due||'-', false],
-        ['EXP', o.exp||'-', false],
-      ].map(([label,val,bold])=>`
-        <div style="padding:6px 10px;border-right:1px solid #ddd">
-          <div style="font-size:9px;color:#888;margin-bottom:2px">${label}</div>
-          <div style="font-size:${bold?'13':'11'}px;font-weight:700;font-family:${bold?'monospace':'inherit'};color:${bold?'#1e40af':'#111'}">${val}</div>
+      ${[['LOT',o.lot||o.id,true],['업체명',co.name||'-',false],['납기일',o.due||'-',false],['EXP',o.exp||'-',false]]
+        .map(([l,v,b])=>`<div style="padding:5px 9px;border-right:1px solid #ddd">
+          <div style="font-size:9px;color:#888;margin-bottom:1px">${l}</div>
+          <div style="font-size:${b?'12':'10'}px;font-weight:700;font-family:${b?'monospace':'inherit'};color:${b?'#1e40af':'#111'}">${v}</div>
         </div>`).join('')}
     </div>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);border-top:1px solid #ddd">
-      ${[
-        ['제품명', prod.name||o.prod||'-'],
-        ['목표수량', fmt(o.qty)+'개'],
-        ['마킹정보', o.mark||'-'],
-      ].map(([label,val])=>`
-        <div style="padding:6px 10px;border-right:1px solid #ddd">
-          <div style="font-size:9px;color:#888;margin-bottom:2px">${label}</div>
-          <div style="font-size:11px;font-weight:700">${val}</div>
+    <div style="display:grid;grid-template-columns:2fr 1fr 1fr;border-top:1px solid #ddd">
+      ${[['제품명',(group?.brand?group.brand+' ':'')+( prod.name||o.prod||'-')+(scent?' · '+scent.name_ko:'')],['목표수량',fmt(o.qty)+'개'],['마킹정보',o.mark||'-']]
+        .map(([l,v])=>`<div style="padding:5px 9px;border-right:1px solid #ddd">
+          <div style="font-size:9px;color:#888;margin-bottom:1px">${l}</div>
+          <div style="font-size:11px;font-weight:700">${v}</div>
         </div>`).join('')}
     </div>
   </div>
+
+  <!-- 포장사양 -->
+  ${packSpecHtml}
 
   <!-- 공정별 작업 기록 -->
   ${procSections}
 
   <!-- 종합 특이사항 -->
-  <div style="border:1px solid #ccc;border-radius:3px;padding:6px 10px;margin-top:6px">
-    <div style="font-size:10px;font-weight:700;color:#555;margin-bottom:4px">📝 종합 특이사항 / 인수인계 메모</div>
-    <div style="height:36px;border-bottom:1px dashed #ddd;margin-bottom:6px"></div>
-    <div style="height:30px"></div>
+  <div style="border:1px solid #ccc;border-radius:3px;padding:5px 9px;margin-top:5px">
+    <div style="font-size:9px;font-weight:700;color:#555;margin-bottom:3px">📝 종합 특이사항 / 인수인계</div>
+    <div style="height:28px;border-bottom:1px dashed #ddd;margin-bottom:4px"></div>
+    <div style="height:22px"></div>
   </div>
 
   <!-- 서명 -->
-  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:10px">
-    ${['작업자 (서명)','확인자 (서명)','관리자 (서명)'].map(label=>`
-      <div style="border-top:1px solid #333;padding-top:5px;text-align:center;font-size:10px;color:#555">${label}</div>`).join('')}
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:8px">
+    ${['작업자 (서명)','확인자 (서명)','관리자 (서명)'].map(l=>`
+      <div style="border-top:1px solid #333;padding-top:4px;text-align:center;font-size:9px;color:#555">${l}</div>`).join('')}
   </div>
 
   <script>setTimeout(()=>window.print(),400)<\/script>
@@ -4676,8 +4678,9 @@ function printWorkJournal(ordId){
 
   const w=window.open('','_blank','width=860,height=1100');
   if(w){w.document.write(html);w.document.close();}
-  else toast('팝업이 차단됐습니다. 팝업 허용 후 다시 시도하세요','warn');
+  else toast('팝업이 차단됐습니다','warn');
 }
+
 
 function toggleOrdBottleneck(ordId){
   const el=document.getElementById(`ord-bottleneck-${ordId}`);
