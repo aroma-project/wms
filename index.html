@@ -803,6 +803,7 @@ textarea{min-height:60px;resize:vertical}
     <input type="date" id="rl-to" style="width:140px">
     <button class="btn btn-p" onclick="renderLotReport()">조회</button>
     <button class="btn btn-g" onclick="window.print()">🖨️ 인쇄</button>
+    <button class="btn btn-g" onclick="printCostReport()" title="공수 기반 생산비용 리포트">💰 비용 리포트</button>
   </div>
   <div id="rl-report"></div>
 </div>
@@ -7117,6 +7118,165 @@ function renderCertList(){
   </div>`;
 }
 
+function printCostReport(){
+  const HOURLY=15000;        // 시급 (원)
+  const MONTHLY_FIXED=10000000; // 월 고정비 (원)
+
+  // 현재 필터 조건 그대로 적용
+  const coId=document.getElementById('rl-co')?.value||'';
+  const lotQ=(document.getElementById('rl-lot')?.value||'').toLowerCase();
+  const from=document.getElementById('rl-from')?.value||'';
+  const to=document.getElementById('rl-to')?.value||'';
+
+  const ords=C.orders.filter(o=>{
+    if(coId&&o.co_id!==coId)return false;
+    if(lotQ&&!(o.lot||o.id).toLowerCase().includes(lotQ))return false;
+    if(from&&(o.date||'')<from)return false;
+    if(to&&(o.date||'')>to)return false;
+    return true;
+  }).sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+
+  if(!ords.length){toast('조회 후 비용 리포트를 출력하세요','warn');return;}
+
+  // 공수 집계
+  let totalMh=0,totalWorkerDays=0,totalPack=0;
+  const rows=ords.map(o=>{
+    const logs=C.progressLogs.filter(l=>l.order_id===o.id);
+    const mh=logs.reduce((a,l)=>a+(l.man_hour||0),0);
+    const workers=logs.reduce((a,l)=>a+(l.workers||0),0);
+    const pack=logs.filter(l=>l.process==='포장').reduce((a,l)=>a+(l.qty||0),0);
+    const laborCost=Math.round(mh*HOURLY);
+    const prod=prodObj(o.prod)||{};
+    const co=C.companies.find(c=>c.id===o.co_id)||{};
+    const group=C.productGroups.find(g=>g.id===prod.group_id);
+    totalMh+=mh;totalWorkerDays+=workers;totalPack+=pack;
+    return{o,prod,co,group,mh,workers,pack,laborCost};
+  });
+
+  // 월 고정비 일할 배분 (조회 기간 일수 기준)
+  const dayCount=from&&to?Math.max(1,Math.ceil((new Date(to)-new Date(from))/(86400000))+1):30;
+  const fixedPerDay=MONTHLY_FIXED/30;
+  const fixedTotal=Math.round(fixedPerDay*dayCount);
+  const totalLaborCost=rows.reduce((a,r)=>a+r.laborCost,0);
+  const grandTotal=totalLaborCost+fixedTotal;
+
+  // 개당 평균 비용
+  const costPerUnit=totalPack>0?Math.round(grandTotal/totalPack):0;
+
+  const fmtW=n=>n.toLocaleString('ko-KR')+'원';
+
+  const tableRows=rows.map((r,i)=>{
+    const perUnit=r.pack>0?Math.round(r.laborCost/r.pack):0;
+    return`<tr style="border-bottom:1px solid #f1f5f9">
+      <td style="padding:7px 8px;font-size:11px;color:#555">${r.o.date||'-'}</td>
+      <td style="padding:7px 8px;font-family:monospace;font-size:11px;color:#1e40af;font-weight:700">${r.o.lot||r.o.id}</td>
+      <td style="padding:7px 8px;font-size:12px">${r.co.name||'-'}</td>
+      <td style="padding:7px 8px;font-size:11px">${r.prod.name||r.o.prod||'-'}</td>
+      <td style="padding:7px 8px;text-align:right">${fmt(r.o.qty)}</td>
+      <td style="padding:7px 8px;text-align:right;color:var(--green)">${fmt(r.pack)}</td>
+      <td style="padding:7px 8px;text-align:right">${r.mh?r.mh.toFixed(1)+'h':'-'}</td>
+      <td style="padding:7px 8px;text-align:right">${r.workers||'-'}</td>
+      <td style="padding:7px 8px;text-align:right;font-weight:600">${r.laborCost>0?fmtW(r.laborCost):'-'}</td>
+      <td style="padding:7px 8px;text-align:right;font-size:11px;color:#666">${perUnit>0?fmtW(perUnit):'-'}</td>
+    </tr>`;
+  }).join('');
+
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <title>생산 비용 리포트</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',sans-serif;font-size:12px;color:#000;padding:16px;max-width:1000px;margin:0 auto}
+    table{width:100%;border-collapse:collapse}
+    th{background:#1e1b4b;color:#fff;padding:8px 8px;font-size:11px;font-weight:600;text-align:center}
+    .summary-card{background:#f0f4ff;border:1px solid #c7d2fe;border-radius:8px;padding:14px 18px;text-align:center}
+    @media print{
+      @page{size:A4 landscape;margin:8mm}
+      body{padding:0;font-size:10px}
+      button{display:none!important}
+      -webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact;
+    }
+  </style>
+  </head><body>
+
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+    <div>
+      <div style="font-size:18px;font-weight:900;color:#1e1b4b">💰 생산 비용 리포트</div>
+      <div style="font-size:11px;color:#666;margin-top:2px">기준: 시급 ${fmtW(HOURLY)} · 월 고정비 ${fmtW(MONTHLY_FIXED)} · 출력일 ${today()}</div>
+      ${from||to?`<div style="font-size:11px;color:#666">기간: ${from||'전체'} ~ ${to||'전체'} (${dayCount}일)</div>`:''}
+    </div>
+    <div>
+      <button onclick="window.print()" style="padding:7px 16px;background:#1e1b4b;color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:12px;margin-right:6px">🖨️ 인쇄 (A4 가로)</button>
+      <button onclick="window.close()" style="padding:7px 12px;background:#f3f4f6;border:1px solid #ddd;border-radius:5px;cursor:pointer;font-size:12px">닫기</button>
+    </div>
+  </div>
+
+  <!-- 종합 요약 -->
+  <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:16px">
+    ${[
+      ['총 LOT 수',ords.length+'건','#1e1b4b'],
+      ['총 포장 완료',fmt(totalPack)+'개','#16a34a'],
+      ['총 공수',totalMh.toFixed(1)+'h','#7c3aed'],
+      ['인건비 합계',fmtW(totalLaborCost),'#dc2626'],
+      ['고정비 배분',fmtW(fixedTotal),'#d97706'],
+      ['총 생산비용',fmtW(grandTotal),'#0369a1'],
+    ].map(([l,v,c])=>`<div class="summary-card">
+      <div style="font-size:10px;color:#555;margin-bottom:4px">${l}</div>
+      <div style="font-size:16px;font-weight:800;color:${c}">${v}</div>
+    </div>`).join('')}
+  </div>
+
+  <!-- 개당 비용 -->
+  <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:10px 16px;margin-bottom:16px;display:flex;align-items:center;gap:20px">
+    <div style="font-size:12px;font-weight:700;color:#9a3412">📦 개당 평균 생산 비용</div>
+    <div style="font-size:22px;font-weight:900;color:#c2410c">${fmtW(costPerUnit)}<span style="font-size:12px;font-weight:400;margin-left:4px">/ EA</span></div>
+    <div style="font-size:11px;color:#92400e;margin-left:auto">인건비 ${fmtW(totalPack>0?Math.round(totalLaborCost/totalPack):0)} + 고정비 ${fmtW(totalPack>0?Math.round(fixedTotal/totalPack):0)} = 합계 ${fmtW(costPerUnit)}</div>
+  </div>
+
+  <!-- 비용 가정 안내 -->
+  <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:8px 12px;margin-bottom:12px;font-size:11px;color:#1d4ed8">
+    💡 <strong>비용 계산 기준:</strong> 인건비 = 총공수(h) × 시급 ${fmtW(HOURLY)} &nbsp;·&nbsp;
+    고정비 = 월 ${fmtW(MONTHLY_FIXED)} ÷ 30일 × ${dayCount}일 &nbsp;·&nbsp;
+    공수가 없는 LOT는 인건비 0원으로 표시됩니다
+  </div>
+
+  <!-- 상세 테이블 -->
+  <table>
+    <thead><tr>
+      <th>생산일</th><th>LOT</th><th>업체</th><th>제품명</th>
+      <th>목표</th><th style="background:#166534">포장완료</th>
+      <th>총공수(h)</th><th>투입인원</th>
+      <th style="background:#991b1b">인건비</th><th>개당인건비</th>
+    </tr></thead>
+    <tbody>${tableRows}</tbody>
+    <tfoot>
+      <tr style="background:#1e1b4b;color:#fff;font-weight:700">
+        <td colspan="4" style="padding:8px 8px;text-align:center">합 계</td>
+        <td style="padding:8px 8px;text-align:right">${fmt(ords.reduce((a,o)=>a+o.qty,0))}</td>
+        <td style="padding:8px 8px;text-align:right">${fmt(totalPack)}</td>
+        <td style="padding:8px 8px;text-align:right">${totalMh.toFixed(1)}h</td>
+        <td style="padding:8px 8px;text-align:right">${totalWorkerDays}</td>
+        <td style="padding:8px 8px;text-align:right">${fmtW(totalLaborCost)}</td>
+        <td style="padding:8px 8px;text-align:right;font-size:10px">-</td>
+      </tr>
+      <tr style="background:#f0f4ff">
+        <td colspan="8" style="padding:8px 8px;text-align:right;font-weight:700;font-size:12px;color:#1e1b4b">고정비 배분 (${dayCount}일)</td>
+        <td colspan="2" style="padding:8px 8px;text-align:right;font-weight:800;font-size:13px;color:#d97706">${fmtW(fixedTotal)}</td>
+      </tr>
+      <tr style="background:#1e1b4b;color:#fff">
+        <td colspan="8" style="padding:10px 8px;text-align:right;font-weight:700;font-size:13px">총 생산 비용 합계</td>
+        <td colspan="2" style="padding:10px 8px;text-align:right;font-weight:900;font-size:16px">${fmtW(grandTotal)}</td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <script>setTimeout(()=>window.print(),500)<\/script>
+  </body></html>`;
+
+  const w=window.open('','_blank','width=1100,height=780');
+  if(w){w.document.write(html);w.document.close();}
+  else toast('팝업이 차단됐습니다','warn');
+}
+
 function printCert(ordId){
   const ord=C.orders.find(o=>o.id===ordId);
   if(!ord){toast('오더를 찾을 수 없습니다','error');return;}
@@ -7135,15 +7295,23 @@ function printCert(ordId){
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
     body{font-family:'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',sans-serif;font-size:12px;color:#000;padding:16px;max-width:780px;margin:0 auto}
-    h1{font-size:22px;font-weight:900;text-align:center;letter-spacing:.15em;margin:12px 0;padding-bottom:10px;border-bottom:2px solid #111}
-    h2{font-size:11px;font-weight:700;color:#555;letter-spacing:.08em;margin:14px 0 6px;padding-bottom:3px;border-bottom:1px solid #ddd}
+    h1{font-size:22px;font-weight:900;text-align:center;letter-spacing:.15em;margin:12px 0;padding-bottom:10px;border-bottom:3px solid #1e1b4b;color:#1e1b4b}
+    h2{font-size:11px;font-weight:700;color:#1e1b4b;letter-spacing:.08em;margin:14px 0 6px;padding-bottom:3px;border-bottom:2px solid #1e1b4b;background:#f0f4ff;padding:4px 8px;border-radius:3px}
     table{width:100%;border-collapse:collapse}
     .info-table td{padding:5px 8px;border:1px solid #ccc;font-size:12px}
-    .info-table th{padding:5px 8px;border:1px solid #ccc;background:#f5f5f5;font-size:11px;font-weight:600;width:110px;white-space:nowrap}
-    .result-table th{padding:7px 8px;border:1px solid #ccc;background:#222;color:#fff;font-size:11px;text-align:center}
+    .info-table th{padding:5px 8px;border:1px solid #ccc;background:#1e1b4b;color:#fff;font-size:11px;font-weight:600;width:110px;white-space:nowrap}
+    .result-table th{padding:7px 8px;border:1px solid #1e1b4b;background:#1e1b4b;color:#fff;font-size:11px;text-align:center}
     .result-table td{padding:6px 8px;border:1px solid #ccc;font-size:11px;text-align:center}
-    .pass{color:#16a34a;font-weight:700}
-    @media print{@page{size:A4;margin:10mm}body{padding:0}button{display:none!important}}
+    .result-table tr:nth-child(even) td{background:#f8f9ff}
+    .pass{color:#16a34a;font-weight:700;background:#f0fdf4;border-radius:3px;padding:1px 6px}
+    @media print{
+      @page{size:A4;margin:10mm}
+      body{padding:0}
+      button{display:none!important}
+      -webkit-print-color-adjust:exact;
+      print-color-adjust:exact;
+      color-adjust:exact;
+    }
   </style>
   </head><body>
   <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
