@@ -6692,6 +6692,17 @@ function renderMhReport(){
       </div>
     </div>`;
 
+    // 미기입 공정 확인
+    const missingProcs=PROCESSES.filter(p=>{
+      if(!d.o.processes||!d.o.processes.includes(p))return false; // 해당 오더의 공정이 아님
+      const procDone=d.byProc[p];
+      return !procDone||!procDone.mh; // 공정이 있는데 기록 없음
+    });
+    const missingBadge=missingProcs.length?`
+      <div style="margin-top:5px;background:#fff7ed;border:1px solid #fed7aa;border-radius:5px;padding:3px 8px;font-size:10px;color:#92400e">
+        ⚠️ 미기입: ${missingProcs.join(', ')} — 참고로 ${fmt(d.o.qty)}개분 누락
+      </div>`:'';
+
     rows.push(`<tr style="border-bottom:2px solid #f1f5f9;vertical-align:top">
       <td style="padding:10px 10px">
         <div style="font-family:monospace;font-weight:700;color:var(--blue-dk)">${d.o.lot||d.o.id}</div>
@@ -6700,6 +6711,7 @@ function renderMhReport(){
           style="margin-top:5px;padding:2px 7px;font-size:10px;background:#f1f5f9;border:1px solid var(--border);border-radius:4px;cursor:pointer;color:var(--text2)">
           상세보기 ▾
         </button>
+        ${missingBadge}
       </td>
       <td style="padding:10px 10px">
         <div style="font-size:12px;font-weight:600">${prodObj(d.o.prod)?.name||d.o.prod||'-'}${effBadge}</div>
@@ -7119,10 +7131,11 @@ function renderCertList(){
 }
 
 function printCostReport(){
-  const HOURLY=15000;        // 시급 (원)
-  const MONTHLY_FIXED=10000000; // 월 고정비 (원)
+  // 비용 리포트를 별도 섹션으로 표시 (인터랙티브)
+  const HOURLY=15000;
+  const MONTHLY_FIXED=10000000;
+  const PROCESSES=['충진','라벨링','기타','포장'];
 
-  // 현재 필터 조건 그대로 적용
   const coId=document.getElementById('rl-co')?.value||'';
   const lotQ=(document.getElementById('rl-lot')?.value||'').toLowerCase();
   const from=document.getElementById('rl-from')?.value||'';
@@ -7136,146 +7149,165 @@ function printCostReport(){
     return true;
   }).sort((a,b)=>(a.date||'').localeCompare(b.date||''));
 
-  if(!ords.length){toast('조회 후 비용 리포트를 출력하세요','warn');return;}
+  if(!ords.length){toast('먼저 조회 버튼을 눌러주세요','warn');return;}
 
-  // 공수 집계
-  let totalMh=0,totalWorkerDays=0,totalPack=0;
+  const dayCount=from&&to?Math.max(1,Math.ceil((new Date(to)-new Date(from))/(86400000))+1):30;
+  const fixedAlloc=Math.round((MONTHLY_FIXED/30)*dayCount);
+
+  // 오더별 데이터
   const rows=ords.map(o=>{
     const logs=C.progressLogs.filter(l=>l.order_id===o.id);
-    const mh=logs.reduce((a,l)=>a+(l.man_hour||0),0);
-    const workers=logs.reduce((a,l)=>a+(l.workers||0),0);
-    const pack=logs.filter(l=>l.process==='포장').reduce((a,l)=>a+(l.qty||0),0);
-    const laborCost=Math.round(mh*HOURLY);
+    const byProc={};
+    PROCESSES.forEach(p=>{
+      const pl=logs.filter(l=>l.process===p);
+      byProc[p]={mh:pl.reduce((a,l)=>a+(l.man_hour||0),0),done:pl.reduce((a,l)=>a+(l.qty||0),0)};
+    });
+    // 누락된 공정 = 오더의 공정인데 mh 기록이 0
+    const missingProcs=(o.processes||PROCESSES).filter(p=>!byProc[p]?.mh);
     const prod=prodObj(o.prod)||{};
     const co=C.companies.find(c=>c.id===o.co_id)||{};
-    const group=C.productGroups.find(g=>g.id===prod.group_id);
-    totalMh+=mh;totalWorkerDays+=workers;totalPack+=pack;
-    return{o,prod,co,group,mh,workers,pack,laborCost};
+    const packDone=byProc['포장']?.done||0;
+    const totalMh=PROCESSES.reduce((a,p)=>a+(byProc[p]?.mh||0),0);
+    return{o,prod,co,byProc,missingProcs,packDone,totalMh,laborCost:Math.round(totalMh*HOURLY)};
   });
 
-  // 월 고정비 일할 배분 (조회 기간 일수 기준)
-  const dayCount=from&&to?Math.max(1,Math.ceil((new Date(to)-new Date(from))/(86400000))+1):30;
-  const fixedPerDay=MONTHLY_FIXED/30;
-  const fixedTotal=Math.round(fixedPerDay*dayCount);
-  const totalLaborCost=rows.reduce((a,r)=>a+r.laborCost,0);
-  const grandTotal=totalLaborCost+fixedTotal;
+  // 누락 공정 종류 수집
+  const allMissingProcs=[...new Set(rows.flatMap(r=>r.missingProcs))];
 
-  // 개당 평균 비용
-  const costPerUnit=totalPack>0?Math.round(grandTotal/totalPack):0;
+  // 현재 수기 단가 읽기 (이미 입력된 경우 유지)
+  const getManualCost=(ordId,proc)=>{
+    const el=document.getElementById('mc-'+ordId+'-'+proc);
+    return el?parseInt(el.value)||0:0;
+  };
 
-  const fmtW=n=>n.toLocaleString('ko-KR')+'원';
+  function recalcCostReport(){
+    let grandLabor=0,grandManual=0,grandPack=0;
+    rows.forEach(r=>{
+      const manualTotal=r.missingProcs.reduce((a,p)=>a+getManualCost(r.o.id,p)*r.o.qty,0);
+      const total=r.laborCost+manualTotal;
+      grandLabor+=r.laborCost;grandManual+=manualTotal;grandPack+=r.packDone||r.o.qty;
+      const totalEl=document.getElementById('mc-total-'+r.o.id);
+      if(totalEl)totalEl.textContent=(total).toLocaleString('ko-KR')+'원';
+      const perEl=document.getElementById('mc-per-'+r.o.id);
+      const qty=r.packDone||r.o.qty;
+      if(perEl)perEl.textContent=qty>0?Math.round(total/qty).toLocaleString('ko-KR')+'원':'-';
+    });
+    const grandTotal=grandLabor+grandManual+fixedAlloc;
+    const perUnit=grandPack>0?Math.round(grandTotal/grandPack):0;
+    const el=document.getElementById('cr-grand-total');if(el)el.textContent=grandTotal.toLocaleString('ko-KR')+'원';
+    const el2=document.getElementById('cr-per-unit');if(el2)el2.textContent=perUnit.toLocaleString('ko-KR')+'원/EA';
+    const el3=document.getElementById('cr-grand-labor');if(el3)el3.textContent=(grandLabor+grandManual).toLocaleString('ko-KR')+'원';
+  }
 
-  const tableRows=rows.map((r,i)=>{
-    const perUnit=r.pack>0?Math.round(r.laborCost/r.pack):0;
-    return`<tr style="border-bottom:1px solid #f1f5f9">
-      <td style="padding:7px 8px;font-size:11px;color:#555">${r.o.date||'-'}</td>
-      <td style="padding:7px 8px;font-family:monospace;font-size:11px;color:#1e40af;font-weight:700">${r.o.lot||r.o.id}</td>
-      <td style="padding:7px 8px;font-size:12px">${r.co.name||'-'}</td>
-      <td style="padding:7px 8px;font-size:11px">${r.prod.name||r.o.prod||'-'}</td>
-      <td style="padding:7px 8px;text-align:right">${fmt(r.o.qty)}</td>
-      <td style="padding:7px 8px;text-align:right;color:var(--green)">${fmt(r.pack)}</td>
-      <td style="padding:7px 8px;text-align:right">${r.mh?r.mh.toFixed(1)+'h':'-'}</td>
-      <td style="padding:7px 8px;text-align:right">${r.workers||'-'}</td>
-      <td style="padding:7px 8px;text-align:right;font-weight:600">${r.laborCost>0?fmtW(r.laborCost):'-'}</td>
-      <td style="padding:7px 8px;text-align:right;font-size:11px;color:#666">${perUnit>0?fmtW(perUnit):'-'}</td>
+  // 테이블 행 생성
+  const tableRows=rows.map(r=>{
+    const manualInputs=r.missingProcs.map(p=>`
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+        <span style="font-size:11px;font-weight:600;color:#92400e;min-width:48px">${p}</span>
+        <input type="number" id="mc-${r.o.id}-${p}" min="0" step="100" placeholder="개당 단가(원)"
+          oninput="recalcCostReport()"
+          style="width:120px;padding:5px 8px;border:1px solid #fcd34d;border-radius:5px;font-size:12px;background:#fffbeb">
+        <span style="font-size:10px;color:#92400e">원/개 × ${(r.o.qty||0).toLocaleString()}개</span>
+      </div>`).join('');
+
+    return`<tr style="border-bottom:1px solid #f1f5f9;vertical-align:top">
+      <td style="padding:8px 10px;font-family:monospace;font-size:11px;color:var(--blue-dk);font-weight:700;white-space:nowrap">${r.o.lot||r.o.id}</td>
+      <td style="padding:8px 10px;font-size:11px;color:#555;white-space:nowrap">${r.o.date||'-'}</td>
+      <td style="padding:8px 10px;font-size:12px">${r.co.name||'-'}</td>
+      <td style="padding:8px 10px;font-size:11px">${r.prod.name||r.o.prod||'-'}</td>
+      <td style="padding:8px 10px;text-align:right">${(r.packDone||r.o.qty).toLocaleString()}</td>
+      <td style="padding:8px 10px;text-align:right">${r.totalMh?r.totalMh.toFixed(1)+'h':'-'}</td>
+      <td style="padding:8px 10px;text-align:right;font-weight:600">${r.laborCost>0?r.laborCost.toLocaleString('ko-KR')+'원':'-'}</td>
+      <td style="padding:8px 10px;min-width:220px">
+        ${r.missingProcs.length
+          ?`<div style="font-size:10px;color:#92400e;margin-bottom:5px;font-weight:700">⚠️ 미기입 공정 — 단가 입력:</div>${manualInputs}`
+          :`<span style="font-size:11px;color:var(--green)">✅ 모두 기입됨</span>`}
+      </td>
+      <td style="padding:8px 10px;text-align:right;font-weight:700" id="mc-total-${r.o.id}">계산중...</td>
+      <td style="padding:8px 10px;text-align:right;font-size:11px;color:#666" id="mc-per-${r.o.id}">-</td>
     </tr>`;
   }).join('');
 
-  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8">
-  <title>생산 비용 리포트</title>
-  <style>
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',sans-serif;font-size:12px;color:#000;padding:16px;max-width:1000px;margin:0 auto}
-    table{width:100%;border-collapse:collapse}
-    th{background:#1e1b4b;color:#fff;padding:8px 8px;font-size:11px;font-weight:600;text-align:center}
-    .summary-card{background:#f0f4ff;border:1px solid #c7d2fe;border-radius:8px;padding:14px 18px;text-align:center}
-    @media print{
-      @page{size:A4 landscape;margin:8mm}
-      body{padding:0;font-size:10px}
-      button{display:none!important}
-      -webkit-print-color-adjust:exact;print-color-adjust:exact;color-adjust:exact;
-    }
-  </style>
-  </head><body>
+  // 리포트 HTML 삽입
+  const existing=document.getElementById('cost-report-section');
+  if(existing)existing.remove();
+  const section=document.createElement('div');
+  section.id='cost-report-section';
+  section.style.cssText='margin-top:16px';
+  section.innerHTML=`
+    <div style="background:#fff;border:1px solid var(--border);border-radius:10px;overflow:hidden">
+      <div style="background:#1e1b4b;color:#fff;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
+        <div>
+          <div style="font-size:15px;font-weight:700">💰 생산 비용 리포트</div>
+          <div style="font-size:11px;opacity:.7;margin-top:2px">시급 ${(HOURLY).toLocaleString()}원 · 월 고정비 ${(MONTHLY_FIXED).toLocaleString()}원 · 기간 ${dayCount}일 고정비 배분 ${fixedAlloc.toLocaleString()}원</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <div style="text-align:right">
+            <div style="font-size:10px;opacity:.7">총 생산비용</div>
+            <div style="font-size:18px;font-weight:900" id="cr-grand-total">계산중...</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:10px;opacity:.7">개당 비용</div>
+            <div style="font-size:14px;font-weight:700;color:#fcd34d" id="cr-per-unit">-</div>
+          </div>
+          <button onclick="window.print()" style="padding:6px 14px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:6px;cursor:pointer;font-size:12px">🖨️ 인쇄</button>
+          <button onclick="document.getElementById('cost-report-section').remove()" style="padding:6px 10px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:6px;cursor:pointer;font-size:12px">✕</button>
+        </div>
+      </div>
+      ${allMissingProcs.length?`<div style="background:#fff7ed;border-bottom:1px solid #fed7aa;padding:10px 16px;font-size:12px;color:#92400e">
+        <strong>⚠️ 누락 공정 있음:</strong> ${allMissingProcs.join(', ')} — 아래 행에서 해당 공정의 개당 단가를 입력하면 자동 계산됩니다.
+      </div>`:''}
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead><tr style="background:#f8fafc">
+            <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border)">LOT</th>
+            <th style="padding:8px 10px;border-bottom:1px solid var(--border)">날짜</th>
+            <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border)">업체</th>
+            <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border)">제품명</th>
+            <th style="padding:8px 10px;text-align:right;border-bottom:1px solid var(--border)">수량</th>
+            <th style="padding:8px 10px;text-align:right;border-bottom:1px solid var(--border)">총공수</th>
+            <th style="padding:8px 10px;text-align:right;border-bottom:1px solid var(--border)">인건비</th>
+            <th style="padding:8px 10px;border-bottom:1px solid var(--border)">누락 공정 단가 입력</th>
+            <th style="padding:8px 10px;text-align:right;border-bottom:1px solid var(--border)">소계</th>
+            <th style="padding:8px 10px;text-align:right;border-bottom:1px solid var(--border)">개당</th>
+          </tr></thead>
+          <tbody>${tableRows}</tbody>
+          <tfoot>
+            <tr style="background:#f0f4ff;font-weight:700">
+              <td colspan="6" style="padding:10px 10px;text-align:right;border-top:2px solid #1e1b4b">인건비 합계</td>
+              <td colspan="4" style="padding:10px 10px;text-align:right;border-top:2px solid #1e1b4b;font-size:13px" id="cr-grand-labor">계산중...</td>
+            </tr>
+            <tr style="background:#fef3c7">
+              <td colspan="6" style="padding:8px 10px;text-align:right;font-weight:700;color:#92400e">고정비 배분 (${dayCount}일)</td>
+              <td colspan="4" style="padding:8px 10px;text-align:right;font-weight:700;color:#92400e">${fixedAlloc.toLocaleString()}원</td>
+            </tr>
+            <tr style="background:#1e1b4b;color:#fff;font-size:14px;font-weight:800">
+              <td colspan="6" style="padding:12px 10px;text-align:right">총 생산 비용</td>
+              <td colspan="4" style="padding:12px 10px;text-align:right" id="cr-grand-total-foot">-</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+    </div>`;
 
-  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-    <div>
-      <div style="font-size:18px;font-weight:900;color:#1e1b4b">💰 생산 비용 리포트</div>
-      <div style="font-size:11px;color:#666;margin-top:2px">기준: 시급 ${fmtW(HOURLY)} · 월 고정비 ${fmtW(MONTHLY_FIXED)} · 출력일 ${today()}</div>
-      ${from||to?`<div style="font-size:11px;color:#666">기간: ${from||'전체'} ~ ${to||'전체'} (${dayCount}일)</div>`:''}
-    </div>
-    <div>
-      <button onclick="window.print()" style="padding:7px 16px;background:#1e1b4b;color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:12px;margin-right:6px">🖨️ 인쇄 (A4 가로)</button>
-      <button onclick="window.close()" style="padding:7px 12px;background:#f3f4f6;border:1px solid #ddd;border-radius:5px;cursor:pointer;font-size:12px">닫기</button>
-    </div>
-  </div>
+  // recalcCostReport를 전역에 등록
+  window.recalcCostReport=recalcCostReport;
 
-  <!-- 종합 요약 -->
-  <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:16px">
-    ${[
-      ['총 LOT 수',ords.length+'건','#1e1b4b'],
-      ['총 포장 완료',fmt(totalPack)+'개','#16a34a'],
-      ['총 공수',totalMh.toFixed(1)+'h','#7c3aed'],
-      ['인건비 합계',fmtW(totalLaborCost),'#dc2626'],
-      ['고정비 배분',fmtW(fixedTotal),'#d97706'],
-      ['총 생산비용',fmtW(grandTotal),'#0369a1'],
-    ].map(([l,v,c])=>`<div class="summary-card">
-      <div style="font-size:10px;color:#555;margin-bottom:4px">${l}</div>
-      <div style="font-size:16px;font-weight:800;color:${c}">${v}</div>
-    </div>`).join('')}
-  </div>
+  // rl-report 아래에 삽입
+  const rlReport=document.getElementById('rl-report');
+  if(rlReport)rlReport.parentElement.insertBefore(section,rlReport.nextSibling);
 
-  <!-- 개당 비용 -->
-  <div style="background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:10px 16px;margin-bottom:16px;display:flex;align-items:center;gap:20px">
-    <div style="font-size:12px;font-weight:700;color:#9a3412">📦 개당 평균 생산 비용</div>
-    <div style="font-size:22px;font-weight:900;color:#c2410c">${fmtW(costPerUnit)}<span style="font-size:12px;font-weight:400;margin-left:4px">/ EA</span></div>
-    <div style="font-size:11px;color:#92400e;margin-left:auto">인건비 ${fmtW(totalPack>0?Math.round(totalLaborCost/totalPack):0)} + 고정비 ${fmtW(totalPack>0?Math.round(fixedTotal/totalPack):0)} = 합계 ${fmtW(costPerUnit)}</div>
-  </div>
-
-  <!-- 비용 가정 안내 -->
-  <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:6px;padding:8px 12px;margin-bottom:12px;font-size:11px;color:#1d4ed8">
-    💡 <strong>비용 계산 기준:</strong> 인건비 = 총공수(h) × 시급 ${fmtW(HOURLY)} &nbsp;·&nbsp;
-    고정비 = 월 ${fmtW(MONTHLY_FIXED)} ÷ 30일 × ${dayCount}일 &nbsp;·&nbsp;
-    공수가 없는 LOT는 인건비 0원으로 표시됩니다
-  </div>
-
-  <!-- 상세 테이블 -->
-  <table>
-    <thead><tr>
-      <th>생산일</th><th>LOT</th><th>업체</th><th>제품명</th>
-      <th>목표</th><th style="background:#166534">포장완료</th>
-      <th>총공수(h)</th><th>투입인원</th>
-      <th style="background:#991b1b">인건비</th><th>개당인건비</th>
-    </tr></thead>
-    <tbody>${tableRows}</tbody>
-    <tfoot>
-      <tr style="background:#1e1b4b;color:#fff;font-weight:700">
-        <td colspan="4" style="padding:8px 8px;text-align:center">합 계</td>
-        <td style="padding:8px 8px;text-align:right">${fmt(ords.reduce((a,o)=>a+o.qty,0))}</td>
-        <td style="padding:8px 8px;text-align:right">${fmt(totalPack)}</td>
-        <td style="padding:8px 8px;text-align:right">${totalMh.toFixed(1)}h</td>
-        <td style="padding:8px 8px;text-align:right">${totalWorkerDays}</td>
-        <td style="padding:8px 8px;text-align:right">${fmtW(totalLaborCost)}</td>
-        <td style="padding:8px 8px;text-align:right;font-size:10px">-</td>
-      </tr>
-      <tr style="background:#f0f4ff">
-        <td colspan="8" style="padding:8px 8px;text-align:right;font-weight:700;font-size:12px;color:#1e1b4b">고정비 배분 (${dayCount}일)</td>
-        <td colspan="2" style="padding:8px 8px;text-align:right;font-weight:800;font-size:13px;color:#d97706">${fmtW(fixedTotal)}</td>
-      </tr>
-      <tr style="background:#1e1b4b;color:#fff">
-        <td colspan="8" style="padding:10px 8px;text-align:right;font-weight:700;font-size:13px">총 생산 비용 합계</td>
-        <td colspan="2" style="padding:10px 8px;text-align:right;font-weight:900;font-size:16px">${fmtW(grandTotal)}</td>
-      </tr>
-    </tfoot>
-  </table>
-
-  <script>setTimeout(()=>window.print(),500)<\/script>
-  </body></html>`;
-
-  const w=window.open('','_blank','width=1100,height=780');
-  if(w){w.document.write(html);w.document.close();}
-  else toast('팝업이 차단됐습니다','warn');
+  // 초기 계산
+  setTimeout(()=>{
+    recalcCostReport();
+    // 총합 foot도 동기화
+    const footEl=document.getElementById('cr-grand-total-foot');
+    const headEl=document.getElementById('cr-grand-total');
+    if(footEl&&headEl)footEl.textContent=headEl.textContent;
+    setInterval(()=>{if(footEl&&headEl)footEl.textContent=headEl.textContent;},500);
+  },100);
 }
+
 
 function printCert(ordId){
   const ord=C.orders.find(o=>o.id===ordId);
