@@ -5227,8 +5227,24 @@ function renderOb(){
       updatePreview();
     });
     const dests=[];
-    obSel.forEach(id=>{const o=C.orders.find(x=>x.id===id);if(o){const co=C.companies.find(c=>c.id===o.co_id);if(co)[1,2,3,4,5].forEach(n=>{const a=co['a'+n];if(a)dests.push({label:`배송지${n}: ${a}`,addr:a,coName:co.name});});}});
-    document.getElementById('ob-dest').innerHTML=[...new Map(dests.map(d=>[d.addr,d])).values()].map(d=>`<option value="${d.addr}">[${d.coName}] ${d.label}</option>`).join('');
+    obSel.forEach(id=>{
+      const o=C.orders.find(x=>x.id===id);if(!o)return;
+      const co=C.companies.find(c=>c.id===o.co_id);if(!co)return;
+      [1,2,3,4,5].forEach(n=>{
+        const raw=co['a'+n];if(!raw)return;
+        const p=parseAddr(raw);
+        if(!p.addr)return;
+        // value = "주소||담당자||연락처||전달사항" 형식 (parseAddr로 파싱 가능)
+        const val=raw; // 이미 구조화 형식으로 저장됨
+        // label = "배송지N: 주소 (담당자)"
+        const label=`배송지${n}: ${p.addr}${p.contact?' ('+p.contact+')':''}`;
+        dests.push({label,val,coName:co.name});
+      });
+    });
+    document.getElementById('ob-dest').innerHTML=
+      dests.length
+        ?[...new Map(dests.map(d=>[d.val,d])).values()].map(d=>`<option value="${d.val}">[${d.coName}] ${d.label}</option>`).join('')
+        :'<option value="">배송지 없음 (업체관리에서 등록)</option>';
   }else document.getElementById('ob-action').style.display='none';
 }
 async function doOutbound(){
