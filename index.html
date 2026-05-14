@@ -197,6 +197,11 @@ textarea{min-height:60px;resize:vertical}
   .mobile-card-list{display:block}
 }
 @media(min-width:601px){.mobile-card-list{display:none}}
+@media(min-width:769px){
+  .ord-btn-mobile{display:none}
+  .ord-btn-desktop{display:block}
+  .ord-card-desktop{flex-direction:row}
+}
 .m-card{background:#fff;border:1px solid var(--border);border-radius:10px;padding:13px;margin-bottom:8px}
 .spinner{width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .6s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -207,9 +212,8 @@ textarea{min-height:60px;resize:vertical}
   /* 레이아웃 */
   .nav{transform:translateX(-100%)}.nav.open{transform:translateX(0)}
   .main{margin-left:0}
-  .content{padding:12px}
+  .content{padding:10px}
   .topbar{padding:0 12px}
-  .bom-tree{grid-template-columns:1fr}
 
   /* 그리드 */
   .g3{grid-template-columns:1fr 1fr}
@@ -224,21 +228,22 @@ textarea{min-height:60px;resize:vertical}
   label{font-size:14px;font-weight:600;margin-bottom:5px;display:block}
 
   /* 카드 */
-  .card{padding:14px;border-radius:10px;margin-bottom:12px}
-  .card-hd{font-size:15px;margin-bottom:12px}
-  .ord-card{padding:14px;margin-bottom:12px}
+  .card{padding:12px;border-radius:10px;margin-bottom:10px}
+  .card-hd{font-size:15px;margin-bottom:10px}
+  .ord-card{padding:12px;margin-bottom:10px}
 
   /* KPI */
-  .kpi{padding:16px}
-  .kpi-value{font-size:26px}
-  .kpi-label{font-size:13px}
+  .kpi{padding:14px}.kpi-value{font-size:26px}.kpi-label{font-size:13px}
 
-  /* 테이블 */
-  table{font-size:13px}
+  /* 테이블 — 모바일에서 가로 스크롤 */
+  .tw{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  table{font-size:13px;min-width:100%}
   .stock-table td{padding:10px 8px;font-size:13px}
+  th,td{white-space:nowrap}
 
-  /* 모달 */
-  .modal{padding:18px;margin:10px;max-height:88vh;border-radius:14px}
+  /* 모달 — 하단 시트 스타일 */
+  .modal-ov{align-items:flex-end;padding:0}
+  .modal{padding:18px 16px;margin:0;max-height:90vh;border-radius:16px 16px 0 0;width:100%;max-width:100%}
   .modal-hd{font-size:16px;margin-bottom:14px}
 
   /* 네비게이션 */
@@ -247,33 +252,54 @@ textarea{min-height:60px;resize:vertical}
 
   /* 검색바 */
   .sw{gap:8px;flex-wrap:wrap}
-  .sw input{font-size:16px;min-height:44px}
-  .sw select{min-height:44px;font-size:15px}
-
-  /* 히스토리 카드 */
-  .hist-card{padding:12px}
+  .sw input,.sw select{font-size:16px;min-height:44px}
 
   /* 배지 */
   .badge{font-size:12px;padding:3px 8px}
 
-  /* 캘린더 (이번달만) */
+  /* 캘린더 */
   #dash-cal{grid-template-columns:1fr}
-  #dash-cal > div:first-child,
-  #dash-cal > div:last-child{display:none}
 
-  /* 대형 버튼 터치 영역 */
+  /* 버튼 터치 영역 */
   button{min-height:36px}
 
-  /* 오더카드 버튼 래핑 */
+  /* 오더카드 버튼 */
+  .ord-btn-mobile{display:block}
+  .ord-btn-desktop{display:none}
+  .ord-card-desktop{flex-direction:column}
   .ord-card .btn-sm{font-size:12px;padding:6px 10px;min-height:34px}
+
+  /* BOM 트리 — 세로 단일 컬럼 */
+  .bom-tree{grid-template-columns:1fr}
+  .bom-col{border-right:none;border-bottom:1px solid var(--border)}
+
+  /* 재고현황 탭 */
+  #stock-tabs .btn{padding:8px 14px;font-size:13px}
+
+  /* 입고/출고/이력 — 테이블 대신 카드 */
+  .hist-card{padding:12px}
+
+  /* 위치이동 테이블 */
+  #sm-table-wrap{overflow-x:auto}
+
+  /* LOT 추적 */
+  .lt-result{font-size:13px}
+
+  /* 발주목록 카드 그리드 */
+  #ord-backlog .g2{grid-template-columns:1fr}
+
+  /* 폼 간격 */
+  .fr{margin-bottom:10px}
+  .modal .fr.c2,.modal .fr.c3{grid-template-columns:1fr}
 }
 
-/* 초소형 화면 */
+/* 초소형 (390px 이하) */
 @media(max-width:390px){
-  .content{padding:10px}
+  .content{padding:8px}
   body{font-size:14px}
   .kpi-value{font-size:22px}
   .g3{grid-template-columns:1fr}
+  .btn{padding:9px 12px;font-size:13px}
 }
 @media print{
   .nav,.topbar,.btn,.br,.sw,#nav-toggle,.no-print{display:none!important}
@@ -525,10 +551,12 @@ textarea{min-height:60px;resize:vertical}
 
 <!-- BOM -->
 <div class="page" id="page-bom">
-  <div class="sw">
-    <select id="bom-group-f" onchange="renderBom()" style="width:180px"><option value="">전체 제품군</option></select>
-    <select id="bom-scent-f" onchange="renderBom()" style="width:150px"><option value="">전체 향</option></select>
-    <input placeholder="제품명/코드 검색..." id="bom-s" oninput="renderBom()" style="max-width:180px">
+  <div class="sw" style="flex-wrap:wrap;gap:6px">
+    <select id="bom-co-f" onchange="bomOnCoFilter()" style="min-width:120px"><option value="">전체 업체</option></select>
+    <select id="bom-brand-f" onchange="bomOnBrandFilter()" style="min-width:120px"><option value="">전체 브랜드</option></select>
+    <select id="bom-group-f" onchange="renderBom()" style="min-width:140px"><option value="">전체 제품군</option></select>
+    <select id="bom-scent-f" onchange="renderBom()" style="min-width:120px"><option value="">전체 향</option></select>
+    <input placeholder="제품명/코드 검색..." id="bom-s" oninput="renderBom()" style="flex:1;min-width:120px">
     <button class="btn btn-p" onclick="openBomModal()">+ BOM 등록</button>
   </div>
   <!-- 3컬럼: 제품군 → 향/제품 → BOM 상세 -->
@@ -1051,11 +1079,24 @@ textarea{min-height:60px;resize:vertical}
     <!-- 추가 부자재 수동 등록 -->
     <div style="font-size:12px;font-weight:600;color:var(--text2);margin-bottom:6px">➕ 추가 부자재 (선택)</div>
     <div id="bom-add-rows"></div>
-    <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;align-items:flex-end">
-      <div style="flex:2;min-width:180px"><label style="font-size:11px">부자재 선택</label><select id="b-mat-sel"></select></div>
-      <div style="width:90px"><label style="font-size:11px">소요량</label><input id="b-mat-qty" type="number" step="0.001" placeholder="1"></div>
-      <div style="width:60px"><label style="font-size:11px">순위</label><input id="b-mat-pri" type="number" value="1"></div>
-      <button class="btn btn-p btn-sm" style="margin-bottom:1px" onclick="addBomRow()">추가</button>
+    <div style="background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:10px">
+      <!-- 검색 -->
+      <div style="margin-bottom:8px">
+        <input id="b-mat-search" placeholder="🔍 부자재명·업체명·브랜드 검색 (다른 업체 부자재도 가능)"
+          oninput="bomMatSearch()"
+          style="width:100%;padding:8px 12px;border:1px solid var(--border);border-radius:7px;font-size:13px">
+      </div>
+      <div id="b-mat-search-result" style="display:none;margin-bottom:8px;max-height:160px;overflow-y:auto;border:1px solid var(--border);border-radius:7px;background:#fff"></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+        <div style="flex:2;min-width:180px">
+          <label style="font-size:11px">선택된 부자재</label>
+          <div id="b-mat-selected" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;color:var(--text3);min-height:36px;background:#fff">검색 후 선택하세요</div>
+          <input type="hidden" id="b-mat-sel">
+        </div>
+        <div style="width:90px"><label style="font-size:11px">소요량</label><input id="b-mat-qty" type="number" step="0.001" placeholder="1"></div>
+        <div style="width:60px"><label style="font-size:11px">순위</label><input id="b-mat-pri" type="number" value="1"></div>
+        <button class="btn btn-p btn-sm" style="margin-bottom:1px" onclick="addBomRow()">추가</button>
+      </div>
     </div>
     <div class="br"><button class="btn btn-s" onclick="saveBom()">BOM 저장</button><button class="btn btn-g" onclick="closeMo()">취소</button></div>
   </div>
@@ -1079,6 +1120,11 @@ textarea{min-height:60px;resize:vertical}
     </div>
     <div style="background:#f8fafc;border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:10px">
       <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:8px">④ 부자재 추가</div>
+      <!-- 부자재 검색 -->
+      <div style="margin-bottom:8px">
+        <input id="i-mat-search" placeholder="🔍 부자재명 검색 (예: 롤온, 라벨, 캡...)" oninput="ibSearchMat()"
+          style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:7px;font-size:14px">
+      </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
         <div style="flex:2;min-width:160px"><label style="font-size:11px">부자재</label><select id="i-mat" onchange="ibOnMatChange()"><option value="">선택...</option></select></div>
         <div style="width:75px"><label style="font-size:11px">수량</label><input id="i-qty" type="number" min="1" placeholder="0"></div>
@@ -3156,22 +3202,73 @@ async function deletePg(groupId){
 }
 let bomSelGroup='',bomSelProd='',pendingBomRows=[];
 
+function bomOnCoFilter(){
+  const coId=document.getElementById('bom-co-f')?.value||'';
+  const brandSel=document.getElementById('bom-brand-f');
+  if(brandSel){
+    const brands=[...new Set(C.productGroups.filter(g=>!coId||g.co_id===coId).map(g=>g.brand).filter(Boolean))].sort();
+    brandSel.innerHTML='<option value="">전체 브랜드</option>'+brands.map(b=>`<option value="${b}">${b}</option>`).join('');
+  }
+  const groupSel=document.getElementById('bom-group-f');
+  if(groupSel){
+    const groups=C.productGroups.filter(g=>!coId||g.co_id===coId);
+    const prev=groupSel.value;
+    groupSel.innerHTML='<option value="">전체 제품군</option>'+groups.map(g=>`<option value="${g.id}">${g.name}</option>`).join('');
+    groupSel.value=groups.find(g=>g.id===prev)?prev:'';
+  }
+  bomSelGroup='';bomSelProd='';
+  renderBom();
+}
+function bomOnBrandFilter(){
+  const coId=document.getElementById('bom-co-f')?.value||'';
+  const brand=document.getElementById('bom-brand-f')?.value||'';
+  const groupSel=document.getElementById('bom-group-f');
+  if(groupSel){
+    const groups=C.productGroups.filter(g=>(!coId||g.co_id===coId)&&(!brand||g.brand===brand));
+    const prev=groupSel.value;
+    groupSel.innerHTML='<option value="">전체 제품군</option>'+groups.map(g=>`<option value="${g.id}">${g.name}</option>`).join('');
+    groupSel.value=groups.find(g=>g.id===prev)?prev:'';
+  }
+  bomSelGroup='';bomSelProd='';
+  renderBom();
+}
+
 function renderBom(){
-  // 필터 드롭다운 populate
+  // 업체 드롭다운 초기화
+  const coSel=document.getElementById('bom-co-f');
+  if(coSel&&coSel.options.length<=1){
+    C.companies.forEach(c=>{const o=document.createElement('option');o.value=c.id;o.textContent=c.name;coSel.appendChild(o);});
+  }
+  const coFv=document.getElementById('bom-co-f')?.value||'';
+  const brandFv=document.getElementById('bom-brand-f')?.value||'';
+
+  // 제품군 필터
   const gf=document.getElementById('bom-group-f');
-  if(gf){const prev=gf.value;gf.innerHTML='<option value="">전체 제품군</option>'+C.productGroups.map(g=>`<option value="${g.id}">${g.name}</option>`).join('');gf.value=prev;}
+  if(gf){
+    const prev=gf.value;
+    const visGroups=C.productGroups.filter(g=>(!coFv||g.co_id===coFv)&&(!brandFv||g.brand===brandFv));
+    gf.innerHTML='<option value="">전체 제품군</option>'+visGroups.map(g=>`<option value="${g.id}">${g.name}</option>`).join('');
+    gf.value=visGroups.find(g=>g.id===prev)?prev:'';
+  }
   const gfv=document.getElementById('bom-group-f')?.value||'';
+
+  // 향 필터
   const sf=document.getElementById('bom-scent-f');
   if(sf){
-    let prev =sf.value;
+    const prev=sf.value;
     const scents=gfv?C.scents.filter(s=>s.group_id===gfv):C.scents;
     sf.innerHTML='<option value="">전체 향</option>'+scents.map(s=>`<option value="${s.id}">${s.name_ko}</option>`).join('');
-    sf.value=prev;
+    sf.value=scents.find(s=>s.id===prev)?prev:'';
   }
   const sfv=document.getElementById('bom-scent-f')?.value||'';
   const q=(document.getElementById('bom-s')?.value||'').toLowerCase();
-  // 제품군 목록 (필터 적용)
-  const groups=gfv?C.productGroups.filter(g=>g.id===gfv):C.productGroups;
+
+  // 표시할 제품군 (업체+브랜드+제품군 필터 모두 적용)
+  const groups=C.productGroups.filter(g=>
+    (!coFv||g.co_id===coFv)&&
+    (!brandFv||g.brand===brandFv)&&
+    (!gfv||g.id===gfv)
+  );
 
   // 왼쪽: 업체→브랜드→제품군 계층
   const groupListEl=document.getElementById('bom-group-list');
@@ -3461,13 +3558,82 @@ function renderPendingBomRows(){
     <button class="btn btn-g btn-sm" onclick="pendingBomRows.splice(${i},1);renderPendingBomRows()">×</button>
   </div>`).join('');
 }
+function bomMatSearch(){
+  const q=(document.getElementById('b-mat-search')?.value||'').toLowerCase().trim();
+  const resEl=document.getElementById('b-mat-search-result');
+  if(!resEl)return;
+  if(!q){resEl.style.display='none';return;}
+
+  const results=C.materials.filter(m=>{
+    const co=C.companies.find(c=>c.id===m.co_id);
+    const group=C.productGroups.find(g=>g.id===m.group_id);
+    const scent=C.scents.find(s=>s.id===m.scent_id);
+    return[m.name||'',m.code||'',co?.name||'',group?.brand||'',group?.name||'',scent?.name_ko||''].join(' ').toLowerCase().includes(q);
+  }).slice(0,30);
+
+  if(!results.length){
+    resEl.style.display='block';
+    resEl.innerHTML='<div style="padding:10px 14px;font-size:12px;color:var(--text3)">검색 결과 없음</div>';
+    return;
+  }
+  resEl.style.display='block';
+  resEl.innerHTML=results.map(m=>{
+    const co=C.companies.find(c=>c.id===m.co_id);
+    const group=C.productGroups.find(g=>g.id===m.group_id);
+    const scent=C.scents.find(s=>s.id===m.scent_id);
+    const curStock=C.stock.filter(s=>s.mat_code===m.code&&s.qty>0).reduce((a,s)=>a+(s.qty||0),0);
+    return`<div onclick="bomMatSelect('${m.code}')"
+      style="padding:9px 14px;border-bottom:1px solid #f1f5f9;cursor:pointer;display:flex;align-items:center;gap:10px"
+      onmouseover="this.style.background='#f0f9ff'" onmouseout="this.style.background=''">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12px;font-weight:700;color:#111">${m.name||m.code}
+          ${m.vol?`<span style="font-size:10px;background:#dbeafe;color:#1d4ed8;padding:1px 5px;border-radius:3px;margin-left:4px">${m.vol}ml</span>`:''}
+        </div>
+        <div style="font-size:11px;color:var(--text2);margin-top:2px;display:flex;gap:6px;flex-wrap:wrap">
+          ${co?`<span style="background:#f1f5f9;padding:0 5px;border-radius:3px">${co.name}</span>`:''}
+          ${group?.brand?`<span style="color:var(--blue-dk)">${group.brand}</span>`:''}
+          ${group?`<span>${group.name}</span>`:''}
+          ${scent?`<span style="display:inline-flex;align-items:center;gap:2px"><span style="width:6px;height:6px;border-radius:50%;background:${scent.color||'#888'};display:inline-block"></span>${scent.name_ko}</span>`:'<span style="color:var(--text3)">공용</span>'}
+          <span style="font-family:monospace;color:var(--text3)">${m.code}</span>
+        </div>
+      </div>
+      <div style="font-size:11px;color:${curStock>0?'var(--green)':'var(--text3)'};flex-shrink:0;text-align:right">
+        재고<br><strong>${fmt(curStock)}</strong>개
+      </div>
+    </div>`;
+  }).join('');
+}
+function bomMatSelect(code){
+  const m=matObj(code);if(!m)return;
+  const co=C.companies.find(c=>c.id===m.co_id);
+  const group=C.productGroups.find(g=>g.id===m.group_id);
+  const scent=C.scents.find(s=>s.id===m.scent_id);
+  document.getElementById('b-mat-sel').value=code;
+  const disp=document.getElementById('b-mat-selected');
+  if(disp){
+    disp.style.color='#111';
+    disp.innerHTML=`<strong>${m.name||code}</strong>${m.vol?` <span style="font-size:10px;background:#dbeafe;color:#1d4ed8;padding:0 4px;border-radius:3px">${m.vol}ml</span>`:''}
+      <span style="font-size:11px;color:var(--text2);margin-left:6px">${co?co.name+' · ':''}${group?.brand?group.brand+' · ':''}${group?.name||''}${scent?' · '+scent.name_ko:''}</span>`;
+  }
+  const resEl=document.getElementById('b-mat-search-result');
+  if(resEl)resEl.style.display='none';
+  const searchEl=document.getElementById('b-mat-search');
+  if(searchEl)searchEl.value='';
+  document.getElementById('b-mat-qty')?.focus();
+}
+
 function addBomRow(){
   const code=document.getElementById('b-mat-sel').value;
   const qty=parseFloat(document.getElementById('b-mat-qty').value)||1;
-  if(!code){toast('부자재를 선택하세요','error');return;}
+  if(!code){toast('부자재를 검색해서 선택하세요','error');return;}
   if(pendingBomRows.find(r=>r.matCode===code)){toast('이미 추가된 부자재입니다','warn');return;}
   const mat=matObj(code);
   pendingBomRows.push({matCode:code,qty,grp:mat?.type||'기타',pri:parseInt(document.getElementById('b-mat-pri').value)||pendingBomRows.length+1});
+  // 선택 초기화
+  document.getElementById('b-mat-sel').value='';
+  document.getElementById('b-mat-qty').value='';
+  const disp=document.getElementById('b-mat-selected');
+  if(disp){disp.style.color='var(--text3)';disp.textContent='검색 후 선택하세요';}
   renderPendingBomRows();
 }
 async function saveBom(){
@@ -3481,17 +3647,31 @@ async function saveBom(){
   if(!prodName){toast('제품명을 입력하세요','error');return;}
   try{
     // 제품 등록 (없으면 새로)
+    const volVal=parseFloat(document.getElementById('b-vol')?.value)||null;
+    const volUnit=document.getElementById('b-vol-unit')?.value||'ml';
     if(!C.products.find(p=>p.code===prodCode)){
-      const volVal=parseFloat(document.getElementById('b-vol')?.value)||null;
-      const volUnit=document.getElementById('b-vol-unit')?.value||'ml';
-      const pobj={code:prodCode,co_id:coId,name:prodName,kind:document.getElementById('b-kind').value,group_id:groupId,scent_id:scentId,vol:volVal,vol_unit:volUnit};
-      await dbInsert('products',pobj);C.products.push(pobj);
+      const pobj={code:prodCode,co_id:coId,name:prodName,kind:document.getElementById('b-kind').value,group_id:groupId,scent_id:scentId};
+      // vol 컬럼은 선택적으로 추가 (없으면 무시)
+      if(volVal)pobj.vol=volVal;
+      if(volVal)pobj.vol_unit=volUnit;
+      try{
+        const r=await dbInsert('products',pobj);C.products.push(r||pobj);
+      }catch(e){
+        // vol 컬럼 없을 경우 vol 없이 재시도
+        if(e.message?.includes('vol')){
+          delete pobj.vol;delete pobj.vol_unit;
+          const r=await dbInsert('products',pobj);C.products.push(r||pobj);
+          toast('제품 등록됨 (용량 컬럼 미지원 — Supabase SQL 실행 필요)','warn',5000);
+        }else throw e;
+      }
     }else{
-      // 기존 제품 vol 업데이트
-      const volVal=parseFloat(document.getElementById('b-vol')?.value)||null;
-      const volUnit=document.getElementById('b-vol-unit')?.value||'ml';
-      await dbUpdate('products','code',prodCode,{vol:volVal,vol_unit:volUnit});
-      const ep=C.products.find(p=>p.code===prodCode);if(ep){ep.vol=volVal;ep.vol_unit=volUnit;}
+      // 기존 제품 vol 업데이트 (컬럼 없으면 무시)
+      try{
+        await dbUpdate('products','code',prodCode,{vol:volVal,vol_unit:volUnit});
+        const ep=C.products.find(p=>p.code===prodCode);if(ep){ep.vol=volVal;ep.vol_unit=volUnit;}
+      }catch(e){
+        if(!e.message?.includes('vol'))throw e;
+      }
     }
     // 기존 BOM 삭제 후 재등록
     const existingBom=C.bom.filter(b=>b.prod===prodCode);
@@ -4011,14 +4191,16 @@ function ibOnGroupChange(){
   ibFilterMats();
 }
 function ibOnScentChange(){ibFilterMats();}
-function ibFilterMats(){
+function ibFilterMats(searchQ){
   const coId=document.getElementById('i-co')?.value||'';
   const groupId=document.getElementById('i-group')?.value||'';
   const scentId=document.getElementById('i-scent')?.value||'';
+  const q=(searchQ||document.getElementById('i-mat-search')?.value||'').toLowerCase().trim();
   const mats=C.materials.filter(m=>{
     if(coId&&m.co_id!==coId)return false;
     if(groupId&&m.group_id!==groupId)return false;
     if(scentId&&m.scent_id!==scentId)return false;
+    if(q&&![m.name||'',m.code||'',coName(m.co_id)||''].join(' ').toLowerCase().includes(q))return false;
     return true;
   }).sort((a,b)=>{
     const sa=a.scent_id?'b':'a',sb=b.scent_id?'b':'a';
@@ -4026,13 +4208,22 @@ function ibFilterMats(){
     return(a.name||'').localeCompare(b.name||'');
   });
   const matSel=document.getElementById('i-mat');
-  matSel.innerHTML='<option value="">선택...</option>'+mats.map(m=>{
+  matSel.innerHTML='<option value="">'+(q?`"${q}" 검색결과 ${mats.length}건`:'선택...')+'</option>'+mats.map(m=>{
     const group=C.productGroups.find(g=>g.id===m.group_id);
     const scent=C.scents.find(s=>s.id===m.scent_id);
-    const label=[group?.name,scent?`[${scent.name_ko}]`:'[공용]',m.name,`(${m.code})`].filter(Boolean).join(' · ');
+    const curStock=C.stock.filter(s=>s.mat_code===m.code&&s.qty>0).reduce((a,s)=>a+(s.qty||0),0);
+    const label=[group?.name,scent?`[${scent.name_ko}]`:'[공용]',m.name,m.vol?m.vol+'ml':'',`재고 ${fmt(curStock)}개`].filter(Boolean).join(' · ');
     return`<option value="${m.code}">${label}</option>`;
   }).join('');
   document.getElementById('i-mat-preview').style.display='none';
+  // 검색 결과 1개면 자동 선택
+  if(q&&mats.length===1){
+    matSel.value=mats[0].code;
+    ibOnMatChange();
+  }
+}
+function ibSearchMat(){
+  ibFilterMats();
 }
 function ibOnMatChange(){
   const code=document.getElementById('i-mat')?.value||'';
@@ -4112,6 +4303,8 @@ function ibRenderRows(){
 }
 function filterIbMat(){ibFilterMats();}
 function openIbModal(){
+  const searchEl=document.getElementById('i-mat-search');
+  if(searchEl)searchEl.value='';
   ibPendingRows=[];
   document.getElementById('i-date').value=today();
   const coSel=document.getElementById('i-co');
@@ -4499,29 +4692,36 @@ function ordCard(o){
     </div>`;
   }).join('');
 
+  // 모바일용 버튼 (가로 스크롤 바 형태)
+  const mobileBtns=`
+    <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;-webkit-overflow-scrolling:touch;scrollbar-width:none;margin-top:10px">
+      ${!isDone?`<button style="flex-shrink:0;padding:8px 14px;border:1px solid var(--border);border-radius:7px;background:#fff;cursor:pointer;font-size:13px;white-space:nowrap" onclick="openProg('${o.id}')">✏️ 진행입력</button>`:''}
+      <button style="flex-shrink:0;padding:8px 14px;border:1px solid var(--border);border-radius:7px;background:#fff;cursor:pointer;font-size:13px;white-space:nowrap" onclick="openPackSpec('${o.id}')">📦 포장사양</button>
+      <button style="flex-shrink:0;padding:8px 14px;border:1px solid var(--border);border-radius:7px;background:#fff;cursor:pointer;font-size:13px;white-space:nowrap" onclick="printWorkJournal('${o.id}')">📋 작업일지</button>
+      <button style="flex-shrink:0;padding:8px 14px;border:1px solid var(--border);border-radius:7px;background:#fff;cursor:pointer;font-size:13px;white-space:nowrap" onclick="openLabelModal('${o.id}')">🏷️ 카톤라벨</button>
+      <button style="flex-shrink:0;padding:8px 14px;border:1px solid var(--border);border-radius:7px;background:#fff;cursor:pointer;font-size:13px;white-space:nowrap" onclick="chgOrdStatus('${o.id}')">${isDone?'↩ 재오픈':'▲ 상태↑'}</button>
+      ${CU?.role==='admin'?`<button style="flex-shrink:0;padding:8px 14px;border:1px solid var(--border);border-radius:7px;background:#fff;cursor:pointer;font-size:13px;white-space:nowrap" onclick="openOrdEditModal('${o.id}')">⚙️ 수정</button>`:''}
+      ${CU?.role==='admin'?`<button style="flex-shrink:0;padding:8px 14px;border:1px solid #fca5a5;border-radius:7px;background:#fff5f5;cursor:pointer;font-size:13px;white-space:nowrap;color:#dc2626" onclick="deleteOrd('${o.id}')">🗑 삭제</button>`:''}
+    </div>`;
+
   return`<div class="ord-card" style="${cardStyle}">
     ${isProgress?`<div style="height:3px;background:linear-gradient(90deg,#3b82f6,#06b6d4);border-radius:2px 2px 0 0;margin:-14px -14px 10px -14px"></div>`:''}
 
-    <!-- 상단: 주요 정보 크게 + 버튼 아이콘 -->
-    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px">
-      <!-- 주요 정보 -->
+    <!-- 데스크탑: 정보+버튼 가로 배치 / 모바일: 정보 풀폭 -->
+    <div class="ord-card-desktop" style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px">
       <div style="flex:1;min-width:0">
-        <!-- LOT + 상태 -->
         <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:6px">
           <span style="font-family:monospace;font-size:13px;font-weight:800;color:var(--blue-dk)">${o.lot||o.id}</span>
           ${isDone?'<span style="font-size:10px;background:#e5e7eb;color:#6b7280;padding:1px 6px;border-radius:4px;font-weight:600">✓ 완료</span>':isProgress?'<span style="font-size:10px;background:#dbeafe;color:#1e40af;padding:1px 6px;border-radius:4px;font-weight:600">진행중</span>':'<span style="font-size:10px;background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:4px;font-weight:600">대기</span>'}
-          ${CU?.role==='admin'?`<button onclick="startLotEdit('${o.id}')" style="padding:1px 5px;border:1px solid var(--border);border-radius:4px;background:none;font-size:10px;color:var(--text3);cursor:pointer" id="lot-text-${o.id}">✏️ LOT</button>`:''}
+          ${CU?.role==='admin'?`<button onclick="startLotEdit('${o.id}')" style="padding:1px 5px;border:1px solid var(--border);border-radius:4px;background:none;font-size:10px;color:var(--text3);cursor:pointer">✏️ LOT</button>`:''}
         </div>
-        <!-- 제품명 크게 -->
         <div style="font-size:16px;font-weight:800;color:#111;line-height:1.25;margin-bottom:5px">
           ${group?.brand?`<span style="color:var(--blue-dk)">${group.brand}</span> · `:''}${prod?.name||o.prod||'-'}
         </div>
-        <!-- 향 + 업체 -->
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:8px">
           ${co?`<span style="font-size:12px;background:#f1f5f9;padding:1px 8px;border-radius:4px;font-weight:600;color:var(--text2)">${co.name}</span>`:''}
           ${scent?`<span style="display:inline-flex;align-items:center;gap:3px;font-size:12px;color:var(--purple);font-weight:600"><span style="width:8px;height:8px;border-radius:50%;background:${scent.color||'#6b7280'};display:inline-block"></span>${scent.name_ko}</span>`:''}
         </div>
-        <!-- 핵심 수치: 목표/EXP/납기 -->
         <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:12px">
           <span>목표 <strong style="font-size:14px">${fmt(o.qty)}</strong>개</span>
           ${packDone>0?`<span style="color:var(--green)">포장완료 <strong>${fmt(packDone)}</strong>개</span>`:''}
@@ -4530,18 +4730,21 @@ function ordCard(o){
           ${o.due?`<span style="color:${dueColor};font-weight:${dueLabel.includes('초과')||dueLabel.includes('오늘')?'700':'400'}">${dueLabel}</span>`:''}
         </div>
       </div>
-      <!-- 버튼 아이콘 세로 -->
-      <div style="flex-shrink:0">${actionBtns}</div>
+      <!-- 데스크탑 버튼 -->
+      <div class="ord-btn-desktop" style="flex-shrink:0">${actionBtns}</div>
     </div>
 
     <!-- 공정 진행바 -->
     ${procs.length?`<div style="margin-bottom:8px">${procBars}</div>`:''}
 
-    <!-- 완제품 등록 버튼 (필요시) -->
+    <!-- 완제품 등록 버튼 -->
     ${(()=>{if(packDone>0&&fgQty<packDone)return`<div style="margin-bottom:8px"><button class="btn btn-sm" style="background:#e0f2fe;color:#0369a1;border:1px solid #7dd3fc;font-size:11px" onclick="registerFgStock('${o.id}')">📦 완제품재고 등록</button></div>`;return '';})()}
 
     <!-- 최대 생산 배지 -->
     ${maxProdBadge}
+
+    <!-- 모바일 버튼 (하단 가로 스크롤) -->
+    <div class="ord-btn-mobile">${mobileBtns}</div>
   </div>`;
 }
 
