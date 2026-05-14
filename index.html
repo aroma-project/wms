@@ -803,7 +803,6 @@ textarea{min-height:60px;resize:vertical}
     <input type="date" id="rl-to" style="width:140px">
     <button class="btn btn-p" onclick="renderLotReport()">조회</button>
     <button class="btn btn-g" onclick="window.print()">🖨️ 인쇄</button>
-    <button class="btn btn-g" onclick="printCostReport()" title="공수 기반 생산비용 리포트">💰 비용 리포트</button>
   </div>
   <div id="rl-report"></div>
 </div>
@@ -7130,6 +7129,14 @@ function renderCertList(){
   </div>`;
 }
 
+function toggleCostDetail(id){
+  const el=document.getElementById(id);if(!el)return;
+  const isOpen=el.style.display!=='none';
+  el.style.display=isOpen?'none':'table-row';
+  const btn=document.querySelector(`button[onclick="toggleCostDetail('${id}')"]`);
+  if(btn)btn.textContent=isOpen?'공정별 ▾':'공정별 ▴';
+}
+
 function printCostReport(){
   // 비용 리포트를 별도 섹션으로 표시 (인터랙티브)
   const HOURLY=15000;
@@ -7210,8 +7217,32 @@ function printCostReport(){
         <span style="font-size:10px;color:#92400e">원/개 × ${(r.o.qty||0).toLocaleString()}개</span>
       </div>`).join('');
 
+    // 공정별 상세 비용 (기입된 공정만)
+    const procDetail=(['충진','라벨링','기타','포장']).filter(p=>(r.o.processes||[]).includes(p)).map(p=>{
+      const pd=r.byProc[p];
+      const mh=pd?.mh||0;
+      const cost=Math.round(mh*HOURLY);
+      const qty=r.packDone||r.o.qty||1;
+      const perUnit=qty>0?Math.round(cost/qty):0;
+      const isMissing=r.missingProcs.includes(p);
+      return`<tr style="background:${isMissing?'#fff7ed':'#f9fbe7'}">
+        <td style="padding:4px 10px;font-size:11px;font-weight:600;color:${isMissing?'#92400e':'#555'}">${p}${isMissing?' ⚠️':''}</td>
+        <td style="padding:4px 10px;font-size:11px;text-align:right">${mh?mh.toFixed(1)+'h':'미기입'}</td>
+        <td style="padding:4px 10px;font-size:11px;text-align:right">${cost>0?cost.toLocaleString()+'원':isMissing?'<em style="color:#92400e">단가 입력 필요</em>':'-'}</td>
+        <td style="padding:4px 10px;font-size:11px;text-align:right;font-weight:700;color:${isMissing?'#92400e':'var(--blue-dk)'}" id="mc-per-proc-${r.o.id}-${p}">${perUnit>0?perUnit.toLocaleString()+'원/개':'-'}</td>
+      </tr>`;
+    }).join('');
+
     return`<tr style="border-bottom:1px solid #f1f5f9;vertical-align:top">
-      <td style="padding:8px 10px;font-family:monospace;font-size:11px;color:var(--blue-dk);font-weight:700;white-space:nowrap">${r.o.lot||r.o.id}</td>
+      <td style="padding:8px 10px;font-family:monospace;font-size:11px;color:var(--blue-dk);font-weight:700;white-space:nowrap">
+        ${r.o.lot||r.o.id}
+        <div style="margin-top:4px">
+          <button onclick="toggleCostDetail('cd-${r.o.id}')"
+            style="padding:2px 7px;font-size:10px;background:#f1f5f9;border:1px solid var(--border);border-radius:4px;cursor:pointer;color:var(--text2)">
+            공정별 ▾
+          </button>
+        </div>
+      </td>
       <td style="padding:8px 10px;font-size:11px;color:#555;white-space:nowrap">${r.o.date||'-'}</td>
       <td style="padding:8px 10px;font-size:12px">${r.co.name||'-'}</td>
       <td style="padding:8px 10px;font-size:11px">${r.prod.name||r.o.prod||'-'}</td>
@@ -7225,6 +7256,20 @@ function printCostReport(){
       </td>
       <td style="padding:8px 10px;text-align:right;font-weight:700" id="mc-total-${r.o.id}">계산중...</td>
       <td style="padding:8px 10px;text-align:right;font-size:11px;color:#666" id="mc-per-${r.o.id}">-</td>
+    </tr>
+    <tr id="cd-${r.o.id}" style="display:none;background:#f8fafc">
+      <td colspan="10" style="padding:4px 20px 10px">
+        <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:4px">공정별 비용 분석</div>
+        <table style="width:500px;border-collapse:collapse;font-size:11px">
+          <thead><tr style="background:#e8eaf6">
+            <th style="padding:4px 10px;text-align:left;border:1px solid #c5cae9">공정</th>
+            <th style="padding:4px 10px;text-align:right;border:1px solid #c5cae9">공수(h)</th>
+            <th style="padding:4px 10px;text-align:right;border:1px solid #c5cae9">비용</th>
+            <th style="padding:4px 10px;text-align:right;border:1px solid #c5cae9">개당 비용</th>
+          </tr></thead>
+          <tbody>${procDetail}</tbody>
+        </table>
+      </td>
     </tr>`;
   }).join('');
 
