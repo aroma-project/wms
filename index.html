@@ -889,11 +889,21 @@ textarea{min-height:60px;resize:vertical}
       </div>
       <div><label>담당자 연락처</label><input id="co-tel"></div>
     </div>
-    <div class="fr"><label>배송지 1</label><input id="co-a1"></div>
-    <div class="fr"><label>배송지 2</label><input id="co-a2"></div>
-    <div class="fr"><label>배송지 3</label><input id="co-a3"></div>
-    <div class="fr"><label>배송지 4</label><input id="co-a4"></div>
-    <div class="fr"><label>배송지 5</label><input id="co-a5"></div>
+    <div style="margin-bottom:6px">
+      <label style="font-size:12px;font-weight:600;color:var(--text2)">배송지 (최대 5곳)</label>
+      <div style="font-size:11px;color:var(--text3);margin-top:2px">거래명세서 출력 시 선택됩니다</div>
+    </div>
+    ${[1,2,3,4,5].map(n=>`
+    <div style="border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px">
+      <div style="font-size:11px;font-weight:700;color:var(--text2);margin-bottom:6px">배송지 ${n}</div>
+      <div class="fr"><label style="font-size:11px">주소</label><input id="co-a${n}" placeholder="배송 주소"></div>
+      <div class="fr c2">
+        <div><label style="font-size:11px">담당자</label><input id="co-a${n}-contact" placeholder="이름/직책"></div>
+        <div><label style="font-size:11px">연락처</label><input id="co-a${n}-tel" placeholder="010-0000-0000"></div>
+      </div>
+      <div class="fr"><label style="font-size:11px">전달사항</label><input id="co-a${n}-note" placeholder="층수, 입고 방법, 주의사항 등"></div>
+    </div>`).join('')}
+    
     <div class="br"><button class="btn btn-p" onclick="saveCo()">저장</button><button class="btn btn-g" onclick="closeMo()">취소</button></div>
   </div>
   <!-- 부자재 -->
@@ -1121,20 +1131,20 @@ textarea{min-height:60px;resize:vertical}
       💡 발주목록에 등록됩니다. LOT는 자동 부여됩니다.<br>공정 등록은 생산대기로 올릴 때 진행합니다.
     </div>
     <div class="fr c2">
-      <div><label>업체 *</label><select id="ob-co" onchange="ordBacklogOnCo()"><option value="">선택...</option></select></div>
-      <div><label>브랜드/제품군 *</label><select id="ob-group" onchange="ordBacklogOnGroup()"><option value="">선택...</option></select></div>
+      <div><label>업체 *</label><select id="blo-co" onchange="ordBacklogOnCo()"><option value="">선택...</option></select></div>
+      <div><label>브랜드/제품군 *</label><select id="blo-group" onchange="ordBacklogOnGroup()"><option value="">선택...</option></select></div>
     </div>
-    <div class="fr"><label>제품(향) *</label><select id="ob-prod"><option value="">선택...</option></select></div>
+    <div class="fr"><label>제품(향) *</label><select id="blo-prod"><option value="">선택...</option></select></div>
     <div class="fr c2">
-      <div><label>수량 *</label><input id="ob-qty" type="number" min="1" placeholder="5000"></div>
-      <div><label>납기일</label><input id="ob-due" type="date"></div>
+      <div><label>수량 *</label><input id="blo-qty" type="number" min="1" placeholder="5000"></div>
+      <div><label>납기일</label><input id="blo-due" type="date"></div>
     </div>
     <div class="fr c2">
-      <div><label>EXP (유통기한)</label><input id="ob-exp" type="date"></div>
-      <div><label>마킹정보</label><input id="ob-mark" placeholder="선택사항"></div>
+      <div><label>EXP (유통기한)</label><input id="blo-exp" type="date"></div>
+      <div><label>마킹정보</label><input id="blo-mark" placeholder="선택사항"></div>
     </div>
     <div style="background:#f8fafc;border-radius:6px;padding:8px 12px;font-size:12px;color:var(--text2);margin-top:4px">
-      자동 생성 LOT: <strong id="ob-lot-preview" style="color:var(--blue-dk);font-family:monospace">-</strong>
+      자동 생성 LOT: <strong id="blo-lot-preview" style="color:var(--blue-dk);font-family:monospace">-</strong>
     </div>
     <div class="br">
       <button class="btn btn-p" onclick="saveBacklogOrd()">발주 등록</button>
@@ -2312,9 +2322,24 @@ function renderCo(){
 }
 function openCoModal(id){
   editCoId=id||null;
-  ['co-name','co-initial','co-contact','co-tel','co-a1','co-a2','co-a3','co-a4','co-a5'].forEach(i=>{
-    const el=document.getElementById(i);if(el)el.value='';
-  });
+  ['co-name','co-initial','co-contact','co-tel'].forEach(i=>{const el=document.getElementById(i);if(el)el.value='';});
+  [1,2,3,4,5].forEach(n=>{['','-contact','-tel','-note'].forEach(s=>{const el=document.getElementById('co-a'+n+s);if(el)el.value='';});});
+  if(id){
+    const c=C.companies.find(x=>x.id===id);
+    if(c){
+      document.getElementById('co-name').value=c.name||'';
+      const ini=document.getElementById('co-initial');if(ini)ini.value=c.initial||'';
+      document.getElementById('co-contact').value=c.contact||'';
+      document.getElementById('co-tel').value=c.tel||'';
+      [1,2,3,4,5].forEach(n=>{
+        const p=parseAddr(c['a'+n]);
+        document.getElementById('co-a'+n).value=p.addr;
+        document.getElementById('co-a'+n+'-contact').value=p.contact;
+        document.getElementById('co-a'+n+'-tel').value=p.tel;
+        document.getElementById('co-a'+n+'-note').value=p.note;
+      });
+    }
+  }
   if(id){
     const c=C.companies.find(x=>x.id===id);
     if(c){
@@ -2328,6 +2353,18 @@ function openCoModal(id){
   showMo('m-company');
 }
 function editCo(id){openCoModal(id);}
+
+// 배송지 필드 파싱: "주소||담당자||연락처||전달사항" 형식
+function parseAddr(val){
+  if(!val)return{addr:'',contact:'',tel:'',note:''};
+  const p=val.split('||');
+  return{addr:p[0]||'',contact:p[1]||'',tel:p[2]||'',note:p[3]||''};
+}
+function buildAddr(addr,contact,tel,note){
+  if(!addr&&!contact&&!tel&&!note)return'';
+  return[addr,contact,tel,note].join('||');
+}
+
 async function saveCo(){
   const name=document.getElementById('co-name').value.trim();
   if(!name){toast('업체명 필수','error');return;}
@@ -2338,7 +2375,16 @@ async function saveCo(){
   // 이니셜 중복 체크 (수정 시 자신 제외)
   const dup=C.companies.find(c=>c.initial===initial&&c.id!==editCoId);
   if(dup){toast(`이니셜 "${initial}"은 이미 "${dup.name}"에서 사용 중입니다`,'error');return;}
-  const obj={name,initial,contact:document.getElementById('co-contact').value,tel:document.getElementById('co-tel').value,a1:document.getElementById('co-a1').value,a2:document.getElementById('co-a2').value,a3:document.getElementById('co-a3').value,a4:document.getElementById('co-a4').value,a5:document.getElementById('co-a5').value};
+  const addrFields={};
+  [1,2,3,4,5].forEach(n=>{
+    addrFields['a'+n]=buildAddr(
+      document.getElementById('co-a'+n)?.value||'',
+      document.getElementById('co-a'+n+'-contact')?.value||'',
+      document.getElementById('co-a'+n+'-tel')?.value||'',
+      document.getElementById('co-a'+n+'-note')?.value||''
+    );
+  });
+  const obj={name,initial,contact:document.getElementById('co-contact').value,tel:document.getElementById('co-tel').value,...addrFields};
   try{
     if(editCoId){
       await dbUpdate('companies','id',editCoId,obj);
@@ -3425,8 +3471,9 @@ function renderFgStock(){
         return[prodCode,prod?.name||'',s.lot||'',s.loc||''].join(' ').toLowerCase().includes(q);
       }).map(s=>{
         const ord=relOrds.find(o=>'LOT:'+(o.lot||o.id)===s.plt||o.lot===s.plt?.replace('LOT:',''));
+        const lotDisplay=s.plt?.startsWith('LOT:')?s.plt.replace('LOT:',''):(ord?.lot||ord?.id||'-');
         return`<tr>
-          <td style="padding:8px 10px;font-family:monospace;font-size:11px;color:var(--blue-dk);font-weight:700">${s.lot||'-'}</td>
+          <td style="padding:8px 10px;font-family:monospace;font-size:11px;color:var(--blue-dk);font-weight:700">${lotDisplay}</td>
           <td style="padding:8px 10px;font-size:12px">${s.date||'-'}</td>
           <td style="padding:8px 10px;font-weight:800;font-size:15px;color:var(--green)">${fmt(s.qty)}<span style="font-size:11px;font-weight:400">개</span></td>
           <td style="padding:8px 10px;font-size:11px;font-family:monospace">${s.loc||'-'}</td>
@@ -3905,47 +3952,47 @@ function toggleOrdDone(){
 // 발주 등록 모달 열기 (간단 버전)
 function openOrdModal(){
   if(CU?.role!=='admin'){toast('관리자만 발주 등록 가능합니다','error');return;}
-  const coSel=document.getElementById('ob-co');
+  const coSel=document.getElementById('blo-co');
   if(coSel){coSel.innerHTML='<option value="">선택...</option>'+C.companies.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');}
-  document.getElementById('ob-group').innerHTML='<option value="">선택...</option>';
-  document.getElementById('ob-prod').innerHTML='<option value="">선택...</option>';
+  document.getElementById('blo-group').innerHTML='<option value="">선택...</option>';
+  document.getElementById('blo-prod').innerHTML='<option value="">선택...</option>';
   ['ob-qty','ob-due','ob-exp','ob-mark'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
-  document.getElementById('ob-lot-preview').textContent='-';
+  document.getElementById('blo-lot-preview').textContent='-';
   showMo('m-ord-backlog');
 }
 function ordBacklogOnCo(){
-  const coId=document.getElementById('ob-co')?.value||'';
+  const coId=document.getElementById('blo-co')?.value||'';
   const groups=C.productGroups.filter(g=>!coId||g.co_id===coId);
-  document.getElementById('ob-group').innerHTML='<option value="">선택...</option>'+groups.map(g=>`<option value="${g.id}">${g.brand?g.brand+' · ':''}${g.name}</option>`).join('');
-  document.getElementById('ob-prod').innerHTML='<option value="">선택...</option>';
-  document.getElementById('ob-lot-preview').textContent='-';
+  document.getElementById('blo-group').innerHTML='<option value="">선택...</option>'+groups.map(g=>`<option value="${g.id}">${g.brand?g.brand+' · ':''}${g.name}</option>`).join('');
+  document.getElementById('blo-prod').innerHTML='<option value="">선택...</option>';
+  document.getElementById('blo-lot-preview').textContent='-';
 }
 function ordBacklogOnGroup(){
-  const gId=document.getElementById('ob-group')?.value||'';
+  const gId=document.getElementById('blo-group')?.value||'';
   const prods=C.products.filter(p=>!gId||p.group_id===gId);
   const scents=C.scents;
-  document.getElementById('ob-prod').innerHTML='<option value="">선택...</option>'+prods.map(p=>{
+  document.getElementById('blo-prod').innerHTML='<option value="">선택...</option>'+prods.map(p=>{
     const sc=scents.find(s=>s.id===p.scent_id);
     return`<option value="${p.code}">${sc?sc.name_ko+' - ':''}${p.name}</option>`;
   }).join('');
   // LOT 미리보기
-  const prodSel=document.getElementById('ob-prod');
+  const prodSel=document.getElementById('blo-prod');
   if(prods.length===1){prodSel.value=prods[0].code;ordBacklogUpdateLot();}
 }
 function ordBacklogUpdateLot(){
-  const prodCode=document.getElementById('ob-prod')?.value||'';
-  if(!prodCode){document.getElementById('ob-lot-preview').textContent='-';return;}
+  const prodCode=document.getElementById('blo-prod')?.value||'';
+  if(!prodCode){document.getElementById('blo-lot-preview').textContent='-';return;}
   const lot=genLot(prodCode);
-  document.getElementById('ob-lot-preview').textContent=lot;
+  document.getElementById('blo-lot-preview').textContent=lot;
 }
 
 async function saveBacklogOrd(){
-  const coId=document.getElementById('ob-co')?.value||'';
-  const prodCode=document.getElementById('ob-prod')?.value||'';
-  const qty=parseInt(document.getElementById('ob-qty')?.value)||0;
-  const due=document.getElementById('ob-due')?.value||null;
-  const exp=document.getElementById('ob-exp')?.value||null;
-  const mark=document.getElementById('ob-mark')?.value||null;
+  const coId=document.getElementById('blo-co')?.value||'';
+  const prodCode=document.getElementById('blo-prod')?.value||'';
+  const qty=parseInt(document.getElementById('blo-qty')?.value)||0;
+  const due=document.getElementById('blo-due')?.value||null;
+  const exp=document.getElementById('blo-exp')?.value||null;
+  const mark=document.getElementById('blo-mark')?.value||null;
   if(!coId){toast('업체를 선택하세요','error');return;}
   if(!prodCode){toast('제품을 선택하세요','error');return;}
   if(qty<=0){toast('수량을 입력하세요','error');return;}
@@ -4817,11 +4864,11 @@ function obItemTypeChange(id){const sel=document.getElementById('ob-type-'+id);c
 function toggleObSel(id,chk){if(chk)obSel.add(id);else obSel.delete(id);renderOb();}
 function clearObSel(){obSel.clear();renderOb();}
 function renderOb(){
-  const cof=document.getElementById('ob-co');
+  const cof=document.getElementById('blo-co');
   if(cof){const prev=cof.value;cof.innerHTML='<option value="">전체 업체</option>'+C.companies.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');if(prev)cof.value=prev;}
   if(obTabCur==='done'){renderObDone();return;}
   const q=(document.getElementById('ob-s')?.value||'').toLowerCase();
-  const cf=document.getElementById('ob-co')?.value||'';
+  const cf=document.getElementById('blo-co')?.value||'';
 
   // 출고 대기 = 포장완료 수량 OR 완제품재고 있고 아직 출고 안 된 오더
   const eligible=C.orders.filter(o=>{
@@ -5122,98 +5169,76 @@ function printPalletLabel(obId){
     const vol=it.vol||matObj(C.bom.find(b=>b.prod===it.prod&&matObj(b.mat_code)?.type==='용기')?.mat_code)?.vol||'';
     const per=parseInt(localStorage.getItem(`receipt-carton-${obId}-${idx}`))||it.cartonPer||0;
     const boxes=per?Math.floor(it.qty/per)+(it.qty%per>0?1:0):null;
-    const boxDesc=per?(()=>{const f=Math.floor(it.qty/per);const r=it.qty%per;return r>0?`${f}박스 + ${r}개 (${per}개입)`:f+'박스 ('+per+'개입)';})():'';
+    const boxDesc=per?(()=>{const f=Math.floor(it.qty/per);const r=it.qty%per;return r>0?`${per}개입 / ${f}박스+${r}개`:per+'개입 / '+f+'박스';})():'';
+    const lot=it.lot||ord.lot||'-';
+    const exp=it.exp||ord.exp||'-';
 
-    return`<div style="border:3px solid #000;border-radius:8px;padding:20px 24px;break-inside:avoid;position:relative">
-      <!-- 번호 -->
-      <div style="position:absolute;top:-14px;left:16px;background:#000;color:#fff;font-size:13px;font-weight:900;padding:2px 12px;border-radius:99px">No.${idx+1}</div>
+    return`<div style="border:3px solid #111;border-radius:6px;padding:18px 20px;break-inside:avoid;position:relative;display:flex;flex-direction:column;gap:10px">
+      <!-- No 배지 -->
+      <div style="position:absolute;top:-13px;left:14px;background:#111;color:#fff;font-size:12px;font-weight:900;padding:2px 10px;border-radius:99px">No.${idx+1}</div>
 
-      <div style="display:grid;grid-template-columns:1fr auto;gap:16px;align-items:start">
-        <div>
-          <!-- 업체 · 브랜드 -->
-          <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap">
-            <span style="background:#000;color:#fff;font-size:12px;font-weight:700;padding:2px 10px;border-radius:4px">${co.name||'-'}</span>
-            ${group?.brand?`<span style="font-size:12px;color:#555;font-weight:600">${group.brand}</span>`:''}
-          </div>
-          <!-- 제품명 -->
-          <div style="font-size:22px;font-weight:900;color:#000;line-height:1.2;margin-bottom:6px">${it.prodName||it.prod||'-'}</div>
-          <!-- 규격 -->
-          <div style="display:flex;gap:12px;font-size:14px;color:#333;margin-bottom:10px;flex-wrap:wrap">
-            ${vol?`<span style="background:#e0f2fe;color:#0369a1;padding:2px 10px;border-radius:4px;font-weight:700">${vol}ml</span>`:''}
-            ${ord.exp?`<span>EXP: <strong>${ord.exp}</strong></span>`:''}
-          </div>
-          <!-- LOT -->
-          <div style="font-size:15px;font-weight:700;font-family:monospace;color:#1e40af;background:#eff6ff;padding:4px 12px;border-radius:4px;display:inline-block">
-            LOT: ${it.lot||ord.lot||'-'}
-          </div>
+      <!-- 업체 · 브랜드 -->
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="font-size:18px;font-weight:900;background:#111;color:#fff;padding:3px 12px;border-radius:5px">${co.name||'-'}</span>
+        ${group?.brand?`<span style="font-size:16px;font-weight:700;color:#333">${group.brand}</span>`:''}
+      </div>
+
+      <!-- 제품명 -->
+      <div style="font-size:26px;font-weight:900;color:#000;line-height:1.15;border-bottom:2px solid #000;padding-bottom:10px">
+        ${it.prodName||it.prod||'-'}
+      </div>
+
+      <!-- 핵심 정보 3단 -->
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+        <div style="border:1.5px solid #000;border-radius:5px;padding:8px 10px;text-align:center">
+          <div style="font-size:10px;color:#555;font-weight:600;margin-bottom:3px">규격</div>
+          <div style="font-size:20px;font-weight:900;color:#0369a1">${vol?vol+'ml':'-'}</div>
         </div>
-
-        <!-- 수량 영역 -->
-        <div style="text-align:right;min-width:160px">
-          <div style="font-size:11px;color:#666;margin-bottom:2px">총 수량</div>
-          <div style="font-size:40px;font-weight:900;color:#000;line-height:1">${fmt(it.qty)}</div>
-          <div style="font-size:13px;color:#555;margin-top:2px">EA</div>
-          ${boxes?`<div style="margin-top:10px;border-top:2px solid #000;padding-top:8px">
-            <div style="font-size:11px;color:#666;margin-bottom:2px">박스</div>
-            <div style="font-size:30px;font-weight:900;color:#000;line-height:1">${boxes}</div>
-            <div style="font-size:11px;color:#555;margin-top:2px">${boxDesc}</div>
-          </div>`:''}
+        <div style="border:1.5px solid #000;border-radius:5px;padding:8px 10px;text-align:center">
+          <div style="font-size:10px;color:#555;font-weight:600;margin-bottom:3px">EXP</div>
+          <div style="font-size:16px;font-weight:900;color:#000">${exp}</div>
         </div>
+        <div style="border:1.5px solid #000;border-radius:5px;padding:8px 10px;text-align:center;background:#eff6ff">
+          <div style="font-size:10px;color:#1e40af;font-weight:600;margin-bottom:3px">LOT</div>
+          <div style="font-size:14px;font-weight:900;color:#1e40af;font-family:monospace;letter-spacing:.03em">${lot}</div>
+        </div>
+      </div>
+
+      <!-- 수량 · 박스 -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:2px">
+        <div style="background:#000;color:#fff;border-radius:5px;padding:10px 14px;text-align:center">
+          <div style="font-size:10px;font-weight:600;opacity:.7;margin-bottom:2px">총 수량</div>
+          <div style="font-size:36px;font-weight:900;line-height:1">${fmt(it.qty)}</div>
+          <div style="font-size:12px;opacity:.8">EA</div>
+        </div>
+        ${boxes?`<div style="border:2px solid #000;border-radius:5px;padding:10px 14px;text-align:center">
+          <div style="font-size:10px;font-weight:600;color:#555;margin-bottom:2px">박스</div>
+          <div style="font-size:36px;font-weight:900;line-height:1;color:#000">${boxes}</div>
+          <div style="font-size:11px;color:#555;margin-top:2px">${boxDesc}</div>
+        </div>`:`<div style="border:2px dashed #ccc;border-radius:5px;padding:10px 14px;text-align:center;display:flex;align-items:center;justify-content:center">
+          <div style="font-size:12px;color:#aaa">박스 미입력</div>
+        </div>`}
       </div>
     </div>`;
   }).join('');
 
-  const totalQty=(ob.items||[]).reduce((a,i)=>a+(i.qty||0),0);
-  const coNames=[...new Set((ob.items||[]).map(i=>coName(i.coId)))].join(', ');
-
   const html=`<!DOCTYPE html><html><head><meta charset="UTF-8">
-  <title>팔레트 라벨 ${ob.id}</title>
+  <title>${ob.id}</title>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
-    body{font-family:'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',sans-serif;background:#fff;color:#000;padding:16px}
-    @media print{
-      @page{size:A4 landscape;margin:8mm}
-      body{padding:0}
-      button{display:none!important}
-    }
+    body{font-family:'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',sans-serif;background:#fff;color:#000;padding:14px}
+    @media print{@page{size:A4 landscape;margin:7mm}body{padding:0}button{display:none!important}}
   </style>
   </head><body>
 
-  <!-- 인쇄 버튼 -->
-  <div style="margin-bottom:12px;display:flex;gap:8px">
-    <button onclick="window.print()" style="padding:8px 20px;background:#000;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;font-weight:700">🖨️ 인쇄 (A4 가로)</button>
-    <button onclick="window.close()" style="padding:8px 14px;background:#f3f4f6;border:1px solid #ddd;border-radius:6px;cursor:pointer;font-size:13px">닫기</button>
+  <div style="margin-bottom:10px;display:flex;gap:8px">
+    <button onclick="window.print()" style="padding:7px 18px;background:#000;color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:13px;font-weight:700">🖨️ 인쇄 (A4 가로)</button>
+    <button onclick="window.close()" style="padding:7px 12px;background:#f3f4f6;border:1px solid #ddd;border-radius:5px;cursor:pointer;font-size:13px">닫기</button>
+    <span style="font-size:11px;color:#888;align-self:center;margin-left:4px">${ob.id} · ${ob.date}</span>
   </div>
 
-  <!-- 헤더 -->
-  <div style="display:grid;grid-template-columns:1fr auto;align-items:center;border:3px solid #000;border-radius:8px;padding:12px 20px;margin-bottom:12px">
-    <div style="display:flex;align-items:center;gap:16px">
-      <div style="background:#000;color:#fff;padding:8px 14px;border-radius:6px;font-size:15px;font-weight:900;line-height:1.3">aroma<br>project.</div>
-      <div>
-        <div style="font-size:22px;font-weight:900;letter-spacing:.1em">팔 레 트 라 벨</div>
-        <div style="font-size:12px;color:#555;margin-top:3px">${coNames}</div>
-      </div>
-    </div>
-    <div style="text-align:right">
-      <div style="font-size:11px;color:#888">출고번호</div>
-      <div style="font-size:14px;font-weight:700;font-family:monospace">${ob.id}</div>
-      <div style="font-size:11px;color:#888;margin-top:4px">출고일</div>
-      <div style="font-size:16px;font-weight:800">${ob.date}</div>
-      <div style="margin-top:6px;background:#000;color:#fff;padding:3px 12px;border-radius:4px;font-size:12px">
-        총 ${fmt(totalQty)}EA
-      </div>
-    </div>
-  </div>
-
-  <!-- 품목 카드 -->
-  <div style="display:grid;grid-template-columns:${(ob.items||[]).length===1?'1fr':(ob.items||[]).length===2?'1fr 1fr':'1fr 1fr 1fr'};gap:12px">
+  <div style="display:grid;grid-template-columns:${(ob.items||[]).length===1?'1fr':(ob.items||[]).length===2?'1fr 1fr':'1fr 1fr 1fr'};gap:14px">
     ${itemCards}
-  </div>
-
-  <!-- 출고지 -->
-  <div style="margin-top:12px;border:2px solid #000;border-radius:6px;padding:10px 16px;display:flex;align-items:center;gap:12px">
-    <span style="font-size:12px;font-weight:700;white-space:nowrap">📍 배송지</span>
-    <span style="font-size:14px;font-weight:600">${ob.dest||'-'}</span>
   </div>
 
   <script>setTimeout(()=>window.print(),400)<\/script>
@@ -5407,13 +5432,26 @@ function showReceipt(ob){
   <div style="display:grid;grid-template-columns:1fr 1fr;border:1px solid #ccc;border-top:none;margin-top:16px">
     <div style="border-right:1px solid #ccc">
       <div style="background:#f0f0f0;text-align:center;padding:6px;font-size:12px;font-weight:700;border-bottom:1px solid #ccc;letter-spacing:.1em">출 고 지 정 보</div>
-      <div style="padding:16px 18px">
-        <div style="font-size:11px;color:#888;font-weight:600;letter-spacing:.05em;margin-bottom:8px">▸ 배 송 지</div>
-        <div style="font-size:16px;font-weight:900;color:#000;line-height:1.7;border-left:4px solid #111;padding-left:12px">${(ob.dest||'-')}</div>
-        ${co.contact||co.tel?`<div style="margin-top:12px;padding:10px 12px;background:#f5f5f5;border-radius:6px">
-          ${co.contact?`<div style="font-size:12px">담당자&emsp;<strong style="font-size:14px">${co.contact}</strong></div>`:''}
-          ${co.tel?`<div style="font-size:12px;margin-top:4px">연락처&emsp;<strong style="font-size:14px">${co.tel}</strong></div>`:''}
-        </div>`:''}
+      <div style="padding:14px 16px">
+        ${(()=>{
+          const raw=ob.dest||'-';
+          const parts=raw.split('||');
+          const addr=parts[0]||raw;
+          const dContact=parts[1]||'';
+          const dTel=parts[2]||'';
+          const dNote=parts[3]||'';
+          const isParsed=parts.length>1;
+          let html='<div style="font-size:11px;color:#888;font-weight:600;margin-bottom:5px">▸ 배 송 지</div>'
+            +'<div style="font-size:14px;font-weight:800;color:#000;line-height:1.6;border-left:4px solid #111;padding-left:10px;margin-bottom:8px">'+addr+'</div>';
+          if(isParsed&&(dContact||dTel)){
+            html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:5px;margin-bottom:6px">';
+            if(dContact)html+='<div style="background:#f5f5f5;border-radius:4px;padding:5px 8px"><div style="font-size:9px;color:#888">담당자</div><div style="font-size:12px;font-weight:700">'+dContact+'</div></div>';
+            if(dTel)html+='<div style="background:#f5f5f5;border-radius:4px;padding:5px 8px"><div style="font-size:9px;color:#888">연락처</div><div style="font-size:12px;font-weight:700">'+dTel+'</div></div>';
+            html+='</div>';
+          }
+          if(isParsed&&dNote)html+='<div style="background:#fefce8;border:1px solid #fde68a;border-radius:4px;padding:5px 8px;font-size:10px;color:#713f12"><strong>전달사항</strong> '+dNote+'</div>';
+          return html;
+        })()}
       </div>
     </div>
     <div>
