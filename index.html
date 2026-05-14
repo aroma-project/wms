@@ -3532,21 +3532,49 @@ function openBomModal(){
   document.getElementById('b-group').innerHTML='<option value="">제품군 선택...</option>';
   document.getElementById('b-scent').innerHTML='<option value="">향 선택...</option>';
   document.getElementById('bom-prod-preview').style.display='none';
-  ['b-prodname','b-mat-qty','b-mat-pri','b-vol'].forEach(i=>{const el=document.getElementById(i);if(el)el.value='';});;
-  let el =document.getElementById('bom-add-rows');if(el)el.innerHTML='';
+  ['b-prodname','b-mat-qty','b-mat-pri','b-vol'].forEach(i=>{const el=document.getElementById(i);if(el)el.value='';});
+  const addRows=document.getElementById('bom-add-rows');if(addRows)addRows.innerHTML='';
   const ss=document.getElementById('bom-shared-section');if(ss)ss.style.display='none';
   const sc=document.getElementById('bom-scent-section');if(sc)sc.style.display='none';
-  // 현재 선택된 제품군 자동 선택
+  const searchEl=document.getElementById('b-mat-search');if(searchEl)searchEl.value='';
+  const resEl=document.getElementById('b-mat-search-result');if(resEl)resEl.style.display='none';
+  const disp=document.getElementById('b-mat-selected');if(disp){disp.style.color='var(--text3)';disp.textContent='검색 후 선택하세요';}
+  document.getElementById('b-mat-sel').value='';
+
+  // 현재 선택된 필터 상태 자동 반영
   if(bomSelGroup){
     const g=C.productGroups.find(x=>x.id===bomSelGroup);
-    if(g&&g.co_id){
-      if(coSel)coSel.value=g.co_id;
-      onBomCoChange();
+    if(g){
+      // 1) 업체
+      if(g.co_id&&coSel){coSel.value=g.co_id;onBomCoChange();}
+      // 2) 제품군 (onBomCoChange 후 옵션 채워짐)
       setTimeout(()=>{
         const gsel=document.getElementById('b-group');
-        if(gsel)gsel.value=bomSelGroup;
-        onBomGroupChange();
-      },50);
+        if(gsel){gsel.value=bomSelGroup;onBomGroupChange();}
+        // 3) 향 (onBomGroupChange 후 옵션 채워짐)
+        setTimeout(()=>{
+          if(bomSelProd){
+            const prod=C.products.find(p=>p.code===bomSelProd);
+            if(prod?.scent_id){
+              const ssel=document.getElementById('b-scent');
+              if(ssel){ssel.value=prod.scent_id;onBomScentChange();}
+              // vol
+              if(prod.vol){
+                const vEl=document.getElementById('b-vol');if(vEl)vEl.value=prod.vol;
+                const vuEl=document.getElementById('b-vol-unit');if(vuEl)vuEl.value=prod.vol_unit||'ml';
+              }
+            }
+          }
+          // 제품군 필터에서 선택한 향
+          const scentFv=document.getElementById('bom-scent-f')?.value||'';
+          if(scentFv&&!bomSelProd){
+            const ssel=document.getElementById('b-scent');
+            if(ssel&&ssel.querySelector(`option[value="${scentFv}"]`)){
+              ssel.value=scentFv;onBomScentChange();
+            }
+          }
+        },60);
+      },60);
     }
   }
   showMo('m-bom');
