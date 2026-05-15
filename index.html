@@ -1292,15 +1292,27 @@ textarea{min-height:60px;resize:vertical}
   </div>
 
   <!-- 생산대기로 올리기 모달 (공정 선택) -->
-  <div class="modal" id="m-to-prod" style="display:none;max-width:460px">
+  <div class="modal" id="m-to-prod" style="display:none;max-width:480px">
     <div class="modal-hd">⚙️ 생산대기 등록 <button class="modal-x" onclick="closeMo()">×</button></div>
-    <div id="m-to-prod-info" style="background:#f8fafc;border-radius:8px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:var(--text2)"></div>
-    <label style="font-size:12px;font-weight:700;display:block;margin-bottom:8px">공정 선택 (해당 제품에 필요한 공정을 선택하세요)</label>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:14px">
-      <label style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:13px"><input type="checkbox" id="proc-fill" value="충진" checked style="accent-color:var(--blue)"> 충진</label>
-      <label style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:13px"><input type="checkbox" id="proc-label" value="라벨링" checked style="accent-color:var(--blue)"> 라벨링</label>
-      <label style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:13px"><input type="checkbox" id="proc-etc" value="기타" style="accent-color:var(--blue)"> 기타</label>
-      <label style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:13px"><input type="checkbox" id="proc-pack" value="포장" checked style="accent-color:var(--blue)"> 포장</label>
+    <div id="m-to-prod-info" style="background:#f0f4ff;border:1px solid #c7d2fe;border-radius:10px;padding:14px 16px;margin-bottom:16px"></div>
+    <div style="font-size:13px;font-weight:700;display:block;margin-bottom:10px;color:var(--text2)">공정 선택</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">
+      <label id="proc-lbl-fill" style="display:flex;align-items:center;gap:10px;padding:14px 16px;border:2px solid var(--blue);border-radius:10px;cursor:pointer;background:#eff6ff">
+        <input type="checkbox" id="proc-fill" value="충진" checked style="accent-color:var(--blue);width:18px;height:18px" onchange="procLblToggle('fill')">
+        <span style="font-size:15px;font-weight:700;color:var(--blue)">충진</span>
+      </label>
+      <label id="proc-lbl-label" style="display:flex;align-items:center;gap:10px;padding:14px 16px;border:2px solid var(--blue);border-radius:10px;cursor:pointer;background:#eff6ff">
+        <input type="checkbox" id="proc-label" value="라벨링" checked style="accent-color:var(--blue);width:18px;height:18px" onchange="procLblToggle('label')">
+        <span style="font-size:15px;font-weight:700;color:var(--blue)">라벨링</span>
+      </label>
+      <label id="proc-lbl-etc" style="display:flex;align-items:center;gap:10px;padding:14px 16px;border:2px solid var(--border);border-radius:10px;cursor:pointer;background:#fff">
+        <input type="checkbox" id="proc-etc" value="기타" style="accent-color:var(--blue);width:18px;height:18px" onchange="procLblToggle('etc')">
+        <span style="font-size:15px;font-weight:700;color:var(--text2)">기타</span>
+      </label>
+      <label id="proc-lbl-pack" style="display:flex;align-items:center;gap:10px;padding:14px 16px;border:2px solid var(--blue);border-radius:10px;cursor:pointer;background:#eff6ff">
+        <input type="checkbox" id="proc-pack" value="포장" checked style="accent-color:var(--blue);width:18px;height:18px" onchange="procLblToggle('pack')">
+        <span style="font-size:15px;font-weight:700;color:var(--blue)">포장</span>
+      </label>
     </div>
     <div class="fr c3">
       <div><label>생산 예정일</label><input id="tp-plan-date" type="date" placeholder="선택사항"></div>
@@ -4428,10 +4440,10 @@ function renderOrdCal(){
       if(!evMap[o.date])evMap[o.date]=[];
       evMap[o.date].push({type:'prod',lot,name,co:coN,status:'진행',qty:o.qty,due:o.due});
     }
-    // 생산 예정일 (대기/발주 상태의 date 또는 due 기준 역산)
-    if((o.status==='대기'||o.status==='발주')&&o.date){
+    // 생산 예정일 (대기/발주 상태 + date 있을 때만)
+    if(o.date&&(o.status==='대기'||o.status==='발주')){
       if(!evMap[o.date])evMap[o.date]=[];
-      evMap[o.date].push({type:'plan',lot,name,co:coN,status:o.status,qty:o.qty,due:o.due});
+      evMap[o.date].push({type:'plan',lot,name,co:coN,status:o.status,qty:o.qty,due:o.due,date:o.date});
     }
   });
 
@@ -4629,22 +4641,45 @@ async function saveBacklogOrd(){
 
 // 발주목록 → 생산대기 모달
 let toProdOrdId=null;
+function procLblToggle(key){
+  const ids={fill:'proc-fill',label:'proc-label',etc:'proc-etc',pack:'proc-pack'};
+  const cb=document.getElementById(ids[key]);
+  const lbl=document.getElementById('proc-lbl-'+key);
+  const span=lbl?.querySelector('span');
+  if(!cb||!lbl)return;
+  if(cb.checked){lbl.style.border='2px solid var(--blue)';lbl.style.background='#eff6ff';if(span)span.style.color='var(--blue)';}
+  else{lbl.style.border='2px solid var(--border)';lbl.style.background='#fff';if(span)span.style.color='var(--text2)';}
+}
+
 function openToProd(ordId){
   toProdOrdId=ordId;
   const o=C.orders.find(x=>x.id===ordId);if(!o)return;
   const prod=prodObj(o.prod)||{};
   const group=C.productGroups.find(g=>g.id===prod.group_id);
+  const scent=C.scents.find(s=>s.id===prod.scent_id);
   const co=C.companies.find(c=>c.id===o.co_id)||{};
+  const vol=prod.vol||matObj(C.bom.find(b=>b.prod===o.prod&&matObj(b.mat_code)?.vol)?.mat_code)?.vol||null;
   document.getElementById('m-to-prod-info').innerHTML=`
-    <div style="font-family:monospace;font-weight:700;color:var(--blue-dk);font-size:14px;margin-bottom:4px">${o.lot}</div>
-    <div>${co.name||''} · ${group?.brand?group.brand+' · ':''}${prod.name||o.prod}</div>
-    <div style="margin-top:3px">수량: <strong>${fmt(o.qty)}</strong>개</div>`;
+    <div style="font-family:monospace;font-size:14px;font-weight:800;color:#1e40af;margin-bottom:8px">${o.lot||o.id}</div>
+    <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:6px">
+      ${co.name?`<span style="background:#1e1b4b;color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:4px">${co.name}</span>`:''}
+      ${group?.brand?`<span style="color:var(--blue-dk);font-weight:600;font-size:12px">${group.brand}</span>`:''}
+    </div>
+    <div style="font-size:16px;font-weight:800;color:#111;margin-bottom:6px">
+      ${prod.name||o.prod||'-'}
+      ${vol?`<span style="font-size:13px;font-weight:600;background:#dbeafe;color:#1d4ed8;padding:1px 8px;border-radius:4px;margin-left:6px">${vol}${prod.vol_unit||'ml'}</span>`:''}
+    </div>
+    <div style="display:flex;gap:12px;font-size:12px;color:var(--text2)">
+      ${scent?`<span style="display:inline-flex;align-items:center;gap:4px"><span style="width:8px;height:8px;border-radius:50%;background:${scent.color||'#6b7280'};display:inline-block"></span>${scent.name_ko}</span>`:''}
+      <span>수량: <strong style="color:#111">${fmt(o.qty)}</strong>개</span>
+      ${o.due?`<span>납기: <strong>${o.due}</strong></span>`:''}
+    </div>`;
   document.getElementById('tp-due').value=o.due||'';
   document.getElementById('tp-exp').value=o.exp||'';
   document.getElementById('tp-plan-date').value=o.date||'';
-  // 기존 공정 체크 복원
-  ['proc-fill','proc-label','proc-etc','proc-pack'].forEach(id=>{
-    const el=document.getElementById(id);if(el)el.checked=id!=='proc-etc';
+  ['fill','label','etc','pack'].forEach(k=>{
+    const cb=document.getElementById('proc-'+(k==='label'?'label':k==='fill'?'fill':k==='etc'?'etc':'pack'));
+    if(cb){cb.checked=k!=='etc';procLblToggle(k);}
   });
   showMo('m-to-prod');
 }
