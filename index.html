@@ -427,23 +427,6 @@ textarea{min-height:60px;resize:vertical}
   </div>
   <!-- 재고 부족 자동 표시 -->
   <div id="dash-shortage" style="margin-bottom:14px"></div>
-  <!-- 생산 캘린더 -->
-  <div class="card" style="margin-bottom:14px">
-    <div class="card-hd" style="display:flex;justify-content:space-between;align-items:center">
-      <span>📅 생산 일정 캘린더</span>
-      <span style="font-size:11px;color:var(--text2);font-weight:400">납기일 · 진행중 · 완료 한눈에 보기</span>
-    </div>
-    <!-- 범례 -->
-    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px">
-      <div style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text2)"><div style="width:10px;height:10px;border-radius:2px;background:#e1f5ee;border:0.5px solid #1d9e75"></div> 생산 진행중</div>
-      <div style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text2)"><div style="width:10px;height:10px;border-radius:2px;background:#faeeda;border:0.5px solid #ba7517"></div> 납기일</div>
-      <div style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text2)"><div style="width:10px;height:10px;border-radius:2px;background:#fcebeb;border:0.5px solid #e24b4a"></div> 납기 임박/초과</div>
-      <div style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text2)"><div style="width:10px;height:10px;border-radius:2px;background:#f1efe8;border:0.5px solid #888"></div> 완료</div>
-      <div style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text2)"><div style="width:10px;height:10px;border-radius:50%;background:#1d9e75"></div> 오늘</div>
-    </div>
-    <!-- 3개월 캘린더 -->
-    <div id="dash-cal" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px"></div>
-  </div>
   <!-- 납기 임박 -->
   <div id="dash-due" style="margin-bottom:14px"></div>
   <div class="g2">
@@ -723,6 +706,7 @@ textarea{min-height:60px;resize:vertical}
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px">
       <div style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text2)"><div style="width:10px;height:10px;border-radius:2px;background:#e1f5ee;border:0.5px solid #1d9e75"></div> 생산 진행중</div>
+      <div style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text2)"><div style="width:10px;height:10px;border-radius:2px;background:#ede9fe;border:0.5px solid #7c3aed"></div> 생산 예정일</div>
       <div style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text2)"><div style="width:10px;height:10px;border-radius:2px;background:#faeeda;border:0.5px solid #ba7517"></div> 납기일</div>
       <div style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text2)"><div style="width:10px;height:10px;border-radius:2px;background:#fcebeb;border:0.5px solid #e24b4a"></div> 납기 임박/초과</div>
       <div style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text2)"><div style="width:10px;height:10px;border-radius:2px;background:#f0fdf4;border:0.5px solid #16a34a"></div> 납기완료</div>
@@ -1318,9 +1302,10 @@ textarea{min-height:60px;resize:vertical}
       <label style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:13px"><input type="checkbox" id="proc-etc" value="기타" style="accent-color:var(--blue)"> 기타</label>
       <label style="display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--border);border-radius:8px;cursor:pointer;font-size:13px"><input type="checkbox" id="proc-pack" value="포장" checked style="accent-color:var(--blue)"> 포장</label>
     </div>
-    <div class="fr">
-      <div style="flex:1"><label>납기일</label><input id="tp-due" type="date"></div>
-      <div style="flex:1"><label>EXP</label><input id="tp-exp" type="date"></div>
+    <div class="fr c3">
+      <div><label>생산 예정일</label><input id="tp-plan-date" type="date" placeholder="선택사항"></div>
+      <div><label>납기일</label><input id="tp-due" type="date"></div>
+      <div><label>EXP</label><input id="tp-exp" type="date"></div>
     </div>
     <div class="br">
       <button class="btn btn-p" onclick="confirmToProd()">생산대기로 등록</button>
@@ -4430,15 +4415,24 @@ function renderOrdCal(){
     const prod=prodObj(o.prod)||{};const coN=coName(o.co_id)||'';
     const lot=o.lot||o.id;const name=prod.name||o.prod||'';
     const isDone=o.status==='완료';
+    // 납기일
     if(o.due){
       if(!evMap[o.due])evMap[o.due]=[];
       const ov=o.due<todayStr&&!isDone;
       const wn=!ov&&!isDone&&o.due<=addD(todayStr,3);
-      // 완료된 납기일 = 'done-due' (초록 체크)
       const type=isDone?'done-due':ov||wn?'warn':'due';
       evMap[o.due].push({type,lot,name,co:coN,status:o.status,qty:o.qty,due:o.due});
     }
-    if(o.date&&o.status==='진행'){if(!evMap[o.date])evMap[o.date]=[];evMap[o.date].push({type:'prod',lot,name,co:coN,status:'진행',qty:o.qty,due:o.due});}
+    // 생산 진행중 (시작일)
+    if(o.date&&o.status==='진행'){
+      if(!evMap[o.date])evMap[o.date]=[];
+      evMap[o.date].push({type:'prod',lot,name,co:coN,status:'진행',qty:o.qty,due:o.due});
+    }
+    // 생산 예정일 (대기/발주 상태의 date 또는 due 기준 역산)
+    if((o.status==='대기'||o.status==='발주')&&o.date){
+      if(!evMap[o.date])evMap[o.date]=[];
+      evMap[o.date].push({type:'plan',lot,name,co:coN,status:o.status,qty:o.qty,due:o.due});
+    }
   });
 
   const DOW=['일','월','화','수','목','금','토'];
@@ -4479,7 +4473,7 @@ function renderOrdCal(){
         <div style="${nc}">${day}</div>`;
       if(isMobile){
         if(evs.length){
-          const colors=evs.map(ev=>ev.type==='prod'?'#1d9e75':ev.type==='done-due'?'#16a34a':ev.type==='warn'?'#e24b4a':'#f59e0b');
+          const colors=evs.map(ev=>ev.type==='prod'?'#1d9e75':ev.type==='plan'?'#7c3aed':ev.type==='done-due'?'#16a34a':ev.type==='warn'?'#e24b4a':'#f59e0b');
           html+=`<div style="display:flex;justify-content:center;gap:2px;flex-wrap:wrap">`;
           colors.slice(0,3).forEach(c=>{html+=`<div style="width:5px;height:5px;border-radius:50%;background:${c}"></div>`;});
           html+='</div>';
@@ -4487,9 +4481,9 @@ function renderOrdCal(){
       }else{
         evs.slice(0,2).forEach(ev=>{
           // done-due: 초록 체크 스타일
-          const bg=ev.type==='prod'?'#e1f5ee':ev.type==='done-due'?'#f0fdf4':ev.type==='warn'?'#fcebeb':'#faeeda';
-          const col=ev.type==='prod'?'#085041':ev.type==='done-due'?'#15803d':ev.type==='warn'?'#791f1f':'#633806';
-          const icon=ev.type==='prod'?'▶':ev.type==='done-due'?'✓':ev.type==='warn'?'⚠':'📅';
+          const bg=ev.type==='prod'?'#e1f5ee':ev.type==='plan'?'#ede9fe':ev.type==='done-due'?'#f0fdf4':ev.type==='warn'?'#fcebeb':'#faeeda';
+          const col=ev.type==='prod'?'#085041':ev.type==='plan'?'#5b21b6':ev.type==='done-due'?'#15803d':ev.type==='warn'?'#791f1f':'#633806';
+          const icon=ev.type==='prod'?'▶':ev.type==='plan'?'◷':ev.type==='done-due'?'✓':ev.type==='warn'?'⚠':'📅';
           const tip=`${ev.lot}: ${ev.name} (${ev.co}) ${(ev.qty||0).toLocaleString()}개 ${ev.status}${ev.due?' | 납기:'+ev.due:''}`;
           html+=`<div title="${tip}" style="font-size:8px;padding:1px 3px;border-radius:2px;margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:${bg};color:${col};line-height:1.4">${icon} ${ev.lot}</div>`;
         });
@@ -4587,6 +4581,7 @@ function openToProd(ordId){
     <div style="margin-top:3px">수량: <strong>${fmt(o.qty)}</strong>개</div>`;
   document.getElementById('tp-due').value=o.due||'';
   document.getElementById('tp-exp').value=o.exp||'';
+  document.getElementById('tp-plan-date').value=o.date||'';
   // 기존 공정 체크 복원
   ['proc-fill','proc-label','proc-etc','proc-pack'].forEach(id=>{
     const el=document.getElementById(id);if(el)el.checked=id!=='proc-etc';
@@ -4603,9 +4598,10 @@ async function confirmToProd(){
   if(!procs.length){toast('공정을 하나 이상 선택하세요','error');return;}
   const due=document.getElementById('tp-due')?.value||o.due||null;
   const exp=document.getElementById('tp-exp')?.value||o.exp||null;
+  const planDate=document.getElementById('tp-plan-date')?.value||o.date||null;
   try{
-    await dbUpdate('orders','id',toProdOrdId,{status:'대기',processes:procs,due,exp});
-    o.status='대기';o.processes=procs;o.due=due;o.exp=exp;
+    await dbUpdate('orders','id',toProdOrdId,{status:'대기',processes:procs,due,exp,date:planDate});
+    o.status='대기';o.processes=procs;o.due=due;o.exp=exp;o.date=planDate;
     closeMo();renderOrds();
     toast(`${o.lot} 생산대기로 등록됐습니다`,'success');
   }catch(e){toast('처리 실패: '+e.message,'error');}
@@ -5230,7 +5226,7 @@ function openOrdEditModal(id){
     <div class="modal-hd">오더 수정 <button class="modal-x" onclick="document.getElementById('m-ord-edit-wrap').remove()">×</button></div>
     <div style="font-size:12px;color:var(--text2);margin-bottom:12px">${o.lot||o.id} · ${prodObj(o.prod)?.name||o.prod}</div>
     <div class="fr c2"><div><label>생산수량</label><input id="oe-qty" type="number" value="${o.qty||0}"></div><div><label>납기일</label><input id="oe-due" type="date" value="${o.due||''}"></div></div>
-    <div class="fr c2"><div><label>EXP</label><input id="oe-exp" type="date" value="${o.exp||''}"></div><div><label>마킹정보</label><input id="oe-mark" value="${o.mark||''}"></div></div>
+    <div class="fr c3"><div><label>생산 예정일</label><input id="oe-plan-date" type="date" value="${o.date||''}"></div><div><label>EXP</label><input id="oe-exp" type="date" value="${o.exp||''}"></div><div><label>마킹정보</label><input id="oe-mark" value="${o.mark||''}"></div></div>
     <div class="br"><button class="btn btn-p" onclick="saveOrdEdit()">저장</button><button class="btn btn-g" onclick="document.getElementById('m-ord-edit-wrap').remove()">취소</button></div>
   </div>`;
   const wrap=document.createElement('div');
@@ -5244,10 +5240,11 @@ async function saveOrdEdit(){
   const qty=parseInt(document.getElementById('oe-qty').value)||o.qty;
   const due=document.getElementById('oe-due').value||null;
   const exp=document.getElementById('oe-exp').value||null;
+  const planDate=document.getElementById('oe-plan-date')?.value||null;
   const mark=document.getElementById('oe-mark').value||null;
   try{
-    await dbUpdate('orders','id',editOrdId,{qty,due,exp,mark});
-    Object.assign(o,{qty,due,exp,mark});
+    await dbUpdate('orders','id',editOrdId,{qty,due,exp,mark,date:planDate});
+    Object.assign(o,{qty,due,exp,mark,date:planDate});
     document.getElementById('m-ord-edit-wrap')?.remove();
     renderOrds();toast('오더가 수정됐습니다');
   }catch(e){toast('수정 실패: '+e.message,'error');}
