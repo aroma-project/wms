@@ -4440,8 +4440,8 @@ function renderOrdCal(){
       if(!evMap[o.date])evMap[o.date]=[];
       evMap[o.date].push({type:'prod',lot,name,co:coN,status:'진행',qty:o.qty,due:o.due});
     }
-    // 생산 예정일 (대기/발주 상태 + date 있을 때만)
-    if(o.date&&(o.status==='대기'||o.status==='발주')){
+    // 생산 예정일 — 대기 상태이고 date(생산예정일)가 명시된 경우만
+    if(o.date&&o.status==='대기'){
       if(!evMap[o.date])evMap[o.date]=[];
       evMap[o.date].push({type:'plan',lot,name,co:coN,status:o.status,qty:o.qty,due:o.due,date:o.date});
     }
@@ -4519,7 +4519,7 @@ function showOrdCalPopup(e,dateKey){
       evs.push({type:isDone?'done-due':ov||wn?'warn':'due',lot,name,co:coN,status:o.status,qty:o.qty,due:o.due,date:o.date});
     }
     if(o.date===dateKey&&o.status==='진행')evs.push({type:'prod',lot,name,co:coN,status:'진행',qty:o.qty,due:o.due,date:o.date});
-    if(o.date===dateKey&&(o.status==='대기'||o.status==='발주'))evs.push({type:'plan',lot,name,co:coN,status:o.status,qty:o.qty,due:o.due,date:o.date});
+    if(o.date===dateKey&&o.status==='대기')evs.push({type:'plan',lot,name,co:coN,status:o.status,qty:o.qty,due:o.due,date:o.date});
   });
   if(!evs.length)return;
 
@@ -4627,8 +4627,8 @@ async function saveBacklogOrd(){
   if(qty<=0){toast('수량을 입력하세요','error');return;}
   const lot=genLot(prodCode);
   const id=nextOrdId();
-  // 발주목록 = status:'발주' (새 상태)
-  const obj={id,lot,co_id:coId,prod:prodCode,qty,due,exp,mark,date:today(),status:'발주',processes:[],outbound_status:null};
+  // 발주목록 = status:'발주' (date는 null — 생산예정일 미지정)
+  const obj={id,lot,co_id:coId,prod:prodCode,qty,due,exp,mark,date:null,status:'발주',processes:[],outbound_status:null};
   try{
     const r=await dbInsert('orders',obj);
     C.orders.unshift(r||obj);
