@@ -7061,6 +7061,7 @@ function renderCertList(){
     }
     return true;
   }).sort((a,b)=>{
+    // LOT 번호 기준 내림차순 (연도→월→순번)
     const la=o=>o.lot||o.id;
     return la(b).localeCompare(la(a));
   });
@@ -7075,6 +7076,27 @@ function renderCertList(){
   const headerExtra=`<span style="font-size:11px;background:${kind==='C'?'#f0e6ff':kind==='A'?'#e6f7e6':'#f1f5f9'};color:${kind==='C'?'#7c3aed':kind==='A'?'#166534':'#475569'};padding:1px 8px;border-radius:99px;margin-left:8px">${tabLabel}</span>`;
 
   // 월별 구분
+  // LOT 월코드 → 월 번호 변환
+  const LOT_MONTH={'JA':1,'FE':2,'MA':3,'AP':4,'MY':5,'JU':6,'JY':7,'AU':8,'SE':9,'OC':10,'NO':11,'DE':12};
+  function getLotMonth(o){
+    const lot=o.lot||o.id||'';
+    // APA6MA01 → 5~6번째: lot[4..5] = 'MA' → 5월
+    if(lot.length>=6){
+      const code=lot.slice(4,6).toUpperCase();
+      const m=LOT_MONTH[code];
+      if(m){
+        // 연도: lot[3] = '6' → 2026
+        const yr=lot[3]?'20'+lot[3]:'';
+        return{month:m,year:yr,label:`${yr}년 ${m}월`,key:yr+String(m).padStart(2,'0')};
+      }
+    }
+    // fallback: 등록일 기준
+    const dateStr=o.date||'';
+    const monthStr=dateStr.slice(0,7);
+    if(!monthStr)return{month:0,year:'',label:'',key:''};
+    return{month:parseInt(monthStr.slice(5)),year:monthStr.slice(0,4),label:monthStr.slice(5)+'월',key:monthStr};
+  }
+
   let lastMonth='';
   const tbodyRows=ords.map(o=>{
     const prod=prodObj(o.prod)||{};
@@ -7088,16 +7110,15 @@ function renderCertList(){
     const rate=o.qty>0?Math.round(outQty/o.qty*100):0;
     const rateColor=rate>=100?'var(--green)':rate>=50?'var(--blue)':'var(--text3)';
 
-    // 월 구분
-    const dateStr=o.date||'';
-    const monthStr=dateStr.slice(0,7); // YYYY-MM
-    const monthLabel=monthStr?monthStr.slice(5)+'월':'';
-    const showMonth=monthStr!==lastMonth;
-    if(showMonth)lastMonth=monthStr;
+    // LOT 기반 월 구분
+    const lotMonthInfo=getLotMonth(o);
+    const monthKey=lotMonthInfo.key;
+    const showMonth=monthKey!==lastMonth&&lotMonthInfo.label;
+    if(showMonth)lastMonth=monthKey;
 
     return`<tr style="border-bottom:1px solid #f1f5f9" onmouseover="this.style.background='#f8faff'" onmouseout="this.style.background=''">
       <td style="padding:8px 6px;text-align:center;width:36px;white-space:nowrap;vertical-align:middle">
-        ${showMonth?`<div style="font-size:10px;font-weight:700;color:#fff;background:#374151;padding:2px 5px;border-radius:3px;margin-bottom:3px">${monthLabel}</div>`:''}
+        ${showMonth?`<div style="font-size:10px;font-weight:700;color:#fff;background:#374151;padding:2px 5px;border-radius:3px;margin-bottom:3px">${lotMonthInfo.label}</div>`:''}
       </td>
       <td style="padding:8px 10px;text-align:center;vertical-align:middle">
         <button onclick="printCert('${o.id}')" style="padding:3px 8px;font-size:10px;font-weight:600;background:#1e1b4b;color:#fff;border:none;border-radius:4px;cursor:pointer;white-space:nowrap">리포트<br>출력</button>
