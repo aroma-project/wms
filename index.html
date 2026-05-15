@@ -4468,8 +4468,8 @@ function renderOrdCal(){
       else if(dow===6)nc+=`color:#185fa5;`;
       else nc+=`color:var(--text2);`;
 
-      const clickHandler=evs.length&&isMobile?`onclick="showCalPopup(event,'${dk}')"` :'';
-      html+=`<div ${clickHandler} style="min-height:48px;border-right:0.5px solid #f1f5f9;border-bottom:0.5px solid #f1f5f9;padding:3px 2px;${isO?'background:rgba(0,0,0,.02)':''}${dow===6?';border-right:none':''}${evs.length&&isMobile?';cursor:pointer':''}">
+      const clickHandler=evs.length?`onclick="showOrdCalPopup(event,'${dk}')"`:'';
+      html+=`<div ${clickHandler} style="min-height:48px;border-right:0.5px solid #f1f5f9;border-bottom:0.5px solid #f1f5f9;padding:3px 2px;${isO?'background:rgba(0,0,0,.02)':''}${dow===6?';border-right:none':''}${evs.length?';cursor:pointer':''}">
         <div style="${nc}">${day}</div>`;
       if(isMobile){
         if(evs.length){
@@ -4480,19 +4480,79 @@ function renderOrdCal(){
         }
       }else{
         evs.slice(0,2).forEach(ev=>{
-          // done-due: 초록 체크 스타일
           const bg=ev.type==='prod'?'#e1f5ee':ev.type==='plan'?'#ede9fe':ev.type==='done-due'?'#f0fdf4':ev.type==='warn'?'#fcebeb':'#faeeda';
           const col=ev.type==='prod'?'#085041':ev.type==='plan'?'#5b21b6':ev.type==='done-due'?'#15803d':ev.type==='warn'?'#791f1f':'#633806';
           const icon=ev.type==='prod'?'▶':ev.type==='plan'?'◷':ev.type==='done-due'?'✓':ev.type==='warn'?'⚠':'📅';
-          const tip=`${ev.lot}: ${ev.name} (${ev.co}) ${(ev.qty||0).toLocaleString()}개 ${ev.status}${ev.due?' | 납기:'+ev.due:''}`;
-          html+=`<div title="${tip}" style="font-size:8px;padding:1px 3px;border-radius:2px;margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:${bg};color:${col};line-height:1.4">${icon} ${ev.lot}</div>`;
+          html+=`<div style="font-size:8px;padding:1px 3px;border-radius:2px;margin-bottom:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;background:${bg};color:${col};line-height:1.4">${icon} ${ev.lot}</div>`;
         });
-        if(evs.length>2)html+=`<div style="font-size:8px;color:var(--text3)">+${evs.length-2}</div>`;
+        if(evs.length>2)html+=`<div style="font-size:8px;color:var(--blue);font-weight:700">+${evs.length-2}건 더보기</div>`;
       }
       html+='</div>';
     }
     return html+'</div></div>';
   }).join('');
+}
+
+function showOrdCalPopup(e,dateKey){
+  document.getElementById('ord-cal-popup')?.remove();
+  const todayStr=today();
+  // 해당 날짜의 이벤트 수집
+  const evs=[];
+  function addD(ds,n){const d=new Date(ds);d.setDate(d.getDate()+n);return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+  C.orders.forEach(o=>{
+    const prod=prodObj(o.prod)||{};const coN=coName(o.co_id)||'';
+    const lot=o.lot||o.id;const name=prod.name||o.prod||'';const isDone=o.status==='완료';
+    if(o.due===dateKey){
+      const ov=o.due<todayStr&&!isDone;const wn=!ov&&!isDone&&o.due<=addD(todayStr,3);
+      evs.push({type:isDone?'done-due':ov||wn?'warn':'due',lot,name,co:coN,status:o.status,qty:o.qty,due:o.due,date:o.date});
+    }
+    if(o.date===dateKey&&o.status==='진행')evs.push({type:'prod',lot,name,co:coN,status:'진행',qty:o.qty,due:o.due,date:o.date});
+    if(o.date===dateKey&&(o.status==='대기'||o.status==='발주'))evs.push({type:'plan',lot,name,co:coN,status:o.status,qty:o.qty,due:o.due,date:o.date});
+  });
+  if(!evs.length)return;
+
+  const typeLabel={prod:'생산 진행중',plan:'생산 예정',done:'완료','done-due':'납기완료',warn:'납기 임박/초과',due:'납기일'};
+  const typeBg={prod:'#e1f5ee',plan:'#ede9fe','done-due':'#f0fdf4',warn:'#fcebeb',due:'#faeeda'};
+  const typeCol={prod:'#085041',plan:'#5b21b6','done-due':'#15803d',warn:'#791f1f',due:'#633806'};
+  const typeIcon={prod:'▶',plan:'◷','done-due':'✓',warn:'⚠',due:'📅'};
+
+  const pop=document.createElement('div');
+  pop.id='ord-cal-popup';
+  const isMobile=window.innerWidth<=768;
+  if(isMobile){
+    pop.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:flex-end;justify-content:center';
+  }else{
+    // 데스크탑: 클릭 위치 근처 팝업
+    pop.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.2);z-index:9999;display:flex;align-items:flex-start;justify-content:flex-start';
+  }
+  const boxStyle=isMobile
+    ?'background:#fff;border-radius:16px 16px 0 0;padding:20px;width:100%;max-height:70vh;overflow-y:auto;box-shadow:0 -4px 20px rgba(0,0,0,.2)'
+    :`background:#fff;border-radius:12px;padding:18px;min-width:300px;max-width:380px;max-height:80vh;overflow-y:auto;box-shadow:0 8px 30px rgba(0,0,0,.2);position:absolute;left:${Math.min(e.clientX,window.innerWidth-400)}px;top:${Math.min(e.clientY+10,window.innerHeight-400)}px`;
+
+  pop.innerHTML=`<div style="${boxStyle}">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div style="font-size:15px;font-weight:700">${dateKey}</div>
+      <button onclick="document.getElementById('ord-cal-popup').remove()" style="background:none;border:none;font-size:22px;color:#888;cursor:pointer;padding:0;line-height:1">×</button>
+    </div>
+    <div style="font-size:11px;color:var(--text2);margin-bottom:10px">${evs.length}건</div>
+    ${evs.map(ev=>`<div style="background:${typeBg[ev.type]||'#f8f8f8'};border-radius:10px;padding:12px 14px;margin-bottom:8px">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+        <span style="font-size:14px">${typeIcon[ev.type]||'•'}</span>
+        <span style="font-size:11px;font-weight:700;color:${typeCol[ev.type]||'#333'}">${typeLabel[ev.type]||ev.type}</span>
+        <span style="font-size:11px;color:#888;margin-left:auto">${ev.status}</span>
+      </div>
+      <div style="font-family:monospace;font-size:14px;font-weight:800;color:#1e40af;margin-bottom:3px">${ev.lot}</div>
+      <div style="font-size:13px;font-weight:600;color:#111;margin-bottom:4px">${ev.name}</div>
+      <div style="font-size:11px;color:#666;display:flex;gap:10px;flex-wrap:wrap">
+        <span>${ev.co}</span>
+        <span>수량 ${(ev.qty||0).toLocaleString()}개</span>
+        ${ev.due?`<span>납기 ${ev.due}</span>`:''}
+        ${ev.date&&ev.date!==dateKey?`<span>생산예정 ${ev.date}</span>`:''}
+      </div>
+    </div>`).join('')}
+  </div>`;
+  pop.onclick=ev=>{if(ev.target===pop)pop.remove();};
+  document.body.appendChild(pop);
 }
 
 function toggleOrdDone(){
