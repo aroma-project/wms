@@ -862,6 +862,26 @@ textarea{min-height:60px;resize:vertical}
 
 <!-- 데이터 관리 -->
 <div class="page" id="page-datamanage">
+  <!-- 라벨 저장 폴더 설정 -->
+  <div class="card" style="border-top:3px solid var(--purple);margin-bottom:16px">
+    <div class="card-hd">🏷️ 라벨 저장 폴더 경로 설정</div>
+    <p style="font-size:12px;color:var(--text2);margin-bottom:12px">
+      라벨 PNG 저장 시 파일명 앞에 붙을 폴더 경로를 입력하세요.<br>
+      브라우저 보안상 직접 폴더 지정은 불가하며, <strong>Chrome 다운로드 설정</strong>에서 저장 위치를 지정하시거나, 아래에 서브폴더 경로를 입력하면 파일명에 반영됩니다.
+    </p>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <div style="flex:1;min-width:200px">
+        <label style="font-size:11px;color:var(--text2);display:block;margin-bottom:4px">라벨 파일명 접두어 (예: 라벨/카톤, 라벨/바코드)</label>
+        <input id="label-folder-input" placeholder="예: 라벨" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px"
+          value="${localStorage.getItem('aroma_label_prefix')||'라벨'}">
+      </div>
+      <button onclick="saveLabelFolder()" class="btn btn-p" style="margin-top:16px">저장</button>
+      <button onclick="document.getElementById('label-folder-input').value='라벨';saveLabelFolder()" class="btn btn-g" style="margin-top:16px">초기화</button>
+    </div>
+    <div style="margin-top:10px;background:#f0f9ff;border-radius:6px;padding:8px 12px;font-size:11px;color:#0369a1">
+      💡 설정 후 라벨 저장 시 파일명 예시: <span id="label-prefix-preview" style="font-weight:700"></span>
+    </div>
+  </div>
   <div class="g3" style="margin-bottom:16px">
     <!-- 전체 다운로드 -->
     <div class="card" style="border-top:3px solid var(--blue)">
@@ -2831,25 +2851,25 @@ function showBarcode(code){
     document.head.appendChild(s);
   }else{renderQR(code,90);}
 }
-function saveLabelAsImage(containerId, fileName){
-  // html2canvas로 PNG 다운로드
-  const el=document.getElementById(containerId);
-  if(!el){toast('라벨 요소를 찾을 수 없습니다','error');return;}
-  if(typeof html2canvas==='undefined'){
-    const s=document.createElement('script');
-    s.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
-    s.onload=()=>doCapture(el,fileName);
-    document.head.appendChild(s);
-  }else{doCapture(el,fileName);}
+function saveLabelFolder(){
+  const val=document.getElementById('label-folder-input')?.value||'라벨';
+  localStorage.setItem('aroma_label_prefix',val);
+  const prev=document.getElementById('label-prefix-preview');
+  const d=today().replace(/-/g,'');
+  if(prev)prev.textContent=val+'_업체명_제품명_'+d+'.png';
+  toast('라벨 저장 설정 완료','success');
 }
-function doCapture(el,fileName){
-  html2canvas(el,{scale:4,backgroundColor:'#ffffff',logging:false,useCORS:true}).then(canvas=>{
-    const a=document.createElement('a');
-    a.href=canvas.toDataURL('image/png');
-    a.download=fileName+'.png';
-    a.click();
-    toast('💾 '+fileName+'.png 저장됨','success');
-  }).catch(e=>{toast('저장 실패: '+e.message,'error');});
+function getLabelFileName(parts){
+  const prefix=localStorage.getItem('aroma_label_prefix')||'라벨';
+  const d=today().replace(/-/g,'');
+  return prefix+'_'+parts.filter(Boolean).join('_')+'_'+d;
+}
+function ensureH2C(cb){
+  if(typeof html2canvas!=='undefined'){cb();return;}
+  const s=document.createElement('script');
+  s.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+  s.onload=cb;s.onerror=()=>toast('html2canvas 로드 실패','error');
+  document.head.appendChild(s);
 }
 
 function printBarcodeLabel(){
@@ -2861,44 +2881,36 @@ function printBarcodeLabel(){
   const brand=group?.brand||'';
   const name=m?.name||code;
   const vol=m?.vol?(m.vol+(m.vol_unit||'ml')):'';
-  const fileName=[coName_,brand,name,vol].filter(Boolean).join('_');
-
-  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8">
-  <title>바코드 ${name}</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"><\/script>
-  <style>
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{background:#fff;color:#000;font-family:'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',sans-serif}
-    @media print{@page{size:50mm 40mm;margin:0}body{width:50mm;height:40mm}.no-print{display:none}}
-  </style></head><body>
-  <div class="no-print" style="padding:8px;display:flex;gap:6px;flex-wrap:wrap">
-    <button onclick="window.print()" style="padding:6px 14px;background:#000;color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:12px">🖨️ 인쇄</button>
-    <button onclick="
-      if(typeof html2canvas==='undefined'){alert('잠시 후 다시 시도하세요');return;}
-      html2canvas(document.getElementById('lbl-body'),{scale:4,backgroundColor:'#ffffff',useCORS:true}).then(c=>{
-        const a=document.createElement('a');a.href=c.toDataURL('image/png');
-        a.download='${fileName}.png';a.click();
-      });" style="padding:6px 14px;background:#1e1b4b;color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:12px">💾 PNG 저장</button>
-    <button onclick="window.close()" style="padding:6px 10px;background:#f3f4f6;border:1px solid #ddd;border-radius:5px;cursor:pointer;font-size:11px">닫기</button>
-  </div>
-  <div id="lbl-body" style="width:50mm;height:40mm;border:0.5mm solid #000;font-family:'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',sans-serif;background:#fff;color:#000;display:flex;flex-direction:column;overflow:hidden">
-    <!-- 상단: 업체명 + 브랜드명 한 줄 -->
-    <div style="border-bottom:0.4mm solid #000;padding:1mm 2mm;flex-shrink:0;text-align:center">
-      <div style="font-size:8.5pt;font-weight:900;line-height:1.2">${[coName_,brand].filter(Boolean).join(' · ')}</div>
-    </div>
-    <!-- 중앙: QR 코드 -->
-    <div style="flex:1;display:flex;align-items:center;justify-content:center">
-      <img id="qr-body" style="width:21mm;height:21mm;display:block" src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&color=000000&bgcolor=ffffff&data=${encodeURIComponent(code)}">
-    </div>
-    <!-- 하단: 품목명 + 규격 크게 -->
-    <div style="border-top:0.4mm solid #000;padding:1mm 2mm;flex-shrink:0;text-align:center">
-      <div style="font-size:9.5pt;font-weight:900;line-height:1.3">${name}</div>
-      ${vol?`<div style="font-size:9pt;font-weight:900;line-height:1.2">${vol}</div>`:''}
-    </div>
-  </div>
-  <script>setTimeout(()=>{},200)<\/script>
-  </body></html>`;
-  const w=window.open('','_blank','width=300,height=340');
+  const fileName=getLabelFileName([coName_,brand,name,vol]);
+  const topLine=[coName_,brand].filter(Boolean).join(' · ');
+  const qrSrc='https://api.qrserver.com/v1/create-qr-code/?size=250x250&color=000000&bgcolor=ffffff&data='+encodeURIComponent(code);
+  const bodyHtml='<div id="lbl-body" style="width:189px;height:151px;border:2px solid #000;font-family:Apple SD Gothic Neo,Noto Sans KR,Malgun Gothic,sans-serif;background:#fff;color:#000;display:flex;flex-direction:column;overflow:hidden;box-sizing:border-box">'
+    +'<div style="border-bottom:1.5px solid #000;padding:3px 6px;flex-shrink:0;text-align:center">'
+    +'<div style="font-size:12px;font-weight:900;line-height:1.2">'+topLine+'</div></div>'
+    +'<div style="flex:1;display:flex;align-items:center;justify-content:center">'
+    +'<img crossorigin="anonymous" style="width:79px;height:79px;display:block" src="'+qrSrc+'"></div>'
+    +'<div style="border-top:1.5px solid #000;padding:3px 6px;flex-shrink:0;text-align:center">'
+    +'<div style="font-size:14px;font-weight:900;line-height:1.3">'+name+'</div>'
+    +(vol?'<div style="font-size:12px;font-weight:900">'+vol+'</div>':'')
+    +'</div></div>';
+  const html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>바코드</title>'
+    +'<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"><\/script>'
+    +'<style>*{box-sizing:border-box;margin:0;padding:0}body{background:#f5f5f5;padding:10px;font-family:sans-serif}'
+    +'@media print{@page{size:50mm 40mm;margin:0}body{background:#fff;padding:0}#lbl-body{width:50mm;height:40mm;border-width:0.5mm;}'
+    +'#lbl-body *{font-size:inherit}.no-print{display:none}}</style></head><body>'
+    +'<div class="no-print" style="margin-bottom:8px;display:flex;gap:6px;flex-wrap:wrap">'
+    +'<button onclick="window.print()" style="padding:6px 14px;background:#000;color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:12px">🖨️ 인쇄</button>'
+    +'<button id="save-btn" onclick="doSave()" style="padding:6px 14px;background:#1e1b4b;color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:12px">💾 PNG 저장</button>'
+    +'<span style="font-size:11px;color:#666">'+fileName+'</span>'
+    +'<button onclick="window.close()" style="padding:6px 10px;background:#f3f4f6;border:1px solid #ddd;border-radius:5px;cursor:pointer;font-size:11px">닫기</button></div>'
+    +bodyHtml
+    +'<script>function doSave(){'
+    +'document.getElementById("save-btn").textContent="저장중...";'
+    +'html2canvas(document.getElementById("lbl-body"),{scale:5,backgroundColor:"#ffffff",useCORS:true,allowTaint:true}).then(function(c){'
+    +'var a=document.createElement("a");a.href=c.toDataURL("image/png");a.download="'+fileName+'.png";a.click();'
+    +'document.getElementById("save-btn").textContent="💾 PNG 저장";}).catch(function(e){alert("저장실패:"+e);});}'
+    +'setTimeout(function(){},200);<\/script></body></html>';
+  const w=window.open('','_blank','width=280,height=320');
   if(w){w.document.write(html);w.document.close();}
   else toast('팝업이 차단됐습니다','warn');
 }
@@ -6985,65 +6997,55 @@ function printLabel(){
   const volStr=vol?vol+(prod.vol_unit||'ml'):'';
   const coLabel=co.name||'';
   const copies=parseInt(document.getElementById('lbl-copies')?.value)||1;
-  const fileName=[coLabel,brand,pName].filter(Boolean).join('_');
+  const fileName=getLabelFileName([coLabel,brand,pName]);
 
-  const labelInner=`
-    <div style="border-bottom:0.5mm solid #000;padding:1.5mm 2mm;flex:1;display:flex;flex-direction:column;justify-content:center;gap:0.5mm">
-      ${coLabel?`<div style="font-size:5.5pt;font-weight:700">${coLabel}</div>`:''}
-      ${brand?`<div style="font-size:8pt;font-weight:900;line-height:1.25">${brand}</div>`:''}
-      <div style="font-size:9pt;font-weight:900;line-height:1.25">${pName}</div>
-      ${volStr?`<div style="font-size:8pt;font-weight:900">${volStr}</div>`:''}
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:0.4mm solid #000;flex-shrink:0">
-      <div style="padding:1mm 2mm;border-right:0.4mm solid #000">
-        <div style="font-size:4pt;color:#444">제조번호</div>
-        <div style="font-size:7pt;font-weight:900;font-family:monospace">${o.lot||o.id||'-'}</div>
-      </div>
-      <div style="padding:1mm 2mm">
-        <div style="font-size:4pt;color:#444">사용기한</div>
-        <div style="font-size:7pt;font-weight:900">${expFormatted||'-'}</div>
-      </div>
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;flex-shrink:0">
-      <div style="padding:1mm 2mm;border-right:0.4mm solid #000">
-        <div style="font-size:4pt;color:#444">제조업체</div>
-        <div style="font-size:5.5pt;font-weight:700">아로마프로젝트</div>
-      </div>
-      <div style="padding:1mm 2mm">
-        <div style="font-size:4pt;color:#444">입수/박스</div>
-        <div style="font-size:7pt;font-weight:900">${perBox?perBox+' ea':'-'}</div>
-      </div>
-    </div>`;
+  // 미리보기용 189x151px inner HTML
+  function lblInner(forPrint){
+    const fs=forPrint?{co:'5.5pt',brand:'8pt',name:'9pt',vol:'8pt',small:'4pt',mid:'7pt',sm2:'5.5pt'}
+                     :{co:'7.5px',brand:'9px',name:'11px',vol:'8.5px',small:'5px',mid:'8.5px',sm2:'7px'};
+    return '<div style="border-bottom:'+(forPrint?'0.5mm':'2px')+' solid #000;padding:'+(forPrint?'1.5mm 2mm':'4px 6px')+';flex:1;display:flex;flex-direction:column;justify-content:center;gap:'+(forPrint?'0.5mm':'2px')+'">'
+      +(coLabel?'<div style="font-size:'+fs.co+';font-weight:700">'+coLabel+'</div>':'')
+      +(brand?'<div style="font-size:'+fs.brand+';font-weight:900;line-height:1.25">'+brand+'</div>':'')
+      +'<div style="font-size:'+fs.name+';font-weight:900;line-height:1.25">'+pName+'</div>'
+      +(volStr?'<div style="font-size:'+fs.vol+';font-weight:900">'+volStr+'</div>':'')
+      +'</div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:'+(forPrint?'0.4mm':'1.5px')+' solid #000;flex-shrink:0">'
+      +'<div style="padding:'+(forPrint?'1mm 2mm':'2px 4px')+';border-right:'+(forPrint?'0.4mm':'1.5px')+' solid #000">'
+      +'<div style="font-size:'+fs.small+';color:#444">제조번호</div>'
+      +'<div style="font-size:'+fs.mid+';font-weight:900;font-family:monospace">'+(o.lot||o.id||'-')+'</div></div>'
+      +'<div style="padding:'+(forPrint?'1mm 2mm':'2px 4px')+'">'
+      +'<div style="font-size:'+fs.small+';color:#444">사용기한</div>'
+      +'<div style="font-size:'+fs.mid+';font-weight:900">'+(expFormatted||'-')+'</div></div></div>'
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;flex-shrink:0">'
+      +'<div style="padding:'+(forPrint?'1mm 2mm':'2px 4px')+';border-right:'+(forPrint?'0.4mm':'1.5px')+' solid #000">'
+      +'<div style="font-size:'+fs.small+';color:#444">제조업체</div>'
+      +'<div style="font-size:'+fs.sm2+';font-weight:700">아로마프로젝트</div></div>'
+      +'<div style="padding:'+(forPrint?'1mm 2mm':'2px 4px')+'">'
+      +'<div style="font-size:'+fs.small+';color:#444">입수/박스</div>'
+      +'<div style="font-size:'+fs.mid+';font-weight:900">'+(perBox?perBox+' ea':'-')+'</div></div></div>';
+  }
 
-  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8">
-  <title>카톤라벨 ${o.lot||o.id}</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"><\/script>
-  <style>
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{background:#fff;color:#000}
-    .no-print{padding:8px;display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-family:sans-serif}
-    .lbl{width:50mm;height:40mm;border:0.5mm solid #000;font-family:'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',sans-serif;background:#fff;color:#000;display:flex;flex-direction:column;overflow:hidden;page-break-after:always}
-    @media print{@page{size:50mm 40mm;margin:0}body{width:50mm}.no-print{display:none}}
-  </style></head><body>
-  <div class="no-print">
-    <button onclick="window.print()" style="padding:6px 14px;background:#000;color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:12px">🖨️ 인쇄</button>
-    <button onclick="
-      if(typeof html2canvas==='undefined'){alert('잠시 후 다시 시도');return;}
-      html2canvas(document.querySelector('.lbl'),{scale:4,backgroundColor:'#ffffff',useCORS:true}).then(c=>{
-        const a=document.createElement('a');a.href=c.toDataURL('image/png');
-        a.download='${fileName}.png';a.click();
-      });" style="padding:6px 14px;background:#1e1b4b;color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:12px">💾 PNG 저장</button>
-    <span style="font-size:11px;color:#666">${copies}매 · 파일명: ${fileName}</span>
-    <button onclick="window.close()" style="padding:6px 10px;background:#f3f4f6;border:1px solid #ddd;border-radius:5px;cursor:pointer;font-size:11px">닫기</button>
-  </div>
-  ${Array(copies).fill(`<div class="lbl">${labelInner}</div>`).join('')}
-  <script>setTimeout(()=>window.print(),400)<\/script>
-  </body></html>`;
-  const w=window.open('','_blank','width=300,height=320');
+  const wrapStyle='width:50mm;height:40mm;border:0.5mm solid #000;font-family:Apple SD Gothic Neo,Noto Sans KR,Malgun Gothic,sans-serif;background:#fff;color:#000;display:flex;flex-direction:column;overflow:hidden;page-break-after:always';
+  const html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>카톤라벨</title>'
+    +'<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"><\/script>'
+    +'<style>*{box-sizing:border-box;margin:0;padding:0}body{background:#f5f5f5;padding:10px;font-family:sans-serif}'
+    +'@media print{@page{size:50mm 40mm;margin:0}body{background:#fff;padding:0}.no-print{display:none}}</style></head><body>'
+    +'<div class="no-print" style="margin-bottom:8px;display:flex;gap:6px;flex-wrap:wrap">'
+    +'<button onclick="window.print()" style="padding:6px 14px;background:#000;color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:12px">🖨️ 인쇄 (50×40mm)</button>'
+    +'<button id="save-btn" onclick="doSave()" style="padding:6px 14px;background:#1e1b4b;color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:12px">💾 PNG 저장</button>'
+    +'<span style="font-size:11px;color:#666">'+copies+'매 · '+fileName+'</span>'
+    +'<button onclick="window.close()" style="padding:6px 10px;background:#f3f4f6;border:1px solid #ddd;border-radius:5px;cursor:pointer;font-size:11px">닫기</button></div>'
+    +Array(copies).fill('<div id="lbl0" style="'+wrapStyle+'">'+lblInner(true)+'</div>').join('')
+    +'<script>function doSave(){'
+    +'document.getElementById("save-btn").textContent="저장중...";'
+    +'html2canvas(document.getElementById("lbl0"),{scale:5,backgroundColor:"#ffffff",useCORS:true,allowTaint:true}).then(function(c){'
+    +'var a=document.createElement("a");a.href=c.toDataURL("image/png");a.download="'+fileName+'.png";a.click();'
+    +'document.getElementById("save-btn").textContent="💾 PNG 저장";}).catch(function(e){alert("실패:"+e);});}'
+    +'setTimeout(function(){},200);<\/script></body></html>';
+  const w=window.open('','_blank','width=280,height=320');
   if(w){w.document.write(html);w.document.close();}
   else toast('팝업이 차단됐습니다','warn');
 }
-
 
 function printArea(areaId,title){
   const area=document.getElementById(areaId);if(!area)return;
