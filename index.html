@@ -1441,10 +1441,14 @@ textarea{min-height:60px;resize:vertical}
     <div class="br"><button class="btn btn-a" onclick="saveStockEdit()">수정 저장</button><button class="btn btn-g" onclick="closeMo()">취소</button></div>
   </div>
   <!-- 바코드 -->
-  <div class="modal" id="m-barcode" style="display:none">
+  <div class="modal" id="m-barcode" style="display:none;max-width:360px">
     <div class="modal-hd">바코드 출력 <button class="modal-x" onclick="closeMo()">×</button></div>
-    <div id="barcode-area" style="display:flex;flex-wrap:wrap;gap:12px;justify-content:center;padding:8px"></div>
-    <div class="br"><button class="btn btn-p" onclick="window.print()">🖨️ 인쇄</button><button class="btn btn-g" onclick="closeMo()">닫기</button></div>
+    <div style="font-size:11px;color:var(--text2);margin-bottom:10px">50×40mm 흑백 라벨 프린터용</div>
+    <div id="barcode-area" style="display:flex;justify-content:center;padding:8px;background:#f5f5f5;border-radius:8px;margin-bottom:12px"></div>
+    <div class="br">
+      <button class="btn btn-p" onclick="printBarcodeLabel()">🖨️ 인쇄 (50×40mm)</button>
+      <button class="btn btn-g" onclick="closeMo()">닫기</button>
+    </div>
   </div>
   <!-- 카톤 라벨 -->
   <div class="modal" id="m-label" style="display:none;max-width:640px">
@@ -2791,45 +2795,70 @@ function renderMat(){
     return`<div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:16px">${coHeader}${brandHTML}</div>`;
   }).join('');
 }
-// ── 실제 Code128 바코드 생성기 ──────────────────────────────
-// ── QR코드 생성기 (순수 JS, 라이브러리 불필요) ────────────────
-// qrcode-generator 방식 - canvas 기반
+let barcodeMatCode=null;
 function showBarcode(code){
+  barcodeMatCode=code;
   const m=matObj(code);
+  const co=C.companies.find(c=>c.id===m?.co_id);
   const container=document.getElementById('barcode-area');
+  // 50x40mm 미리보기 (189x151px)
   container.innerHTML=`
-    <div style="text-align:center;padding:16px;border:1px solid var(--border);border-radius:8px;background:#fff">
-      <div style="font-size:13px;font-weight:700;margin-bottom:4px">${m?m.name:code}</div>
-      <div style="font-size:11px;color:var(--text2);margin-bottom:10px">${coName(m?.co_id||'')}</div>
-      <canvas id="qr-canvas" style="display:block;margin:0 auto"></canvas>
-      <div style="font-size:11px;font-family:monospace;margin-top:8px;color:#333">${code}</div>
+    <div style="width:189px;height:151px;border:1.5px solid #000;background:#fff;color:#000;font-family:'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:6px;box-sizing:border-box;gap:4px">
+      ${co?`<div style="font-size:6px;color:#555;font-weight:600;align-self:flex-start">${co.name}</div>`:''}
+      <div style="font-size:8px;font-weight:900;text-align:center;line-height:1.2;max-width:100%">${m?m.name:code}</div>
+      <canvas id="qr-canvas" style="display:block"></canvas>
+      <div style="font-size:7px;font-family:monospace;color:#000;font-weight:700">${code}</div>
     </div>`;
   showMo('m-barcode');
-  // QR 라이브러리 로드 후 생성
   if(typeof QRCode==='undefined'){
     const s=document.createElement('script');
     s.src='https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js';
-    s.onload=()=>renderQR(code);
-    s.onerror=()=>renderQRFallback(code);
+    s.onload=()=>renderQR(code,90);
+    s.onerror=()=>renderQRFallback(code,90);
     document.head.appendChild(s);
-  } else {
-    renderQR(code);
-  }
+  }else{renderQR(code,90);}
 }
-function renderQR(code){
+function printBarcodeLabel(){
+  const code=barcodeMatCode;if(!code)return;
+  const m=matObj(code);
+  const co=C.companies.find(c=>c.id===m?.co_id);
+  const name=m?m.name:code;
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <title>바코드 ${code}</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:#fff;color:#000;font-family:'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',sans-serif}
+    @media print{@page{size:50mm 40mm;margin:0}body{width:50mm;height:40mm}.no-print{display:none}}
+  </style></head><body>
+  <div class="no-print" style="padding:8px;display:flex;gap:8px">
+    <button onclick="window.print()" style="padding:6px 14px;background:#000;color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:12px">🖨️ 인쇄 (50×40mm 흑백)</button>
+    <button onclick="window.close()" style="padding:6px 10px;background:#f3f4f6;border:1px solid #ddd;border-radius:5px;cursor:pointer;font-size:11px">닫기</button>
+  </div>
+  <div style="width:50mm;height:40mm;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2mm;border:0.3mm solid #000">
+    ${co?`<div style="font-size:5pt;color:#555;font-weight:600;align-self:flex-start;margin-bottom:0.5mm">${co.name}</div>`:''}
+    <div style="font-size:7pt;font-weight:900;text-align:center;line-height:1.2;margin-bottom:1mm">${name}</div>
+    <img id="qr-img" style="width:22mm;height:22mm" src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&color=000000&bgcolor=ffffff&data=${encodeURIComponent(code)}">
+    <div style="font-size:6pt;font-family:monospace;font-weight:700;margin-top:1mm">${code}</div>
+  </div>
+  <script>setTimeout(()=>window.print(),600)<\/script>
+  </body></html>`;
+  const w=window.open('','_blank','width=280,height=260');
+  if(w){w.document.write(html);w.document.close();}
+  else toast('팝업이 차단됐습니다','warn');
+}
+function renderQR(code,size=200){
   const canvas=document.getElementById('qr-canvas');
   if(!canvas)return;
-  QRCode.toCanvas(canvas,code,{width:200,margin:2,color:{dark:'#000',light:'#fff'}},(err)=>{
-    if(err)renderQRFallback(code);
+  QRCode.toCanvas(canvas,code,{width:size,margin:1,color:{dark:'#000',light:'#fff'}},(err)=>{
+    if(err)renderQRFallback(code,size);
   });
 }
-function renderQRFallback(code){
-  // Google Charts API로 QR 이미지 생성 (폴백)
+function renderQRFallback(code,size=200){
   const canvas=document.getElementById('qr-canvas');
   if(!canvas)return;
   const img=document.createElement('img');
-  img.src=`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(code)}`;
-  img.width=200;img.height=200;
+  img.src=`https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(code)}`;
+  img.width=size;img.height=size;
   canvas.replaceWith(img);
 }
 let editMatCode=null;
@@ -6841,40 +6870,112 @@ function renderLabelPreview(){
   const ordId=labelOrdId;
   const o=C.orders.find(x=>x.id===ordId)||{};
   const prod=prodObj(o.prod)||{};
+  const group=C.productGroups.find(g=>g.id===prod.group_id);
   const engName=document.getElementById('lbl-eng')?.value||'';
   const perBox=document.getElementById('lbl-perbox')?.value||'';
   const expFormatted=(o.exp||'').replace(/-/g,'.');
+  const bomCont=C.bom.find(b=>b.prod===o.prod&&matObj(b.mat_code)?.vol);
+  const vol=prod.vol||matObj(bomCont?.mat_code)?.vol||'';
+  const prodLabel=[group?.brand,prod.name||o.prod,vol?vol+(prod.vol_unit||'ml'):'',o.mark].filter(Boolean).join(' ');
+  // 50x40mm 미리보기 (189x151px)
   document.getElementById('label-preview').innerHTML=`
-    <div id="label-print-area" style="font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;max-width:440px;margin:0 auto">
-      <table style="width:100%;border-collapse:collapse;border:2px solid #222;font-size:13px">
-        <tr>
-          <td style="border:1px solid #222;padding:7px 10px;background:#f5f5f5;font-weight:700;width:90px;white-space:nowrap">제품명</td>
-          <td style="border:1px solid #222;padding:7px 10px" colspan="3">
-            <div style="font-weight:600">${prod.name||o.prod||'-'} <span style="color:var(--blue);font-size:12px">${o.mark||''}</span></div>
-            <div style="color:#888;font-size:11px;margin-top:3px;min-height:16px">${engName}</div>
-          </td>
-        </tr>
-        <tr>
-          <td style="border:1px solid #222;padding:7px 10px;background:#f5f5f5;font-weight:700">제조번호</td>
-          <td style="border:1px solid #222;padding:7px 10px;font-family:monospace;font-weight:700;font-size:14px">${o.lot||o.id||'-'}</td>
-          <td style="border:1px solid #222;padding:7px 10px;background:#f5f5f5;font-weight:700;white-space:nowrap">사용기한</td>
-          <td style="border:1px solid #222;padding:7px 10px;font-weight:600">${expFormatted||'-'}</td>
-        </tr>
-        <tr>
-          <td style="border:1px solid #222;padding:7px 10px;background:#f5f5f5;font-weight:700">제조업체</td>
-          <td style="border:1px solid #222;padding:7px 10px">아로마프로젝트</td>
-          <td style="border:1px solid #222;padding:7px 10px;background:#f5f5f5;font-weight:700;white-space:nowrap">입수량/박스</td>
-          <td style="border:1px solid #222;padding:7px 10px;font-weight:600">${perBox?perBox+' ea':''}</td>
-        </tr>
-      </table>
+    <div style="padding:8px;background:#e5e7eb;display:inline-block;border-radius:6px">
+      <div style="font-size:10px;color:#666;margin-bottom:4px;text-align:center">미리보기 (50×40mm 실물 비율)</div>
+      <div style="width:189px;height:151px;border:1.5px solid #000;font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:#fff;color:#000;display:flex;flex-direction:column;overflow:hidden;box-sizing:border-box">
+        <div style="border-bottom:1.5px solid #000;padding:3px 5px;flex-shrink:0">
+          <div style="font-size:8.5px;font-weight:900;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${prodLabel}</div>
+          ${engName?`<div style="font-size:6px;color:#333;line-height:1.1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${engName}</div>`:''}
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid #000;flex-shrink:0">
+          <div style="padding:2px 4px;border-right:1px solid #000">
+            <div style="font-size:5.5px;color:#444">제조번호 (LOT)</div>
+            <div style="font-size:8px;font-weight:900;font-family:monospace">${o.lot||o.id||'-'}</div>
+          </div>
+          <div style="padding:2px 4px">
+            <div style="font-size:5.5px;color:#444">사용기한</div>
+            <div style="font-size:8px;font-weight:900">${expFormatted||'-'}</div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid #000;flex-shrink:0">
+          <div style="padding:2px 4px;border-right:1px solid #000">
+            <div style="font-size:5.5px;color:#444">제조업체</div>
+            <div style="font-size:6px;font-weight:700">아로마프로젝트</div>
+          </div>
+          <div style="padding:2px 4px">
+            <div style="font-size:5.5px;color:#444">입수/박스</div>
+            <div style="font-size:7px;font-weight:700">${perBox?perBox+' ea':'-'}</div>
+          </div>
+        </div>
+        <div style="flex:1"></div>
+      </div>
     </div>`;
 }
+
 function printLabel(){
-  const area=document.getElementById('label-print-area');if(!area)return;
-  const w=window.open('','_blank','width=600,height=400');
-  w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><style>body{margin:20px;font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif}@media print{body{margin:0}}</style></head><body>${area.outerHTML}<script>window.onload=()=>{window.print();setTimeout(()=>window.close(),500)}<\/script></body></html>`);
-  w.document.close();
+  const o=C.orders.find(x=>x.id===labelOrdId)||{};
+  const prod=prodObj(o.prod)||{};
+  const group=C.productGroups.find(g=>g.id===prod.group_id);
+  const engName=document.getElementById('lbl-eng')?.value||'';
+  const perBox=document.getElementById('lbl-perbox')?.value||'';
+  const expFormatted=(o.exp||'').replace(/-/g,'.');
+  const bomCont=C.bom.find(b=>b.prod===o.prod&&matObj(b.mat_code)?.vol);
+  const vol=prod.vol||matObj(bomCont?.mat_code)?.vol||'';
+  const prodLabel=[group?.brand,prod.name||o.prod,vol?vol+(prod.vol_unit||'ml'):'',o.mark].filter(Boolean).join(' ');
+  const copies=parseInt(document.getElementById('lbl-copies')?.value)||1;
+
+  const labelHtml=`<div style="width:50mm;height:40mm;border:0.3mm solid #000;font-family:'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',sans-serif;background:#fff;color:#000;display:flex;flex-direction:column;overflow:hidden;page-break-after:always">
+    <div style="border-bottom:0.5mm solid #000;padding:1mm 1.5mm;flex-shrink:0">
+      <div style="font-size:7pt;font-weight:900;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${prodLabel}</div>
+      ${engName?`<div style="font-size:5pt;color:#333">${engName}</div>`:''}
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:0.3mm solid #000;flex-shrink:0">
+      <div style="padding:0.8mm 1.5mm;border-right:0.3mm solid #000">
+        <div style="font-size:4.5pt;color:#444">제조번호 (LOT)</div>
+        <div style="font-size:6.5pt;font-weight:900;font-family:monospace">${o.lot||o.id||'-'}</div>
+      </div>
+      <div style="padding:0.8mm 1.5mm">
+        <div style="font-size:4.5pt;color:#444">사용기한</div>
+        <div style="font-size:6.5pt;font-weight:900">${expFormatted||'-'}</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;flex-shrink:0">
+      <div style="padding:0.8mm 1.5mm;border-right:0.3mm solid #000">
+        <div style="font-size:4.5pt;color:#444">제조업체</div>
+        <div style="font-size:5.5pt;font-weight:700">아로마프로젝트</div>
+      </div>
+      <div style="padding:0.8mm 1.5mm">
+        <div style="font-size:4.5pt;color:#444">입수/박스</div>
+        <div style="font-size:6pt;font-weight:700">${perBox?perBox+' ea':'-'}</div>
+      </div>
+    </div>
+    <div style="flex:1"></div>
+  </div>`;
+
+  const html=`<!DOCTYPE html><html><head><meta charset="UTF-8">
+  <title>카톤라벨 ${o.lot||o.id}</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:#fff;color:#000}
+    .no-print{padding:8px;display:flex;gap:8px;align-items:center;font-family:sans-serif}
+    @media print{
+      @page{size:50mm 40mm;margin:0}
+      body{width:50mm}
+      .no-print{display:none}
+    }
+  </style></head><body>
+  <div class="no-print">
+    <button onclick="window.print()" style="padding:6px 16px;background:#000;color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:12px">🖨️ 인쇄 (50×40mm 흑백)</button>
+    <span style="font-size:11px;color:#666">${copies}매 · 라벨 프린터 사용</span>
+    <button onclick="window.close()" style="padding:6px 10px;background:#f3f4f6;border:1px solid #ddd;border-radius:5px;cursor:pointer;font-size:11px">닫기</button>
+  </div>
+  ${Array(copies).fill(labelHtml).join('')}
+  <script>setTimeout(()=>window.print(),400)<\/script>
+  </body></html>`;
+  const w=window.open('','_blank','width=280,height=260');
+  if(w){w.document.write(html);w.document.close();}
+  else toast('팝업이 차단됐습니다','warn');
 }
+
 
 // ══ PDF 출력 헬퍼 ════════════════════════════════════════════
 function printArea(areaId,title){
