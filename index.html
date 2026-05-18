@@ -6954,35 +6954,38 @@ function renderLabelPreview(){
   const pName=prod.name||o.prod||'';
   const volStr=vol?vol+(prod.vol_unit||'ml'):'';
   const coLabel=co.name||'';
+  // 업체명/브랜드명 한 줄
+  const topLine=[coLabel,brand].filter(Boolean).join(' / ');
 
   document.getElementById('label-preview').innerHTML=`
     <div style="padding:8px;background:#e5e7eb;display:inline-block;border-radius:6px">
       <div style="font-size:10px;color:#666;margin-bottom:4px;text-align:center">미리보기 (50×40mm)</div>
       <div style="width:189px;height:151px;border:2px solid #000;font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:#fff;color:#000;display:flex;flex-direction:column;overflow:hidden">
-        <!-- 제품 정보 -->
-        <div style="border-bottom:2px solid #000;padding:4px 6px;flex:1;display:flex;flex-direction:column;justify-content:center;gap:2px">
-          ${coLabel?`<div style="font-size:8.5px;font-weight:700">${coLabel}</div>`:''}
-          ${brand?`<div style="font-size:10.5px;font-weight:900;line-height:1.2">${brand}</div>`:''}
-          <div style="font-size:12px;font-weight:900;line-height:1.25">${pName}</div>
-          ${volStr?`<div style="font-size:8.5px;font-weight:900">${volStr}</div>`:''}
+        <!-- 제품 정보: 업체/브랜드 한줄 + 제품명 + 규격 -->
+        <div style="border-bottom:2px solid #000;padding:3px 6px;flex:1;display:flex;flex-direction:column;justify-content:center;gap:1px">
+          ${topLine?`<div style="font-size:8px;font-weight:700;line-height:1.1">${topLine}</div>`:''}
+          <div style="font-size:12px;font-weight:900;line-height:1.2">${pName}</div>
+          ${volStr?`<div style="font-size:8.5px;font-weight:900;line-height:1.1">${volStr}</div>`:''}
         </div>
+        <!-- 제조번호 / 사용기한 -->
         <div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:1.5px solid #000;flex-shrink:0">
           <div style="padding:2px 4px;border-right:1.5px solid #000">
-            <div style="font-size:5.5px;color:#444">제조번호</div>
+            <div style="font-size:5px;color:#444">제조번호</div>
             <div style="font-size:9px;font-weight:900;font-family:monospace">${o.lot||o.id||'-'}</div>
           </div>
           <div style="padding:2px 4px">
-            <div style="font-size:5.5px;color:#444">사용기한</div>
+            <div style="font-size:5px;color:#444">사용기한</div>
             <div style="font-size:9px;font-weight:900">${expFormatted||'-'}</div>
           </div>
         </div>
+        <!-- 제조업체 / 입수박스 -->
         <div style="display:grid;grid-template-columns:1fr 1fr;flex-shrink:0">
           <div style="padding:2px 4px;border-right:1.5px solid #000">
-            <div style="font-size:5.5px;color:#444">제조업체</div>
-            <div style="font-size:8.5px;font-weight:700">아로마프로젝트</div>
+            <div style="font-size:5px;color:#444">제조업체</div>
+            <div style="font-size:8px;font-weight:700">아로마프로젝트</div>
           </div>
           <div style="padding:2px 4px">
-            <div style="font-size:5.5px;color:#444">입수/박스</div>
+            <div style="font-size:5px;color:#444">입수/박스</div>
             <div style="font-size:9px;font-weight:900">${perBox?perBox+' ea':'-'}</div>
           </div>
         </div>
@@ -7003,33 +7006,36 @@ function printLabel(){
   const pName=prod.name||o.prod||'';
   const volStr=vol?vol+(prod.vol_unit||'ml'):'';
   const coLabel=co.name||'';
+  const topLine=[coLabel,brand].filter(Boolean).join(' / ');
   const copies=parseInt(document.getElementById('lbl-copies')?.value)||1;
   const fileName=getLabelFileName([coLabel,brand,pName]);
 
-  // 미리보기용 189x151px inner HTML
-  function lblInner(forPrint){
-    const fs=forPrint?{co:'8pt',brand:'10pt',name:'11pt',vol:'8pt',small:'9pt',mid:'9pt',sm2:'9pt'}
-                     :{co:'9px',brand:'11px',name:'13px',vol:'9px',small:'9px',mid:'9px',sm2:'9px'};
-    return '<div style="border-bottom:'+(forPrint?'0.5mm':'2px')+' solid #000;padding:'+(forPrint?'1.5mm 2mm':'4px 6px')+';flex:1;display:flex;flex-direction:column;justify-content:center;gap:'+(forPrint?'0.5mm':'2px')+'">'
-      +(coLabel?'<div style="font-size:'+fs.co+';font-weight:700">'+coLabel+'</div>':'')
-      +(brand?'<div style="font-size:'+fs.brand+';font-weight:900;line-height:1.25">'+brand+'</div>':'')
-      +'<div style="font-size:'+fs.name+';font-weight:900;line-height:1.25">'+pName+'</div>'
-      +(volStr?'<div style="font-size:'+fs.vol+';font-weight:900">'+volStr+'</div>':'')
+  function lblInner(p){
+    // p=true: 인쇄용 pt 단위, p=false: 미리보기 px
+    const U=(pt,px)=>p?pt:px;
+    return '<div style="border-bottom:'+(p?'0.5mm':'2px')+' solid #000'
+      +';padding:'+(p?'1mm 2mm':'3px 6px')
+      +';flex:1;display:flex;flex-direction:column;justify-content:center;gap:'+(p?'0.3mm':'1px')+'">'
+      +(topLine?'<div style="font-size:'+U('6pt','8px')+';font-weight:700;line-height:1.1">'+topLine+'</div>':'')
+      +'<div style="font-size:'+U('9pt','12px')+';font-weight:900;line-height:1.2">'+pName+'</div>'
+      +(volStr?'<div style="font-size:'+U('7pt','8.5px')+';font-weight:900;line-height:1.1">'+volStr+'</div>':'')
       +'</div>'
-      +'<div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:'+(forPrint?'0.4mm':'1.5px')+' solid #000;flex-shrink:0">'
-      +'<div style="padding:'+(forPrint?'1mm 2mm':'2px 4px')+';border-right:'+(forPrint?'0.4mm':'1.5px')+' solid #000">'
-      +'<div style="font-size:'+fs.small+';color:#444">제조번호</div>'
-      +'<div style="font-size:'+fs.mid+';font-weight:900;font-family:monospace">'+(o.lot||o.id||'-')+'</div></div>'
-      +'<div style="padding:'+(forPrint?'1mm 2mm':'2px 4px')+'">'
-      +'<div style="font-size:'+fs.small+';color:#444">사용기한</div>'
-      +'<div style="font-size:'+fs.mid+';font-weight:900">'+(expFormatted||'-')+'</div></div></div>'
+      // 제조번호 / 사용기한
+      +'<div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:'+(p?'0.4mm':'1.5px')+' solid #000;flex-shrink:0">'
+      +'<div style="padding:'+(p?'0.8mm 2mm':'2px 4px')+';border-right:'+(p?'0.4mm':'1.5px')+' solid #000">'
+      +'<div style="font-size:'+U('4pt','5px')+';color:#444">제조번호</div>'
+      +'<div style="font-size:'+U('7.5pt','9px')+';font-weight:900;font-family:monospace">'+(o.lot||o.id||'-')+'</div></div>'
+      +'<div style="padding:'+(p?'0.8mm 2mm':'2px 4px')+'">'
+      +'<div style="font-size:'+U('4pt','5px')+';color:#444">사용기한</div>'
+      +'<div style="font-size:'+U('7.5pt','9px')+';font-weight:900">'+(expFormatted||'-')+'</div></div></div>'
+      // 제조업체 / 입수박스
       +'<div style="display:grid;grid-template-columns:1fr 1fr;flex-shrink:0">'
-      +'<div style="padding:'+(forPrint?'1mm 2mm':'2px 4px')+';border-right:'+(forPrint?'0.4mm':'1.5px')+' solid #000">'
-      +'<div style="font-size:'+fs.small+';color:#444">제조업체</div>'
-      +'<div style="font-size:'+fs.sm2+';font-weight:700">아로마프로젝트</div></div>'
-      +'<div style="padding:'+(forPrint?'1mm 2mm':'2px 4px')+'">'
-      +'<div style="font-size:'+fs.small+';color:#444">입수/박스</div>'
-      +'<div style="font-size:'+fs.mid+';font-weight:900">'+(perBox?perBox+' ea':'-')+'</div></div></div>';
+      +'<div style="padding:'+(p?'0.8mm 2mm':'2px 4px')+';border-right:'+(p?'0.4mm':'1.5px')+' solid #000">'
+      +'<div style="font-size:'+U('4pt','5px')+';color:#444">제조업체</div>'
+      +'<div style="font-size:'+U('7pt','8px')+';font-weight:700">아로마프로젝트</div></div>'
+      +'<div style="padding:'+(p?'0.8mm 2mm':'2px 4px')+'">'
+      +'<div style="font-size:'+U('4pt','5px')+';color:#444">입수/박스</div>'
+      +'<div style="font-size:'+U('7.5pt','9px')+';font-weight:900">'+(perBox?perBox+' ea':'-')+'</div></div></div>';
   }
 
   const wrapStyle='width:50mm;height:40mm;border:0.5mm solid #000;font-family:Apple SD Gothic Neo,Noto Sans KR,Malgun Gothic,sans-serif;background:#fff;color:#000;display:flex;flex-direction:column;overflow:hidden;page-break-after:always';
@@ -7040,7 +7046,7 @@ function printLabel(){
     +'<div class="no-print" style="margin-bottom:8px;display:flex;gap:6px;flex-wrap:wrap">'
     +'<button onclick="window.print()" style="padding:6px 14px;background:#000;color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:12px">🖨️ 인쇄 (50×40mm)</button>'
     +'<button id="save-btn" onclick="doSave()" style="padding:6px 14px;background:#1e1b4b;color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:12px">💾 PNG 저장</button>'
-    +'<span style="font-size:11px;color:#666">'+copies+'매 · '+fileName+'</span>'
+    +'<span style="font-size:11px;color:#666">'+copies+'매</span>'
     +'<button onclick="window.close()" style="padding:6px 10px;background:#f3f4f6;border:1px solid #ddd;border-radius:5px;cursor:pointer;font-size:11px">닫기</button></div>'
     +Array(copies).fill('<div id="lbl0" style="'+wrapStyle+'">'+lblInner(true)+'</div>').join('')
     +'<script>function doSave(){'
@@ -7049,10 +7055,11 @@ function printLabel(){
     +'var a=document.createElement("a");a.href=c.toDataURL("image/png");a.download="'+fileName+'.png";a.click();'
     +'document.getElementById("save-btn").textContent="💾 PNG 저장";}).catch(function(e){alert("실패:"+e);});}'
     +'setTimeout(function(){},200);<\/script></body></html>';
-  const w=window.open('','_blank','width=280,height=320');
+  const w=window.open('','_blank','width=300,height=320');
   if(w){w.document.write(html);w.document.close();}
   else toast('팝업이 차단됐습니다','warn');
 }
+
 
 function printArea(areaId,title){
   const area=document.getElementById(areaId);if(!area)return;
