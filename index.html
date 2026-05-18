@@ -7273,10 +7273,12 @@ function renderCertList(){
   };
 
   const ords=C.orders.filter(o=>{
-    // 연도 필터: date 없는 발주 오더는 LOT에서 연도 추출 (6은 2026)
+    // 연도 필터: date 없는 발주 오더는 LOT에서 연도 추출
+    // LOT 형식: APC6MA03 → lot[3]='6' → 2026년
     if(year){
-      const orderYear=(o.date||'').slice(0,4)||('20'+(o.lot||o.id||'').slice(3,4)||'');
-      if(orderYear&&!orderYear.startsWith(year))return false;
+      const dateYear=(o.date||'').slice(0,4);
+      const lotYear=dateYear||('202'+(o.lot||o.id||'')[3]);
+      if(lotYear&&!lotYear.startsWith(year))return false;
     }
     if(coF&&o.co_id!==coF)return false;
     if(kind&&getLotKind(o)!==kind)return false;
