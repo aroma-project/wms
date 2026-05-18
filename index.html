@@ -1400,7 +1400,11 @@ textarea{min-height:60px;resize:vertical}
     </div>
     <!-- 공수 계산 결과 미리보기 -->
     <div id="pg-manhour-preview" style="margin-bottom:4px"></div>
-    <div class="br"><button class="btn btn-p" onclick="saveProgress()">추가</button><button class="btn btn-g" onclick="closeMo()">닫기</button></div>
+    <div id="prog-edit-indicator" style="display:none;background:#fef3c7;border:1px solid #fcd34d;border-radius:6px;padding:6px 10px;font-size:11px;color:#92400e;margin-bottom:8px"></div>
+    <div class="br">
+      <button class="btn btn-p" onclick="saveProgress()">추가</button>
+      <button class="btn btn-g" onclick="cancelProgEdit()">취소</button>
+    </div>
   </div>
   <!-- 재고 수정 -->
   <div class="modal" id="m-stockedit" style="display:none">
@@ -5401,7 +5405,8 @@ function confirmLotEdit(id,oldLot){
   saveLotEdit(id,oldLot,newLot);
 }
 async function openProg(id){
-  currProgOrd=id;const o=C.orders.find(x=>x.id===id);if(!o)return;
+  currProgOrd=id;editingLogId=null;
+  const o=C.orders.find(x=>x.id===id);if(!o)return;
   const prod=prodObj(o.prod);const procs=o.processes||['충진','라벨링','기타','포장'];
   // 공정별 진행바
   const bars=procs.map(pr=>{const d=getProcessDone(id,pr);const pp=Math.min(100,Math.round(d/(o.qty||1)*100));const c=pp>=100?'var(--green)':pp>=50?'var(--amber)':'var(--blue)';return`<div style="margin-bottom:6px"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px"><span style="font-weight:600">${pr}${pr==='포장'?' ⭐':''}</span><span>${fmt(d)} / ${fmt(o.qty)}개 (${pp}%)</span></div><div style="height:6px;background:#e5e7eb;border-radius:99px"><div style="height:100%;background:${c};border-radius:99px;width:${pp}%;transition:width .3s"></div></div></div>`;}).join('');
@@ -5418,11 +5423,97 @@ async function openProg(id){
     const el=document.getElementById(id);
     if(el)el.oninput=updateMhPreview;
   });
-  // 로그
-  const logs=C.progressLogs.filter(l=>l.order_id===id);
-  document.getElementById('prog-log').innerHTML=logs.length?logs.map(l=>`<div class="ord-log-row"><span class="ord-log-date">${l.date||''}</span><span class="badge b-gray" style="font-size:10px">${l.process}</span><span style="font-weight:600;margin-left:4px">${fmt(l.qty)}개</span><span style="color:var(--text2);font-size:11px;margin-left:6px">${l.note||''}</span></div>`).join(''):'<div style="font-size:12px;color:var(--text2)">기록 없음</div>';
+  // 로그 목록 (수정 버튼 포함)
+  const logs=C.progressLogs.filter(l=>l.order_id===id).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  renderProgLog(logs);
   showMo('m-prog');
 }
+
+function renderProgLog(logs){
+  const el=document.getElementById('prog-log');if(!el)return;
+  if(!logs.length){el.innerHTML='<div style="font-size:12px;color:var(--text2)">기록 없음</div>';return;}
+  el.innerHTML=logs.map(l=>`
+    <div class="ord-log-row" style="display:flex;align-items:center;gap:6px;padding:7px 8px;border-radius:6px;background:#f9fafb;margin-bottom:4px">
+      <div style="flex:1;min-width:0">
+        <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+          <span class="ord-log-date" style="font-size:11px;color:var(--text3)">${l.date||''}</span>
+          <span class="badge b-gray" style="font-size:10px">${l.process}</span>
+          <span style="font-weight:700;font-size:13px">${fmt(l.qty)}개</span>
+          ${l.workers?`<span style="font-size:11px;color:var(--blue)">👤${l.workers}명</span>`:''}
+          ${l.man_hour?`<span style="font-size:11px;color:var(--purple)">${l.man_hour}공수</span>`:''}
+        </div>
+        ${l.note?`<div style="font-size:11px;color:var(--text2);margin-top:2px">📝 ${l.note}</div>`:''}
+      </div>
+      <button onclick="editProgLog(${l.id})"
+        style="flex-shrink:0;padding:3px 10px;border:1px solid var(--border);border-radius:5px;background:#fff;cursor:pointer;font-size:11px;color:var(--text2)">수정</button>
+      <button onclick="deleteProgLog(${l.id})"
+        style="flex-shrink:0;padding:3px 8px;border:1px solid #fca5a5;border-radius:5px;background:#fff5f5;cursor:pointer;font-size:11px;color:#dc2626">삭제</button>
+    </div>`).join('');
+}
+let editingLogId=null; // null=신규, number=수정중
+
+function cancelProgEdit(){
+  if(editingLogId!==null){
+    editingLogId=null;
+    document.getElementById('pg-qty').value='';
+    document.getElementById('pg-note').value='';
+    document.getElementById('pg-workers').value='';
+    const hhEl=document.getElementById('pg-hours-h');if(hhEl)hhEl.value='';
+    const hmEl=document.getElementById('pg-hours-m');if(hmEl)hmEl.value='';
+    document.getElementById('pg-manhour-preview').innerHTML='';
+    const saveBtn=document.querySelector('#m-prog .btn-p');if(saveBtn)saveBtn.textContent='추가';
+    const ind=document.getElementById('prog-edit-indicator');if(ind)ind.style.display='none';
+  }else{
+    closeMo();
+  }
+}
+
+function editProgLog(logId){
+  const l=C.progressLogs.find(x=>x.id===logId);if(!l)return;
+  editingLogId=logId;
+  // 폼에 값 채우기
+  const procSel=document.getElementById('pg-process');
+  if(procSel)procSel.value=l.process||'';
+  document.getElementById('pg-date').value=l.date||today();
+  document.getElementById('pg-qty').value=l.qty||'';
+  document.getElementById('pg-note').value=l.note||'';
+  document.getElementById('pg-workers').value=l.workers||'';
+  // man_hour → 시간/분 역산
+  const hhEl=document.getElementById('pg-hours-h');
+  const hmEl=document.getElementById('pg-hours-m');
+  if(l.hours){
+    if(hhEl)hhEl.value=Math.floor(l.hours);
+    if(hmEl)hmEl.value=Math.round((l.hours%1)*60);
+  }else{
+    if(hhEl)hhEl.value='';
+    if(hmEl)hmEl.value='';
+  }
+  updateMhPreview();
+  // 버튼 텍스트 변경
+  const saveBtn=document.querySelector('#m-prog .btn-p');
+  if(saveBtn)saveBtn.textContent='수정 저장';
+  // 수정중 표시
+  const indicator=document.getElementById('prog-edit-indicator');
+  if(indicator){indicator.style.display='block';indicator.textContent=`✏️ ${l.date} ${l.process} ${fmt(l.qty)}개 수정중...`;}
+  document.getElementById('pg-qty')?.focus();
+}
+
+async function deleteProgLog(logId){
+  if(!confirm('이 기록을 삭제하시겠습니까?'))return;
+  try{
+    await dbDelete('progress_logs','id',logId);
+    C.progressLogs=C.progressLogs.filter(x=>x.id!==logId);
+    const logs=C.progressLogs.filter(l=>l.order_id===currProgOrd).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+    renderProgLog(logs);
+    // 진행바 갱신
+    const o=C.orders.find(x=>x.id===currProgOrd);if(!o)return;
+    const procs=o.processes||['충진','라벨링','기타','포장'];
+    const bars=procs.map(pr=>{const d=getProcessDone(currProgOrd,pr);const pp=Math.min(100,Math.round(d/(o.qty||1)*100));const c=pp>=100?'var(--green)':pp>=50?'var(--amber)':'var(--blue)';return`<div style="margin-bottom:6px"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px"><span style="font-weight:600">${pr}${pr==='포장'?' ⭐':''}</span><span>${fmt(d)} / ${fmt(o.qty)}개 (${pp}%)</span></div><div style="height:6px;background:#e5e7eb;border-radius:99px"><div style="height:100%;background:${c};border-radius:99px;width:${pp}%;transition:width .3s"></div></div></div>`;}).join('');
+    document.getElementById('prog-process-bars').innerHTML=`<div style="background:#f8fafc;border-radius:8px;padding:12px;margin-bottom:8px">${bars}</div>`;
+    renderOrds();toast('삭제됐습니다','warn');
+  }catch(e){toast('삭제 실패: '+e.message,'error');}
+}
+
 async function saveProgress(){
   const o=C.orders.find(x=>x.id===currProgOrd);if(!o)return;
   const qty=parseInt(document.getElementById('pg-qty').value);if(!qty||qty<=0){alert('수량 입력');return;}
@@ -5433,7 +5524,36 @@ async function saveProgress(){
   const hours=(hh>0||hm>0)?Math.round((hh+hm/60)*100)/100:null;
   const manHour=(workers&&hours)?Math.round(workers*hours*100)/100:null;
   const noteVal=document.getElementById('pg-note').value||null;
-  const logObj={order_id:currProgOrd,process,qty,note:noteVal,date:document.getElementById('pg-date').value,user_name:CU?.name||'관리자',workers,hours,man_hour:manHour};
+  const dateVal=document.getElementById('pg-date').value;
+
+  // ── 수정 모드 ──────────────────────────────────────────
+  if(editingLogId!==null){
+    const updateObj={process,qty,note:noteVal,date:dateVal,workers,hours,man_hour:manHour};
+    try{
+      await dbUpdate('progress_logs','id',editingLogId,updateObj);
+      const l=C.progressLogs.find(x=>x.id===editingLogId);
+      if(l)Object.assign(l,updateObj);
+      editingLogId=null;
+      // 폼 초기화
+      document.getElementById('pg-qty').value='';document.getElementById('pg-note').value='';
+      document.getElementById('pg-workers').value='';
+      const hhEl=document.getElementById('pg-hours-h');if(hhEl)hhEl.value='';
+      const hmEl=document.getElementById('pg-hours-m');if(hmEl)hmEl.value='';
+      document.getElementById('pg-manhour-preview').innerHTML='';
+      const saveBtn=document.querySelector('#m-prog .btn-p');if(saveBtn)saveBtn.textContent='추가';
+      const ind=document.getElementById('prog-edit-indicator');if(ind)ind.style.display='none';
+      const logs=C.progressLogs.filter(l=>l.order_id===currProgOrd).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+      renderProgLog(logs);
+      // 진행바 갱신
+      const procs=o.processes||['충진','라벨링','기타','포장'];
+      const bars=procs.map(pr=>{const d=getProcessDone(currProgOrd,pr);const pp=Math.min(100,Math.round(d/(o.qty||1)*100));const c=pp>=100?'var(--green)':pp>=50?'var(--amber)':'var(--blue)';return`<div style="margin-bottom:6px"><div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px"><span style="font-weight:600">${pr}${pr==='포장'?' ⭐':''}</span><span>${fmt(d)} / ${fmt(o.qty)}개 (${pp}%)</span></div><div style="height:6px;background:#e5e7eb;border-radius:99px"><div style="height:100%;background:${c};border-radius:99px;width:${pp}%;transition:width .3s"></div></div></div>`;}).join('');
+      document.getElementById('prog-process-bars').innerHTML=`<div style="background:#f8fafc;border-radius:8px;padding:12px;margin-bottom:8px">${bars}</div>`;
+      renderOrds();toast('수정됐습니다','success');
+    }catch(e){toast('수정 실패: '+e.message,'error');}
+    return;
+  }
+
+  const logObj={order_id:currProgOrd,process,qty,note:noteVal,date:dateVal,user_name:CU?.name||'관리자',workers,hours,man_hour:manHour};
   try{
     const r=await dbInsert('progress_logs',logObj);C.progressLogs.unshift(r||logObj);
     // 상태 업데이트
