@@ -1616,7 +1616,12 @@ const sb = {
 
 // ══ HELPERS ════════════════════════════════════════════════════
 const fmt = n => Number(n||0).toLocaleString();
-const today = () => new Date().toISOString().slice(0,10);
+const today = () => {
+  const d=new Date();
+  // 한국 시간(UTC+9) 기준
+  const kst=new Date(d.getTime()+9*60*60*1000);
+  return kst.toISOString().slice(0,10);
+};
 const nowId = () => Date.now().toString(36) + Math.random().toString(36).slice(2,6);
 const coName = id => C.companies.find(x=>x.id===id)?.name || id || '-';
 const matName = code => C.materials.find(x=>x.code===code)?.name || code;
@@ -2061,7 +2066,7 @@ function renderDash(){
 // ── 생산 일정 캘린더 ────────────────────────────────────────
 function renderProdCal(){
   const calEl=document.getElementById('dash-cal');if(!calEl)return;
-  const T=new Date();const todayStr=today();
+  const _now=new Date();const T=new Date(_now.getTime()+9*60*60*1000);const todayStr=today();
   const isMobile=window.innerWidth<=768;
 
   function addD(ds,n){const d=new Date(ds);d.setDate(d.getDate()+n);return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
@@ -4416,7 +4421,7 @@ let currProgOrd=null;
 // ── 발주·생산관리 캘린더 ─────────────────────────────────────
 function renderOrdCal(){
   const calEl=document.getElementById('ord-cal');if(!calEl)return;
-  const T=new Date();const todayStr=today();
+  const _now=new Date();const T=new Date(_now.getTime()+9*60*60*1000);const todayStr=today();
   const isMobile=window.innerWidth<=768;
 
   function addD(ds,n){const d=new Date(ds);d.setDate(d.getDate()+n);return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
@@ -4632,9 +4637,13 @@ async function saveBacklogOrd(){
   try{
     const r=await dbInsert('orders',obj);
     C.orders.unshift(r||obj);
-    closeMo();renderOrds();renderCertList();
+    closeMo();renderOrds();
+    // 완제품시험성적서에서 발주했으면 목록 즉시 갱신
+    if(typeof renderCertList==='function')try{renderCertList();}catch(e){}
+    if(typeof initCertList==='function'&&document.getElementById('page-report-cert')?.classList.contains('active')){
+      try{initCertList();}catch(e){}
+    }
     toast(`발주 등록 완료 — 발주·생산관리 발주목록에 추가됐습니다: ${lot}`,'success');
-    // 발주·생산관리 메뉴로 이동
     setTimeout(()=>go('order'),800);
   }catch(e){toast('등록 실패: '+e.message,'error');}
 }
@@ -4845,7 +4854,8 @@ function ordCard(o){
     ?'background:#eff6ff;border-left:4px solid #3b82f6;border-color:#93c5fd'
     :'';
 
-  // 액션 버튼 (아이콘만)
+  const isAdmin=CU?.role==='admin';
+  // 액션 버튼 (아이콘만) — 직원: 진행입력/포장사양/작업일지/카톤라벨만
   const btnStyle='padding:4px 7px;border:1px solid var(--border);border-radius:6px;background:#fff;cursor:pointer;font-size:13px;color:var(--text2)';
   const actionBtns=`
     <div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap">
@@ -4853,10 +4863,11 @@ function ordCard(o){
       <button style="${btnStyle}" onclick="openPackSpec('${o.id}')" title="포장사양">📦</button>
       <button style="${btnStyle}" onclick="printWorkJournal('${o.id}')" title="작업일지">📋</button>
       <button style="${btnStyle}" onclick="openLabelModal('${o.id}')" title="카톤라벨">🏷️</button>
-      <button style="${btnStyle}" onclick="openManualDeduct('${o.id}')" title="재고차감">🔧</button>
-      ${CU?.role==='admin'?`<button style="${btnStyle}" onclick="openOrdEditModal('${o.id}')" title="수정">⚙️</button>`:''}
-      <button style="${btnStyle}" onclick="chgOrdStatus('${o.id}')" title="${isDone?'재오픈':'상태↑'}">${isDone?'↩':'▲'}</button>
-      ${CU?.role==='admin'?`<button style="${btnStyle.replace('var(--text2)','#dc2626')}" onclick="deleteOrd('${o.id}')" title="삭제">🗑</button>`:''}
+      ${isAdmin?`<button style="${btnStyle}" onclick="openManualDeduct('${o.id}')" title="재고차감">🔧</button>`:''}
+      ${isAdmin?`<button style="${btnStyle}" onclick="openOrdEditModal('${o.id}')" title="수정">⚙️</button>`:''}
+      ${isAdmin?`<button style="${btnStyle}" onclick="chgOrdStatus('${o.id}')" title="${isDone?'재오픈':'상태↑'}">${isDone?'↩':'▲'}</button>`:''}
+      ${isAdmin&&o.status==='대기'?`<button style="${btnStyle.replace('var(--text2)','#d97706')}" onclick="revertToBacklog('${o.id}')" title="발주목록으로">↩발주</button>`:''}
+      ${isAdmin?`<button style="${btnStyle.replace('var(--text2)','#dc2626')}" onclick="deleteOrd('${o.id}')" title="삭제">🗑</button>`:''}
     </div>`;
 
   // 최대 생산 배지
@@ -4918,16 +4929,16 @@ function ordCard(o){
     </div>`;
   }).join('');
 
-  // 모바일용 버튼 (가로 스크롤 바 형태)
   const mobileBtns=`
     <div style="display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;-webkit-overflow-scrolling:touch;scrollbar-width:none;margin-top:10px">
       ${!isDone?`<button style="flex-shrink:0;padding:8px 14px;border:1px solid var(--border);border-radius:7px;background:#fff;cursor:pointer;font-size:13px;white-space:nowrap" onclick="openProg('${o.id}')">✏️ 진행입력</button>`:''}
       <button style="flex-shrink:0;padding:8px 14px;border:1px solid var(--border);border-radius:7px;background:#fff;cursor:pointer;font-size:13px;white-space:nowrap" onclick="openPackSpec('${o.id}')">📦 포장사양</button>
       <button style="flex-shrink:0;padding:8px 14px;border:1px solid var(--border);border-radius:7px;background:#fff;cursor:pointer;font-size:13px;white-space:nowrap" onclick="printWorkJournal('${o.id}')">📋 작업일지</button>
       <button style="flex-shrink:0;padding:8px 14px;border:1px solid var(--border);border-radius:7px;background:#fff;cursor:pointer;font-size:13px;white-space:nowrap" onclick="openLabelModal('${o.id}')">🏷️ 카톤라벨</button>
-      <button style="flex-shrink:0;padding:8px 14px;border:1px solid var(--border);border-radius:7px;background:#fff;cursor:pointer;font-size:13px;white-space:nowrap" onclick="chgOrdStatus('${o.id}')">${isDone?'↩ 재오픈':'▲ 상태↑'}</button>
-      ${CU?.role==='admin'?`<button style="flex-shrink:0;padding:8px 14px;border:1px solid var(--border);border-radius:7px;background:#fff;cursor:pointer;font-size:13px;white-space:nowrap" onclick="openOrdEditModal('${o.id}')">⚙️ 수정</button>`:''}
-      ${CU?.role==='admin'?`<button style="flex-shrink:0;padding:8px 14px;border:1px solid #fca5a5;border-radius:7px;background:#fff5f5;cursor:pointer;font-size:13px;white-space:nowrap;color:#dc2626" onclick="deleteOrd('${o.id}')">🗑 삭제</button>`:''}
+      ${isAdmin?`<button style="flex-shrink:0;padding:8px 14px;border:1px solid var(--border);border-radius:7px;background:#fff;cursor:pointer;font-size:13px;white-space:nowrap" onclick="chgOrdStatus('${o.id}')">${isDone?'↩ 재오픈':'▲ 상태↑'}</button>`:''}
+      ${isAdmin&&o.status==='대기'?`<button style="flex-shrink:0;padding:8px 14px;border:1px solid #fcd34d;border-radius:7px;background:#fff;cursor:pointer;font-size:13px;white-space:nowrap;color:#92400e" onclick="revertToBacklog('${o.id}')">↩ 발주목록</button>`:''}
+      ${isAdmin?`<button style="flex-shrink:0;padding:8px 14px;border:1px solid var(--border);border-radius:7px;background:#fff;cursor:pointer;font-size:13px;white-space:nowrap" onclick="openOrdEditModal('${o.id}')">⚙️ 수정</button>`:''}
+      ${isAdmin?`<button style="flex-shrink:0;padding:8px 14px;border:1px solid #fca5a5;border-radius:7px;background:#fff5f5;cursor:pointer;font-size:13px;white-space:nowrap;color:#dc2626" onclick="deleteOrd('${o.id}')">🗑 삭제</button>`:''}
     </div>`;
 
   return`<div class="ord-card" style="${cardStyle}">
@@ -5292,10 +5303,22 @@ async function saveOrd(){
   }
 }
 async function chgOrdStatus(id){
+  if(CU?.role!=='admin'){toast('관리자만 상태를 변경할 수 있습니다','error');return;}
   const o=C.orders.find(x=>x.id===id);if(!o)return;
   const seq=['대기','진행','완료'];const next=seq[(seq.indexOf(o.status)+1)%seq.length];
   if(!confirm(`"${o.status}" → "${next}"로 변경?`))return;
   try{await dbUpdate('orders','id',id,{status:next});o.status=next;renderOrds();}catch(e){toast('저장 실패: '+e.message,'error');}
+}
+
+async function revertToBacklog(id){
+  if(CU?.role!=='admin'){toast('관리자만 변경 가능합니다','error');return;}
+  const o=C.orders.find(x=>x.id===id);if(!o)return;
+  if(!confirm(`"${o.lot||id}"을 발주목록으로 되돌리시겠습니까?\n공정 정보가 초기화됩니다.`))return;
+  try{
+    await dbUpdate('orders','id',id,{status:'발주',processes:[],date:null});
+    o.status='발주';o.processes=[];o.date=null;
+    renderOrds();toast('발주목록으로 되돌렸습니다','warn');
+  }catch(e){toast('실패: '+e.message,'error');}
 }
 async function deleteOrd(id){
   if(CU?.role!=='admin'){toast('관리자만 오더를 삭제할 수 있습니다','error');return;}
@@ -7250,7 +7273,11 @@ function renderCertList(){
   };
 
   const ords=C.orders.filter(o=>{
-    if(year&&!(o.date||'').startsWith(year))return false;
+    // 연도 필터: date 없는 발주 오더는 LOT에서 연도 추출 (6은 2026)
+    if(year){
+      const orderYear=(o.date||'').slice(0,4)||('20'+(o.lot||o.id||'').slice(3,4)||'');
+      if(orderYear&&!orderYear.startsWith(year))return false;
+    }
     if(coF&&o.co_id!==coF)return false;
     if(kind&&getLotKind(o)!==kind)return false;
     if(q){
@@ -7413,7 +7440,42 @@ function printCostReport(){
   // 누락 공정 종류 수집
   const allMissingProcs=[...new Set(rows.flatMap(r=>r.missingProcs))];
 
-  // 현재 수기 단가 읽기 (이미 입력된 경우 유지)
+  // localStorage 키
+  const LS_KEY='aroma_cost_manual';
+
+  // 저장된 단가 불러오기
+  function loadSavedCosts(){
+    try{return JSON.parse(localStorage.getItem(LS_KEY)||'{}');}catch{return{};}
+  }
+  // 현재 입력값 저장
+  function saveCostInputs(){
+    const saved=loadSavedCosts();
+    rows.forEach(r=>{
+      r.missingProcs.forEach(p=>{
+        const el=document.getElementById('mc-'+r.o.id+'-'+p);
+        if(!el)return;
+        const val=el.value.trim();
+        const key=r.o.id+'|'+p;
+        if(val)saved[key]=val;
+        else delete saved[key];
+      });
+    });
+    localStorage.setItem(LS_KEY,JSON.stringify(saved));
+    toast('단가가 임시저장됐습니다','success');
+  }
+  // 저장된 값 인풋에 복원
+  function restoreCostInputs(){
+    const saved=loadSavedCosts();
+    rows.forEach(r=>{
+      r.missingProcs.forEach(p=>{
+        const el=document.getElementById('mc-'+r.o.id+'-'+p);
+        const key=r.o.id+'|'+p;
+        if(el&&saved[key]){el.value=saved[key];}
+      });
+    });
+    recalcCostReport();
+  }
+  // 현재 수기 단가 읽기 (입력값 또는 저장값)
   const getManualCost=(ordId,proc)=>{
     const el=document.getElementById('mc-'+ordId+'-'+proc);
     return el?parseInt(el.value)||0:0;
@@ -7440,14 +7502,19 @@ function printCostReport(){
 
   // 테이블 행 생성
   const tableRows=rows.map(r=>{
-    const manualInputs=r.missingProcs.map(p=>`
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+    const manualInputs=r.missingProcs.map(p=>{
+      const saved=loadSavedCosts();
+      const savedVal=saved[r.o.id+'|'+p]||'';
+      return`<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
         <span style="font-size:11px;font-weight:600;color:#92400e;min-width:48px">${p}</span>
         <input type="number" id="mc-${r.o.id}-${p}" min="0" step="100" placeholder="개당 단가(원)"
-          oninput="recalcCostReport()"
-          style="width:120px;padding:5px 8px;border:1px solid #fcd34d;border-radius:5px;font-size:12px;background:#fffbeb">
+          value="${savedVal}"
+          oninput="recalcCostReport();document.getElementById('cr-unsaved').style.display='inline'"
+          style="width:120px;padding:5px 8px;border:1px solid ${savedVal?'#86efac':'#fcd34d'};border-radius:5px;font-size:12px;background:${savedVal?'#f0fdf4':'#fffbeb'}">
         <span style="font-size:10px;color:#92400e">원/개 × ${(r.o.qty||0).toLocaleString()}개</span>
-      </div>`).join('');
+        ${savedVal?`<span style="font-size:9px;color:#16a34a;font-weight:600">💾저장됨</span>`:''}
+      </div>`;
+    }).join('');
 
     // 공정별 상세 비용 (기입된 공정만)
     const procDetail=(['충진','라벨링','기타','포장']).filter(p=>(r.o.processes||[]).includes(p)).map(p=>{
@@ -7527,6 +7594,8 @@ function printCostReport(){
             <div style="font-size:10px;opacity:.7">개당 비용</div>
             <div style="font-size:14px;font-weight:700;color:#fcd34d" id="cr-per-unit">-</div>
           </div>
+          <button onclick="saveCostInputs()" style="padding:6px 14px;background:#16a34a;border:none;color:#fff;border-radius:6px;cursor:pointer;font-size:12px;font-weight:600">💾 단가 저장</button>
+          <span id="cr-unsaved" style="display:none;font-size:11px;color:#fcd34d">● 미저장</span>
           <button onclick="window.print()" style="padding:6px 14px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.3);color:#fff;border-radius:6px;cursor:pointer;font-size:12px">🖨️ 인쇄</button>
           <button onclick="document.getElementById('cost-report-section').remove()" style="padding:6px 10px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:6px;cursor:pointer;font-size:12px">✕</button>
         </div>
@@ -7569,15 +7638,15 @@ function printCostReport(){
 
   // recalcCostReport를 전역에 등록
   window.recalcCostReport=recalcCostReport;
+  window.saveCostInputs=saveCostInputs;
 
   // rl-report 아래에 삽입
   const rlReport=document.getElementById('rl-report');
   if(rlReport)rlReport.parentElement.insertBefore(section,rlReport.nextSibling);
 
-  // 초기 계산
+  // 저장값 복원 + 초기 계산
   setTimeout(()=>{
-    recalcCostReport();
-    // 총합 foot도 동기화
+    restoreCostInputs();
     const footEl=document.getElementById('cr-grand-total-foot');
     const headEl=document.getElementById('cr-grand-total');
     if(footEl&&headEl)footEl.textContent=headEl.textContent;
