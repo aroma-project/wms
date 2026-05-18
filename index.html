@@ -1454,7 +1454,7 @@ textarea{min-height:60px;resize:vertical}
   <div class="modal" id="m-label" style="display:none;max-width:640px">
     <div class="modal-hd">카톤박스 라벨 출력 <button class="modal-x" onclick="closeMo()">×</button></div>
     <div id="label-preview" style="margin-bottom:14px"></div>
-    <div class="fr c2"><div><label>영문 제품명 (수기 입력)</label><input id="lbl-eng" placeholder="LIBER ESSENTIAL ROLL ON 15ML" oninput="renderLabelPreview()"></div><div><label>입수량/박스 (ea)</label><input id="lbl-perbox" type="number" placeholder="42" oninput="renderLabelPreview()"></div></div>
+    <div class="fr"><div><label>입수량/박스 (ea)</label><input id="lbl-perbox" type="number" placeholder="42" oninput="renderLabelPreview()"></div></div>
     <div class="br no-print"><button class="btn btn-p" onclick="printLabel()">🖨️ 인쇄 / PDF 저장</button><button class="btn btn-g" onclick="closeMo()">닫기</button></div>
   </div>
   <!-- 계정 -->
@@ -2802,12 +2802,20 @@ function showBarcode(code){
   const co=C.companies.find(c=>c.id===m?.co_id);
   const container=document.getElementById('barcode-area');
   // 50x40mm 미리보기 (189x151px)
+  const group_=C.productGroups.find(g=>g.id===m?.group_id);
+  const brand_=group_?.brand||'';
+  const vol_=m?.vol?(m.vol+(m.vol_unit||'ml')):'';
   container.innerHTML=`
-    <div style="width:189px;height:151px;border:1.5px solid #000;background:#fff;color:#000;font-family:'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:6px;box-sizing:border-box;gap:4px">
-      ${co?`<div style="font-size:6px;color:#555;font-weight:600;align-self:flex-start">${co.name}</div>`:''}
-      <div style="font-size:8px;font-weight:900;text-align:center;line-height:1.2;max-width:100%">${m?m.name:code}</div>
-      <canvas id="qr-canvas" style="display:block"></canvas>
-      <div style="font-size:7px;font-family:monospace;color:#000;font-weight:700">${code}</div>
+    <div style="width:189px;height:151px;border:1.5px solid #000;background:#fff;color:#000;font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;display:flex;flex-direction:row;overflow:hidden;box-sizing:border-box">
+      <div style="flex:1;display:flex;flex-direction:column;justify-content:center;padding:5px 7px;border-right:1.5px solid #000;gap:4px">
+        ${co?`<div style="font-size:8px;font-weight:900;line-height:1.2">${co.name}</div>`:''}
+        ${brand_?`<div style="font-size:7.5px;font-weight:700;line-height:1.1">${brand_}</div>`:''}
+        <div style="font-size:9.5px;font-weight:900;line-height:1.2">${m?m.name:code}</div>
+        ${vol_?`<div style="font-size:8px;font-weight:700;border:1px solid #000;display:inline-block;padding:1px 3px;margin-top:1px">${vol_}</div>`:''}
+      </div>
+      <div style="display:flex;align-items:center;justify-content:center;padding:4px;flex-shrink:0">
+        <canvas id="qr-canvas" style="display:block"></canvas>
+      </div>
     </div>`;
   showMo('m-barcode');
   if(typeof QRCode==='undefined'){
@@ -2822,9 +2830,14 @@ function printBarcodeLabel(){
   const code=barcodeMatCode;if(!code)return;
   const m=matObj(code);
   const co=C.companies.find(c=>c.id===m?.co_id);
-  const name=m?m.name:code;
+  const group=C.productGroups.find(g=>g.id===m?.group_id);
+  const coName_=co?.name||'';
+  const brand=group?.brand||'';
+  const name=m?.name||code;
+  const vol=m?.vol?(m.vol+(m.vol_unit||'ml')):'';
+
   const html=`<!DOCTYPE html><html><head><meta charset="UTF-8">
-  <title>바코드 ${code}</title>
+  <title>바코드 ${name}</title>
   <style>
     *{box-sizing:border-box;margin:0;padding:0}
     body{background:#fff;color:#000;font-family:'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',sans-serif}
@@ -2834,15 +2847,22 @@ function printBarcodeLabel(){
     <button onclick="window.print()" style="padding:6px 14px;background:#000;color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:12px">🖨️ 인쇄 (50×40mm 흑백)</button>
     <button onclick="window.close()" style="padding:6px 10px;background:#f3f4f6;border:1px solid #ddd;border-radius:5px;cursor:pointer;font-size:11px">닫기</button>
   </div>
-  <div style="width:50mm;height:40mm;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2mm;border:0.3mm solid #000">
-    ${co?`<div style="font-size:5pt;color:#555;font-weight:600;align-self:flex-start;margin-bottom:0.5mm">${co.name}</div>`:''}
-    <div style="font-size:7pt;font-weight:900;text-align:center;line-height:1.2;margin-bottom:1mm">${name}</div>
-    <img id="qr-img" style="width:22mm;height:22mm" src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&color=000000&bgcolor=ffffff&data=${encodeURIComponent(code)}">
-    <div style="font-size:6pt;font-family:monospace;font-weight:700;margin-top:1mm">${code}</div>
+  <div style="width:50mm;height:40mm;display:flex;flex-direction:row;border:0.4mm solid #000;overflow:hidden">
+    <!-- 좌측: 텍스트 정보 -->
+    <div style="flex:1;display:flex;flex-direction:column;justify-content:center;padding:1.5mm 2mm;border-right:0.4mm solid #000;gap:1.5mm">
+      ${coName_?`<div style="font-size:6.5pt;font-weight:900;line-height:1.1">${coName_}</div>`:''}
+      ${brand?`<div style="font-size:6pt;font-weight:700;line-height:1.1">${brand}</div>`:''}
+      <div style="font-size:8pt;font-weight:900;line-height:1.2">${name}</div>
+      ${vol?`<div style="font-size:7pt;font-weight:700;border:0.3mm solid #000;display:inline-block;padding:0.3mm 1mm;margin-top:0.5mm">${vol}</div>`:''}
+    </div>
+    <!-- 우측: QR -->
+    <div style="display:flex;align-items:center;justify-content:center;padding:1mm;flex-shrink:0">
+      <img style="width:22mm;height:22mm;display:block" src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&color=000000&bgcolor=ffffff&data=${encodeURIComponent(code)}">
+    </div>
   </div>
   <script>setTimeout(()=>window.print(),600)<\/script>
   </body></html>`;
-  const w=window.open('','_blank','width=280,height=260');
+  const w=window.open('','_blank','width=300,height=260');
   if(w){w.document.write(html);w.document.close();}
   else toast('팝업이 차단됐습니다','warn');
 }
@@ -6871,42 +6891,47 @@ function renderLabelPreview(){
   const o=C.orders.find(x=>x.id===ordId)||{};
   const prod=prodObj(o.prod)||{};
   const group=C.productGroups.find(g=>g.id===prod.group_id);
-  const engName=document.getElementById('lbl-eng')?.value||'';
   const perBox=document.getElementById('lbl-perbox')?.value||'';
   const expFormatted=(o.exp||'').replace(/-/g,'.');
   const bomCont=C.bom.find(b=>b.prod===o.prod&&matObj(b.mat_code)?.vol);
   const vol=prod.vol||matObj(bomCont?.mat_code)?.vol||'';
-  const prodLabel=[group?.brand,prod.name||o.prod,vol?vol+(prod.vol_unit||'ml'):'',o.mark].filter(Boolean).join(' ');
+  const prodLabel=[group?.brand,prod.name||o.prod,vol?vol+(prod.vol_unit||'ml'):''].filter(Boolean).join(' ');
+
   // 50x40mm 미리보기 (189x151px)
   document.getElementById('label-preview').innerHTML=`
     <div style="padding:8px;background:#e5e7eb;display:inline-block;border-radius:6px">
-      <div style="font-size:10px;color:#666;margin-bottom:4px;text-align:center">미리보기 (50×40mm 실물 비율)</div>
-      <div style="width:189px;height:151px;border:1.5px solid #000;font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:#fff;color:#000;display:flex;flex-direction:column;overflow:hidden;box-sizing:border-box">
-        <div style="border-bottom:1.5px solid #000;padding:3px 5px;flex-shrink:0">
-          <div style="font-size:8.5px;font-weight:900;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${prodLabel}</div>
-          ${engName?`<div style="font-size:6px;color:#333;line-height:1.1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${engName}</div>`:''}
+      <div style="font-size:10px;color:#666;margin-bottom:4px;text-align:center">미리보기 (50×40mm)</div>
+      <div style="width:189px;height:151px;border:2px solid #000;font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:#fff;color:#000;display:flex;flex-direction:column;overflow:hidden;box-sizing:border-box">
+        <!-- 제품명 -->
+        <div style="border-bottom:2px solid #000;padding:3px 5px;flex:1;display:flex;align-items:center">
+          <div>
+            <div style="font-size:5px;color:#444;margin-bottom:1px">제품명</div>
+            <div style="font-size:9px;font-weight:900;line-height:1.3">${prodLabel}</div>
+            ${o.mark?`<div style="font-size:7.5px;font-weight:700;color:#000;margin-top:1px">${o.mark}</div>`:''}
+          </div>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid #000;flex-shrink:0">
-          <div style="padding:2px 4px;border-right:1px solid #000">
-            <div style="font-size:5.5px;color:#444">제조번호 (LOT)</div>
-            <div style="font-size:8px;font-weight:900;font-family:monospace">${o.lot||o.id||'-'}</div>
+        <!-- 제조번호 / 사용기한 -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:1.5px solid #000;flex-shrink:0">
+          <div style="padding:2px 4px;border-right:1.5px solid #000">
+            <div style="font-size:5px;color:#444">제조번호</div>
+            <div style="font-size:8.5px;font-weight:900;font-family:monospace">${o.lot||o.id||'-'}</div>
           </div>
           <div style="padding:2px 4px">
-            <div style="font-size:5.5px;color:#444">사용기한</div>
-            <div style="font-size:8px;font-weight:900">${expFormatted||'-'}</div>
+            <div style="font-size:5px;color:#444">사용기한</div>
+            <div style="font-size:8.5px;font-weight:900">${expFormatted||'-'}</div>
           </div>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid #000;flex-shrink:0">
-          <div style="padding:2px 4px;border-right:1px solid #000">
-            <div style="font-size:5.5px;color:#444">제조업체</div>
-            <div style="font-size:6px;font-weight:700">아로마프로젝트</div>
+        <!-- 제조업체 / 입수 -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;flex-shrink:0">
+          <div style="padding:2px 4px;border-right:1.5px solid #000">
+            <div style="font-size:5px;color:#444">제조업체</div>
+            <div style="font-size:7px;font-weight:700">아로마프로젝트</div>
           </div>
           <div style="padding:2px 4px">
-            <div style="font-size:5.5px;color:#444">입수/박스</div>
-            <div style="font-size:7px;font-weight:700">${perBox?perBox+' ea':'-'}</div>
+            <div style="font-size:5px;color:#444">입수/박스</div>
+            <div style="font-size:8px;font-weight:900">${perBox?perBox+' ea':'-'}</div>
           </div>
         </div>
-        <div style="flex:1"></div>
       </div>
     </div>`;
 }
@@ -6915,40 +6940,41 @@ function printLabel(){
   const o=C.orders.find(x=>x.id===labelOrdId)||{};
   const prod=prodObj(o.prod)||{};
   const group=C.productGroups.find(g=>g.id===prod.group_id);
-  const engName=document.getElementById('lbl-eng')?.value||'';
   const perBox=document.getElementById('lbl-perbox')?.value||'';
   const expFormatted=(o.exp||'').replace(/-/g,'.');
   const bomCont=C.bom.find(b=>b.prod===o.prod&&matObj(b.mat_code)?.vol);
   const vol=prod.vol||matObj(bomCont?.mat_code)?.vol||'';
-  const prodLabel=[group?.brand,prod.name||o.prod,vol?vol+(prod.vol_unit||'ml'):'',o.mark].filter(Boolean).join(' ');
+  const prodLabel=[group?.brand,prod.name||o.prod,vol?vol+(prod.vol_unit||'ml'):''].filter(Boolean).join(' ');
   const copies=parseInt(document.getElementById('lbl-copies')?.value)||1;
 
-  const labelHtml=`<div style="width:50mm;height:40mm;border:0.3mm solid #000;font-family:'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',sans-serif;background:#fff;color:#000;display:flex;flex-direction:column;overflow:hidden;page-break-after:always">
-    <div style="border-bottom:0.5mm solid #000;padding:1mm 1.5mm;flex-shrink:0">
-      <div style="font-size:7pt;font-weight:900;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${prodLabel}</div>
-      ${engName?`<div style="font-size:5pt;color:#333">${engName}</div>`:''}
-    </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:0.3mm solid #000;flex-shrink:0">
-      <div style="padding:0.8mm 1.5mm;border-right:0.3mm solid #000">
-        <div style="font-size:4.5pt;color:#444">제조번호 (LOT)</div>
-        <div style="font-size:6.5pt;font-weight:900;font-family:monospace">${o.lot||o.id||'-'}</div>
+  const labelHtml=`<div style="width:50mm;height:40mm;border:0.5mm solid #000;font-family:'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',sans-serif;background:#fff;color:#000;display:flex;flex-direction:column;overflow:hidden;page-break-after:always">
+    <div style="border-bottom:0.5mm solid #000;padding:1.2mm 2mm;flex:1;display:flex;align-items:center">
+      <div>
+        <div style="font-size:4.5pt;color:#444;margin-bottom:0.5mm">제품명</div>
+        <div style="font-size:7.5pt;font-weight:900;line-height:1.3">${prodLabel}</div>
+        ${o.mark?`<div style="font-size:6.5pt;font-weight:700;margin-top:0.5mm">${o.mark}</div>`:''}
       </div>
-      <div style="padding:0.8mm 1.5mm">
-        <div style="font-size:4.5pt;color:#444">사용기한</div>
-        <div style="font-size:6.5pt;font-weight:900">${expFormatted||'-'}</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:0.4mm solid #000;flex-shrink:0">
+      <div style="padding:1mm 2mm;border-right:0.4mm solid #000">
+        <div style="font-size:4pt;color:#444">제조번호</div>
+        <div style="font-size:7pt;font-weight:900;font-family:monospace">${o.lot||o.id||'-'}</div>
+      </div>
+      <div style="padding:1mm 2mm">
+        <div style="font-size:4pt;color:#444">사용기한</div>
+        <div style="font-size:7pt;font-weight:900">${expFormatted||'-'}</div>
       </div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;flex-shrink:0">
-      <div style="padding:0.8mm 1.5mm;border-right:0.3mm solid #000">
-        <div style="font-size:4.5pt;color:#444">제조업체</div>
-        <div style="font-size:5.5pt;font-weight:700">아로마프로젝트</div>
+      <div style="padding:1mm 2mm;border-right:0.4mm solid #000">
+        <div style="font-size:4pt;color:#444">제조업체</div>
+        <div style="font-size:6pt;font-weight:700">아로마프로젝트</div>
       </div>
-      <div style="padding:0.8mm 1.5mm">
-        <div style="font-size:4.5pt;color:#444">입수/박스</div>
-        <div style="font-size:6pt;font-weight:700">${perBox?perBox+' ea':'-'}</div>
+      <div style="padding:1mm 2mm">
+        <div style="font-size:4pt;color:#444">입수/박스</div>
+        <div style="font-size:7pt;font-weight:900">${perBox?perBox+' ea':'-'}</div>
       </div>
     </div>
-    <div style="flex:1"></div>
   </div>`;
 
   const html=`<!DOCTYPE html><html><head><meta charset="UTF-8">
@@ -6957,15 +6983,11 @@ function printLabel(){
     *{box-sizing:border-box;margin:0;padding:0}
     body{background:#fff;color:#000}
     .no-print{padding:8px;display:flex;gap:8px;align-items:center;font-family:sans-serif}
-    @media print{
-      @page{size:50mm 40mm;margin:0}
-      body{width:50mm}
-      .no-print{display:none}
-    }
+    @media print{@page{size:50mm 40mm;margin:0}body{width:50mm}.no-print{display:none}}
   </style></head><body>
   <div class="no-print">
     <button onclick="window.print()" style="padding:6px 16px;background:#000;color:#fff;border:none;border-radius:5px;cursor:pointer;font-size:12px">🖨️ 인쇄 (50×40mm 흑백)</button>
-    <span style="font-size:11px;color:#666">${copies}매 · 라벨 프린터 사용</span>
+    <span style="font-size:11px;color:#666">${copies}매</span>
     <button onclick="window.close()" style="padding:6px 10px;background:#f3f4f6;border:1px solid #ddd;border-radius:5px;cursor:pointer;font-size:11px">닫기</button>
   </div>
   ${Array(copies).fill(labelHtml).join('')}
@@ -6977,7 +6999,6 @@ function printLabel(){
 }
 
 
-// ══ PDF 출력 헬퍼 ════════════════════════════════════════════
 function printArea(areaId,title){
   const area=document.getElementById(areaId);if(!area)return;
   const w=window.open('','_blank');
