@@ -558,10 +558,10 @@ textarea{min-height:60px;resize:vertical}
       <button id="stock-tab-fg" onclick="setStockTab('fg')" class="btn" style="border-radius:0;border:none;background:#fff;color:var(--text2);font-size:12px;padding:6px 14px">완제품 재고</button>
     </div>
     <input placeholder="코드/명/업체 검색..." id="stock-s" oninput="renderStock()" style="flex:1;min-width:130px">
+    <select id="stock-co" onchange="renderStock()" style="width:130px"><option value="">전체 업체</option></select>
     <select id="stock-group" onchange="renderStock();updateStockScentFilter()" style="width:140px"><option value="">전체 제품군</option></select>
     <select id="stock-scent" onchange="renderStock()" style="width:130px"><option value="">전체 향</option><option value="__shared__">공용만</option></select>
     <select id="stock-type" onchange="renderStock()" style="width:100px"><option value="">전체 타입</option><option>용기</option><option>펌프</option><option>숄더</option><option>오버캡</option><option>라벨</option><option>카톤</option><option>포장재</option><option>기타</option></select>
-    <select id="stock-co" onchange="renderStock()" style="width:130px"><option value="">전체 업체</option></select>
     <button class="btn btn-s" onclick="exportStock()">📥 엑셀</button>
   </div>
   <div id="stock-cards"></div>
@@ -1730,8 +1730,18 @@ async function loadAll(){
   // 부가 테이블 (없어도 로그인 가능)
   await Promise.allSettled([
     fetchTable('prod_issues','select=*&order=id.desc&limit=100').then(d=>{C.prodIssues=d;}).catch(()=>{C.prodIssues=[];}),
-    fetchTable('product_groups','select=*&order=name').then(d=>{C.productGroups=d;}).catch(()=>{C.productGroups=[];}),
-    fetchTable('scents','select=*&order=name_ko').then(d=>{C.scents=d;}).catch(()=>{C.scents=[];}),
+    fetchTable('product_groups','select=*&order=name').then(d=>{
+      C.productGroups=d.map(g=>{
+        if(typeof g.pack_spec_hist==='string')try{g.pack_spec_hist=JSON.parse(g.pack_spec_hist);}catch{g.pack_spec_hist=[];}
+        return g;
+      });
+    }).catch(()=>{C.productGroups=[];}),
+    fetchTable('scents','select=*&order=name_ko').then(d=>{
+      C.scents=d.map(s=>{
+        if(typeof s.pack_note_hist==='string')try{s.pack_note_hist=JSON.parse(s.pack_note_hist);}catch{s.pack_note_hist=[];}
+        return s;
+      });
+    }).catch(()=>{C.scents=[];}),
   ]);
 
   document.getElementById('conn-status').textContent='● 연결됨';
@@ -2829,33 +2839,33 @@ function showBarcode(code){
   const co=C.companies.find(c=>c.id===m?.co_id);
   const container=document.getElementById('barcode-area');
   const group_=C.productGroups.find(g=>g.id===m?.group_id);
+  const scent_=C.scents.find(s=>s.id===m?.scent_id);
   const brand_=group_?.brand||'';
   const groupName_=group_?.name||'';
   const vol_=m?.vol?(m.vol+(m.vol_unit||'ml')):'';
+  const scentName_=scent_?.name_ko||'';
+  const nameWithScent=m?(m.name+(scentName_?' '+scentName_:'')):'';
   container.innerHTML=`
     <div style="width:189px;height:151px;border:1.5px solid #000;background:#fff;color:#000;font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;display:flex;flex-direction:column;overflow:hidden;box-sizing:border-box">
-      <!-- 상단: 브랜드명 / 제품군 (테두리 없음) -->
-      <div style="padding:3px 5px 1px;flex-shrink:0;text-align:center">
+      <div style="padding:2px 5px 1px;flex-shrink:0;text-align:center">
         <div style="font-size:12px;font-weight:900;line-height:1.1">${[brand_,groupName_].filter(Boolean).join(' / ')||co?.name||'&nbsp;'}</div>
       </div>
-      <!-- 중앙: QR -->
       <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:1px">
         <canvas id="qr-canvas" style="display:block"></canvas>
       </div>
-      <!-- 하단: 부자재명 / 규격 (테두리 없음) -->
-      <div style="padding:1px 5px 4px;flex-shrink:0;text-align:center;overflow:hidden">
-        <div style="font-size:17px;font-weight:900;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${m?m.name:code}</div>
-        ${vol_?`<div style="font-size:14px;font-weight:900;line-height:1.1">${vol_}</div>`:''}
+      <div style="padding:1px 5px 3px;flex-shrink:0;text-align:center;overflow:hidden">
+        <div style="font-size:14px;font-weight:900;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${nameWithScent||code}</div>
+        ${vol_?`<div style="font-size:12px;font-weight:900;line-height:1.15">${vol_}</div>`:''}
       </div>
     </div>`;
   showMo('m-barcode');
   if(typeof QRCode==='undefined'){
     const s=document.createElement('script');
     s.src='https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js';
-    s.onload=()=>renderQR(code,90);
-    s.onerror=()=>renderQRFallback(code,90);
+    s.onload=()=>renderQR(code,78);
+    s.onerror=()=>renderQRFallback(code,78);
     document.head.appendChild(s);
-  }else{renderQR(code,90);}
+  }else{renderQR(code,78);}
 }
 function saveLabelFolder(){
   const val=document.getElementById('label-folder-input')?.value||'라벨';
@@ -2883,22 +2893,25 @@ function printBarcodeLabel(){
   const m=matObj(code);
   const co=C.companies.find(c=>c.id===m?.co_id);
   const group=C.productGroups.find(g=>g.id===m?.group_id);
+  const scent=C.scents.find(s=>s.id===m?.scent_id);
   const coName_=co?.name||'';
   const brand=group?.brand||'';
   const groupName=group?.name||'';
+  const scentName=scent?.name_ko||'';
   const name=m?.name||code;
+  const nameWithScent=name+(scentName?' '+scentName:'');
   const vol=m?.vol?(m.vol+(m.vol_unit||'ml')):'';
   const fileName=getLabelFileName([coName_,brand,name,vol]);
   const topLine=[brand,groupName].filter(Boolean).join(' / ')||coName_;
-  const qrSrc='https://api.qrserver.com/v1/create-qr-code/?size=250x250&color=000000&bgcolor=ffffff&data='+encodeURIComponent(code);
+  const qrSrc='https://api.qrserver.com/v1/create-qr-code/?size=200x200&color=000000&bgcolor=ffffff&data='+encodeURIComponent(code);
   const bodyHtml='<div id="lbl-body" style="width:189px;height:151px;border:2px solid #000;font-family:Apple SD Gothic Neo,Noto Sans KR,Malgun Gothic,sans-serif;background:#fff;color:#000;display:flex;flex-direction:column;overflow:hidden;box-sizing:border-box">'
-    +'<div style="padding:2mm 1.5mm 0.5mm;flex-shrink:0;text-align:center">'
-    +'<div style="font-size:11pt;font-weight:900;line-height:1.1">'+topLine+'</div></div>'
+    +'<div style="padding:2px 5px 0;flex-shrink:0;text-align:center">'
+    +'<div style="font-size:11px;font-weight:900;line-height:1.1">'+topLine+'</div></div>'
     +'<div style="flex:1;display:flex;align-items:center;justify-content:center">'
-    +'<img crossorigin="anonymous" style="width:79px;height:79px;display:block" src="'+qrSrc+'"></div>'
-    +'<div style="padding:0.5mm 1.5mm 2mm;flex-shrink:0;text-align:center;overflow:hidden">'
-    +'<div style="font-size:15pt;font-weight:900;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+name+'</div>'
-    +(vol?'<div style="font-size:13pt;font-weight:900;line-height:1.1">'+vol+'</div>':'')
+    +'<img crossorigin="anonymous" style="width:70px;height:70px;display:block" src="'+qrSrc+'"></div>'
+    +'<div style="padding:0 5px 3px;flex-shrink:0;text-align:center;overflow:hidden">'
+    +'<div style="font-size:14pt;font-weight:900;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+nameWithScent+'</div>'
+    +(vol?'<div style="font-size:12pt;font-weight:900;line-height:1.1">'+vol+'</div>':'')
     +'</div></div>';
   const html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>바코드</title>'
     +'<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"><\/script>'
@@ -8502,14 +8515,16 @@ function openPackSpec(ordId){
   // 공통사양 이력 복원
   const groupHistWrap=document.getElementById('ps-group-hist-wrap');
   const groupHistEl=document.getElementById('ps-group-hist');
-  const groupHist=group?.pack_spec_hist||[];
+  // JSON 문자열로 저장된 경우 파싱
+  let groupHist=group?.pack_spec_hist||[];
+  if(typeof groupHist==='string'){try{groupHist=JSON.parse(groupHist);}catch{groupHist=[];}}
   if(groupHistWrap)groupHistWrap.style.display=groupHist.length?'block':'none';
   if(groupHistEl)groupHistEl.innerHTML=groupHist.length
     ?[...groupHist].reverse().map(h=>`<div style="margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid #fde68a">
         <div style="display:flex;gap:8px;font-size:10px;color:#92400e;margin-bottom:4px">
-          <span>📅 ${h.date}</span><span>·</span><span>✍️ ${h.user||'관리자'}</span>
+          <span>📅 ${h.date||'-'}</span><span>·</span><span>✍️ ${h.user||'관리자'}</span>
         </div>
-        <pre style="margin:0;font-size:11px;white-space:pre-wrap;color:#444;font-family:inherit">${h.spec}</pre>
+        <pre style="margin:0;font-size:11px;white-space:pre-wrap;color:#444;font-family:inherit">${h.spec||h.note||''}</pre>
       </div>`).join('')
     :'<div style="color:var(--text3)">이전 이력 없음</div>';
 
@@ -8525,14 +8540,15 @@ function openPackSpec(ordId){
     else if(scentMeta)scentMeta.textContent='';
     const scentHistWrap=document.getElementById('ps-scent-hist-wrap');
     const scentHistEl=document.getElementById('ps-scent-hist');
-    const scentHist=scent?.pack_note_hist||[];
+    let scentHist=scent?.pack_note_hist||[];
+    if(typeof scentHist==='string'){try{scentHist=JSON.parse(scentHist);}catch{scentHist=[];}}
     if(scentHistWrap)scentHistWrap.style.display=scentHist.length?'block':'none';
     if(scentHistEl)scentHistEl.innerHTML=scentHist.length
       ?[...scentHist].reverse().map(h=>`<div style="margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid #fde68a">
           <div style="display:flex;gap:8px;font-size:10px;color:#92400e;margin-bottom:4px">
-            <span>📅 ${h.date}</span><span>·</span><span>✍️ ${h.user||'관리자'}</span>
+            <span>📅 ${h.date||'-'}</span><span>·</span><span>✍️ ${h.user||'관리자'}</span>
           </div>
-          <pre style="margin:0;font-size:11px;white-space:pre-wrap;color:#444;font-family:inherit">${h.note}</pre>
+          <pre style="margin:0;font-size:11px;white-space:pre-wrap;color:#444;font-family:inherit">${h.note||h.spec||''}</pre>
         </div>`).join('')
       :'<div style="color:var(--text3)">이전 이력 없음</div>';
   }else{scentSec.style.display='none';}
@@ -9079,6 +9095,8 @@ async function commitScan(){
       const ribr=await dbInsert('inbounds',ib);C.inbounds.unshift(ribr||ib);
       await addHist('입고',scanMat,qty,'',selLoc,'모바일 입고');
       toast(`입고: ${matName(scanMat)} ${fmt(qty)}개 → ${selLoc}`);
+      if(typeof renderStock==='function')renderStock();
+      if(typeof renderMat==='function')renderMat();
     }else if(scanType==='출고'){
       let rem=qty;
       const srcs=C.stock.filter(s=>s.mat_code===scanMat&&s.loc===selLoc);
