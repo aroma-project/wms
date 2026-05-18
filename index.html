@@ -1680,7 +1680,12 @@ function genLot(prodCode){
 }
 function nextMatCode(){const nums=C.materials.map(m=>parseInt((m.code||'').replace('MAT-',''))||0);return 'MAT-'+String((nums.length?Math.max(...nums):0)+1).padStart(6,'0');}
 function nextOrdId(){const d=today().replace(/-/g,'');const n=C.orders.filter(o=>o.id.startsWith('ORD-'+d)).length;return`ORD-${d}-${String(n+1).padStart(3,'0')}`;}
-function nextInvId(){const nums=C.stock.map(s=>parseInt((s.id||'').replace('INV-',''))||0);return 'INV-'+String((nums.length?Math.max(...nums):0)+1).padStart(6,'0');}
+function nextInvId(){
+  // 타임스탬프 기반으로 중복 방지 (로컬 캐시 의존 제거)
+  const ts=Date.now().toString().slice(-7);
+  const rand=Math.floor(Math.random()*100).toString().padStart(2,'0');
+  return 'INV-'+ts+rand;
+}
 
 // ══ SUPABASE DATA LAYER ══════════════════════════════════════
 async function fetchTable(table, params=''){
@@ -2723,9 +2728,10 @@ function renderMat(){
     const isDanger=min>0&&qty<=min*0.5;
     const isLow=min>0&&qty<=min;
     const qtyColor=isDanger?'var(--red)':isLow?'var(--amber)':qty>0?'var(--green)':'var(--text3)';
+    const volStr=m.vol?(m.vol+(m.vol_unit||'ml')):'';
     return`<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid #f5f7fa;font-size:12px${isDanger?' border-left:3px solid var(--red)':isLow?' border-left:3px solid var(--amber)':''}">
       <span class="mono" style="font-size:10px;color:var(--text3);width:90px;flex-shrink:0">${m.code}</span>
-      <span style="flex:1;font-weight:600">${m.name}</span>
+      <span style="flex:1;font-weight:600">${m.name}${volStr?`<span style="margin-left:5px;font-size:10px;font-weight:700;background:#dbeafe;color:#1d4ed8;padding:1px 5px;border-radius:3px">${volStr}</span>`:''}</span>
       <span style="font-size:11px">${badge(m.type,'gray')}</span>
       <span style="font-weight:700;color:${qtyColor};min-width:50px;text-align:right">${fmt(qty)}개${min>0?`<span style="font-size:10px;color:var(--text3)">/${fmt(min)}</span>`:''}</span>
       <button class="btn btn-g btn-sm" onclick="showBarcode('${m.code}')">🔲</button>
@@ -2822,24 +2828,24 @@ function showBarcode(code){
   const m=matObj(code);
   const co=C.companies.find(c=>c.id===m?.co_id);
   const container=document.getElementById('barcode-area');
-  // 50x40mm 미리보기 (189x151px)
   const group_=C.productGroups.find(g=>g.id===m?.group_id);
   const brand_=group_?.brand||'';
+  const groupName_=group_?.name||'';
   const vol_=m?.vol?(m.vol+(m.vol_unit||'ml')):'';
   container.innerHTML=`
     <div style="width:189px;height:151px;border:1.5px solid #000;background:#fff;color:#000;font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;display:flex;flex-direction:column;overflow:hidden;box-sizing:border-box">
-      <!-- 상단: 업체명 + 브랜드명 -->
+      <!-- 상단: 브랜드명 / 제품군 -->
       <div style="border-bottom:1.5px solid #000;padding:3px 6px;flex-shrink:0;text-align:center">
-        <div style="font-size:11px;font-weight:900;line-height:1.2">${[co?.name,brand_].filter(Boolean).join(' · ')||'&nbsp;'}</div>
+        <div style="font-size:13px;font-weight:900;line-height:1.2">${[brand_,groupName_].filter(Boolean).join(' / ')||co?.name||'&nbsp;'}</div>
       </div>
       <!-- 중앙: QR -->
       <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:2px">
         <canvas id="qr-canvas" style="display:block"></canvas>
       </div>
-      <!-- 하단: 품목명 + 규격 크게 -->
+      <!-- 하단: 부자재명 / 규격 -->
       <div style="border-top:1.5px solid #000;padding:3px 6px;flex-shrink:0;text-align:center">
-        <div style="font-size:14px;font-weight:900;line-height:1.3">${m?m.name:code}</div>
-        ${vol_?`<div style="font-size:12px;font-weight:900;line-height:1.2">${vol_}</div>`:''}
+        <div style="font-size:16px;font-weight:900;line-height:1.3">${m?m.name:code}</div>
+        ${vol_?`<div style="font-size:14px;font-weight:900;line-height:1.2">${vol_}</div>`:''}
       </div>
     </div>`;
   showMo('m-barcode');
@@ -2879,19 +2885,20 @@ function printBarcodeLabel(){
   const group=C.productGroups.find(g=>g.id===m?.group_id);
   const coName_=co?.name||'';
   const brand=group?.brand||'';
+  const groupName=group?.name||'';
   const name=m?.name||code;
   const vol=m?.vol?(m.vol+(m.vol_unit||'ml')):'';
   const fileName=getLabelFileName([coName_,brand,name,vol]);
-  const topLine=[coName_,brand].filter(Boolean).join(' · ');
+  const topLine=[brand,groupName].filter(Boolean).join(' / ')||coName_;
   const qrSrc='https://api.qrserver.com/v1/create-qr-code/?size=250x250&color=000000&bgcolor=ffffff&data='+encodeURIComponent(code);
   const bodyHtml='<div id="lbl-body" style="width:189px;height:151px;border:2px solid #000;font-family:Apple SD Gothic Neo,Noto Sans KR,Malgun Gothic,sans-serif;background:#fff;color:#000;display:flex;flex-direction:column;overflow:hidden;box-sizing:border-box">'
     +'<div style="border-bottom:1.5px solid #000;padding:3px 6px;flex-shrink:0;text-align:center">'
-    +'<div style="font-size:12px;font-weight:900;line-height:1.2">'+topLine+'</div></div>'
+    +'<div style="font-size:13px;font-weight:900;line-height:1.2">'+topLine+'</div></div>'
     +'<div style="flex:1;display:flex;align-items:center;justify-content:center">'
     +'<img crossorigin="anonymous" style="width:79px;height:79px;display:block" src="'+qrSrc+'"></div>'
     +'<div style="border-top:1.5px solid #000;padding:3px 6px;flex-shrink:0;text-align:center">'
-    +'<div style="font-size:14px;font-weight:900;line-height:1.3">'+name+'</div>'
-    +(vol?'<div style="font-size:12px;font-weight:900">'+vol+'</div>':'')
+    +'<div style="font-size:16px;font-weight:900;line-height:1.3">'+name+'</div>'
+    +(vol?'<div style="font-size:14px;font-weight:900;line-height:1.2">'+vol+'</div>':'')
     +'</div></div>';
   const html='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>바코드</title>'
     +'<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"><\/script>'
@@ -6954,29 +6961,29 @@ function renderLabelPreview(){
       <div style="width:189px;height:151px;border:2px solid #000;font-family:'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:#fff;color:#000;display:flex;flex-direction:column;overflow:hidden">
         <!-- 제품 정보 -->
         <div style="border-bottom:2px solid #000;padding:4px 6px;flex:1;display:flex;flex-direction:column;justify-content:center;gap:2px">
-          ${coLabel?`<div style="font-size:7.5px;font-weight:700">${coLabel}</div>`:''}
-          ${brand?`<div style="font-size:9px;font-weight:900;line-height:1.2">${brand}</div>`:''}
-          <div style="font-size:10.5px;font-weight:900;line-height:1.25">${pName}</div>
-          ${volStr?`<div style="font-size:9px;font-weight:900">${volStr}</div>`:''}
+          ${coLabel?`<div style="font-size:8.5px;font-weight:700">${coLabel}</div>`:''}
+          ${brand?`<div style="font-size:10.5px;font-weight:900;line-height:1.2">${brand}</div>`:''}
+          <div style="font-size:12px;font-weight:900;line-height:1.25">${pName}</div>
+          ${volStr?`<div style="font-size:8.5px;font-weight:900">${volStr}</div>`:''}
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;border-bottom:1.5px solid #000;flex-shrink:0">
           <div style="padding:2px 4px;border-right:1.5px solid #000">
-            <div style="font-size:5px;color:#444">제조번호</div>
-            <div style="font-size:8.5px;font-weight:900;font-family:monospace">${o.lot||o.id||'-'}</div>
+            <div style="font-size:5.5px;color:#444">제조번호</div>
+            <div style="font-size:9px;font-weight:900;font-family:monospace">${o.lot||o.id||'-'}</div>
           </div>
           <div style="padding:2px 4px">
-            <div style="font-size:5px;color:#444">사용기한</div>
-            <div style="font-size:8.5px;font-weight:900">${expFormatted||'-'}</div>
+            <div style="font-size:5.5px;color:#444">사용기한</div>
+            <div style="font-size:9px;font-weight:900">${expFormatted||'-'}</div>
           </div>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;flex-shrink:0">
           <div style="padding:2px 4px;border-right:1.5px solid #000">
-            <div style="font-size:5px;color:#444">제조업체</div>
-            <div style="font-size:7px;font-weight:700">아로마프로젝트</div>
+            <div style="font-size:5.5px;color:#444">제조업체</div>
+            <div style="font-size:8.5px;font-weight:700">아로마프로젝트</div>
           </div>
           <div style="padding:2px 4px">
-            <div style="font-size:5px;color:#444">입수/박스</div>
-            <div style="font-size:8.5px;font-weight:900">${perBox?perBox+' ea':'-'}</div>
+            <div style="font-size:5.5px;color:#444">입수/박스</div>
+            <div style="font-size:9px;font-weight:900">${perBox?perBox+' ea':'-'}</div>
           </div>
         </div>
       </div>
@@ -7001,8 +7008,8 @@ function printLabel(){
 
   // 미리보기용 189x151px inner HTML
   function lblInner(forPrint){
-    const fs=forPrint?{co:'5.5pt',brand:'8pt',name:'9pt',vol:'8pt',small:'4pt',mid:'7pt',sm2:'5.5pt'}
-                     :{co:'7.5px',brand:'9px',name:'11px',vol:'8.5px',small:'5px',mid:'8.5px',sm2:'7px'};
+    const fs=forPrint?{co:'8pt',brand:'10pt',name:'11pt',vol:'8pt',small:'9pt',mid:'9pt',sm2:'9pt'}
+                     :{co:'9px',brand:'11px',name:'13px',vol:'9px',small:'9px',mid:'9px',sm2:'9px'};
     return '<div style="border-bottom:'+(forPrint?'0.5mm':'2px')+' solid #000;padding:'+(forPrint?'1.5mm 2mm':'4px 6px')+';flex:1;display:flex;flex-direction:column;justify-content:center;gap:'+(forPrint?'0.5mm':'2px')+'">'
       +(coLabel?'<div style="font-size:'+fs.co+';font-weight:700">'+coLabel+'</div>':'')
       +(brand?'<div style="font-size:'+fs.brand+';font-weight:900;line-height:1.25">'+brand+'</div>':'')
