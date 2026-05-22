@@ -7814,7 +7814,6 @@ function printCostReport(){
     const fixedCost=Math.round(totalMh*fixedPerHour);
     return{o,prod,co,byProc,missingProcs,packDone,totalMh,laborCost,fixedCost};
   });
-  });
 
   // 누락 공정 종류 수집
   const allMissingProcs=[...new Set(rows.flatMap(r=>r.missingProcs))];
