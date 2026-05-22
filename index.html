@@ -7975,7 +7975,16 @@ function printCostReport(){
       <div style="background:#1e1b4b;color:#fff;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
         <div>
           <div style="font-size:15px;font-weight:700">💰 생산 비용 리포트</div>
-          <div style="font-size:11px;opacity:.7;margin-top:2px">시급 ${HOURLY.toLocaleString()}원 · 월 고정비 ${MONTHLY_FIXED.toLocaleString()}원 ÷ ${WORK_DAYS}일×8h(${MONTH_HOURS}h) → 공수 1h당 ${Math.round(fixedPerHour).toLocaleString()}원</div>
+          <div style="font-size:11px;opacity:.7;margin-top:2px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span>시급 ${HOURLY.toLocaleString()}원 · 월 고정비 ${MONTHLY_FIXED.toLocaleString()}원</span>
+            <span style="display:flex;align-items:center;gap:4px">
+              이번달 영업일:
+              <input type="number" id="cr-workdays-input" min="1" max="31" value="${WORK_DAYS}"
+                style="width:46px;padding:2px 5px;border:1px solid rgba(255,255,255,.4);border-radius:4px;background:rgba(255,255,255,.15);color:#fff;font-size:12px;font-weight:700;text-align:center"
+                oninput="updateCostReportCalc()">
+              일 × 8h = <span id="cr-monthhours-display">${MONTH_HOURS}</span>h → 공수 1h당 <span id="cr-fixed-per-hour">${Math.round(fixedPerHour).toLocaleString()}</span>원
+            </span>
+          </div>
         </div>
         <div style="display:flex;gap:8px;align-items:center">
           <div style="text-align:right">
@@ -8029,6 +8038,21 @@ function printCostReport(){
     </div>`;
 
   // recalcCostReport를 전역에 등록
+  window.updateCostReportCalc=function(){
+    const days=parseInt(document.getElementById('cr-workdays-input')?.value)||20;
+    const mh=days*8;
+    const fpH=MONTHLY_FIXED/mh;
+    const el1=document.getElementById('cr-monthhours-display');if(el1)el1.textContent=mh;
+    const el2=document.getElementById('cr-fixed-per-hour');if(el2)el2.textContent=Math.round(fpH).toLocaleString();
+    // fixedPerHour 업데이트 후 재계산
+    rows.forEach(r=>{
+      r.fixedCost=Math.round(r.totalMh*fpH);
+    });
+    recalcCostReport();
+    // localStorage 저장
+    localStorage.setItem('aroma_cost_workdays',days);
+    localStorage.setItem('aroma_cost_monthhours',mh);
+  };
   window.recalcCostReport=recalcCostReport;
   window.saveCostInputs=saveCostInputs;
 
