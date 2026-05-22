@@ -883,6 +883,44 @@ textarea{min-height:60px;resize:vertical}
       💡 설정 후 라벨 저장 시 파일명 예시: <span id="label-prefix-preview" style="font-weight:700"></span>
     </div>
   </div>
+
+  <!-- 비용 계산 기준 설정 -->
+  <div class="card" style="border-top:3px solid var(--amber);margin-bottom:16px">
+    <div class="card-hd">💰 생산 비용 계산 기준 설정</div>
+    <p style="font-size:12px;color:var(--text2);margin-bottom:12px">
+      고정비는 <strong>월 총 가동시간 대비 실제 공수 비율</strong>로 배분됩니다.<br>
+      월 가동일수 × 8h = 월 총 가동시간으로 자동 계산됩니다.<br>
+      예: 가동 20일 → 160h, LOT 공수 10h → 고정비 배분 = 10,000,000 × (10÷160) = 625,000원
+    </p>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;flex-wrap:wrap">
+      <div>
+        <label style="font-size:11px;color:var(--text2);display:block;margin-bottom:4px">시급 (원/h)</label>
+        <input id="cost-hourly-input" type="number" placeholder="15000"
+          style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;font-weight:700"
+          value="${localStorage.getItem('aroma_cost_hourly')||15000}">
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--text2);display:block;margin-bottom:4px">월 고정비 (원)</label>
+        <input id="cost-fixed-input" type="number" placeholder="10000000"
+          style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;font-weight:700"
+          value="${localStorage.getItem('aroma_cost_fixed')||10000000}">
+      </div>
+      <div>
+        <label style="font-size:11px;color:var(--text2);display:block;margin-bottom:4px">이번 달 가동일수 (일)</label>
+        <input id="cost-workdays-input" type="number" min="1" max="31" placeholder="20"
+          oninput="updateWorkhoursPreview()"
+          style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;font-weight:700"
+          value="${localStorage.getItem('aroma_cost_workdays')||20}">
+        <div id="workdays-preview" style="font-size:11px;color:var(--text2);margin-top:4px">
+          → 월 가동 <strong>${(parseInt(localStorage.getItem('aroma_cost_workdays')||20)*8).toLocaleString()}h</strong> (×8h)
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:10px;display:flex;gap:8px">
+      <button onclick="saveCostSettings()" class="btn btn-p">저장</button>
+      <div id="cost-settings-preview" style="font-size:11px;color:var(--text2);display:flex;align-items:center;padding:0 8px;background:#f8fafc;border-radius:6px"></div>
+    </div>
+  </div>
   <div class="g3" style="margin-bottom:16px">
     <!-- 전체 다운로드 -->
     <div class="card" style="border-top:3px solid var(--blue)">
@@ -2866,6 +2904,24 @@ function showBarcode(code){
     s.onerror=()=>renderQRFallback(code,78);
     document.head.appendChild(s);
   }else{renderQR(code,78);}
+}
+function updateWorkhoursPreview(){
+  const days=parseInt(document.getElementById('cost-workdays-input')?.value)||20;
+  const el=document.getElementById('workdays-preview');
+  if(el)el.innerHTML=`→ 월 가동 <strong>${(days*8).toLocaleString()}h</strong> (×8h)`;
+}
+function saveCostSettings(){
+  const hourly=parseInt(document.getElementById('cost-hourly-input')?.value)||15000;
+  const fixed=parseInt(document.getElementById('cost-fixed-input')?.value)||10000000;
+  const workdays=parseInt(document.getElementById('cost-workdays-input')?.value)||20;
+  const monthHours=workdays*8;
+  localStorage.setItem('aroma_cost_hourly',hourly);
+  localStorage.setItem('aroma_cost_fixed',fixed);
+  localStorage.setItem('aroma_cost_workdays',workdays);
+  localStorage.setItem('aroma_cost_monthhours',monthHours);
+  const prev=document.getElementById('cost-settings-preview');
+  if(prev)prev.textContent=`시급 ${hourly.toLocaleString()}원 · 월 고정비 ${fixed.toLocaleString()}원 · 가동 ${workdays}일(${monthHours}h) → 공수 10h 시 고정비 ${Math.round(fixed/monthHours*10).toLocaleString()}원`;
+  toast('비용 계산 기준이 저장됐습니다','success');
 }
 function saveLabelFolder(){
   const val=document.getElementById('label-folder-input')?.value||'라벨';
@@ -7717,8 +7773,12 @@ function toggleCostDetail(id){
 
 function printCostReport(){
   // 비용 리포트를 별도 섹션으로 표시 (인터랙티브)
-  const HOURLY=15000;
-  const MONTHLY_FIXED=10000000;
+  const HOURLY=parseInt(localStorage.getItem('aroma_cost_hourly'))||15000;
+  const MONTHLY_FIXED=parseInt(localStorage.getItem('aroma_cost_fixed'))||10000000;
+  const MONTH_HOURS=parseInt(localStorage.getItem('aroma_cost_monthhours'))||(parseInt(localStorage.getItem('aroma_cost_workdays')||20)*8);
+  const WORK_DAYS=parseInt(localStorage.getItem('aroma_cost_workdays'))||20;
+  // 시간당 고정비 = 월 고정비 ÷ 월 총 가동시간
+  const fixedPerHour=MONTHLY_FIXED/MONTH_HOURS;
   const PROCESSES=['충진','라벨링','기타','포장'];
 
   const coId=document.getElementById('rl-co')?.value||'';
@@ -7736,9 +7796,6 @@ function printCostReport(){
 
   if(!ords.length){toast('먼저 조회 버튼을 눌러주세요','warn');return;}
 
-  const dayCount=from&&to?Math.max(1,Math.ceil((new Date(to)-new Date(from))/(86400000))+1):30;
-  const fixedAlloc=Math.round((MONTHLY_FIXED/30)*dayCount);
-
   // 오더별 데이터
   const rows=ords.map(o=>{
     const logs=C.progressLogs.filter(l=>l.order_id===o.id);
@@ -7747,13 +7804,16 @@ function printCostReport(){
       const pl=logs.filter(l=>l.process===p);
       byProc[p]={mh:pl.reduce((a,l)=>a+(l.man_hour||0),0),done:pl.reduce((a,l)=>a+(l.qty||0),0)};
     });
-    // 누락된 공정 = 오더의 공정인데 mh 기록이 0
     const missingProcs=(o.processes||PROCESSES).filter(p=>!byProc[p]?.mh);
     const prod=prodObj(o.prod)||{};
     const co=C.companies.find(c=>c.id===o.co_id)||{};
     const packDone=byProc['포장']?.done||0;
     const totalMh=PROCESSES.reduce((a,p)=>a+(byProc[p]?.mh||0),0);
-    return{o,prod,co,byProc,missingProcs,packDone,totalMh,laborCost:Math.round(totalMh*HOURLY)};
+    const laborCost=Math.round(totalMh*HOURLY);
+    // 고정비 = 공수 비례 배분 (해당 LOT 공수 ÷ 월 총 가동시간 × 월 고정비)
+    const fixedCost=Math.round(totalMh*fixedPerHour);
+    return{o,prod,co,byProc,missingProcs,packDone,totalMh,laborCost,fixedCost};
+  });
   });
 
   // 누락 공정 종류 수집
@@ -7801,22 +7861,36 @@ function printCostReport(){
   };
 
   function recalcCostReport(){
-    let grandLabor=0,grandManual=0,grandPack=0;
+    let grandLabor=0,grandFixed=0,grandManual=0,grandPack=0;
     rows.forEach(r=>{
       const manualTotal=r.missingProcs.reduce((a,p)=>a+getManualCost(r.o.id,p)*r.o.qty,0);
-      const total=r.laborCost+manualTotal;
-      grandLabor+=r.laborCost;grandManual+=manualTotal;grandPack+=r.packDone||r.o.qty;
+      // LOT별 총비용 = 인건비 + 고정비(공수비례) + 수기입력
+      const total=r.laborCost+r.fixedCost+manualTotal;
+      grandLabor+=r.laborCost;grandFixed+=r.fixedCost;grandManual+=manualTotal;
+      grandPack+=r.packDone||r.o.qty;
       const totalEl=document.getElementById('mc-total-'+r.o.id);
-      if(totalEl)totalEl.textContent=(total).toLocaleString('ko-KR')+'원';
+      if(totalEl)totalEl.textContent=total.toLocaleString('ko-KR')+'원';
       const perEl=document.getElementById('mc-per-'+r.o.id);
       const qty=r.packDone||r.o.qty;
       if(perEl)perEl.textContent=qty>0?Math.round(total/qty).toLocaleString('ko-KR')+'원':'-';
+      // 공정별 개당 비용 (고정비 포함)
+      const fixedPerUnit=qty>0?Math.round(r.fixedCost/qty):0;
+      ['충진','라벨링','기타','포장'].forEach(p=>{
+        const el=document.getElementById('mc-per-proc-'+r.o.id+'-'+p);
+        if(!el)return;
+        const pd=r.byProc[p];const mh=pd?.mh||0;
+        const pCost=Math.round(mh*HOURLY);
+        const pFixed=Math.round(mh*fixedPerHour);
+        const pTotal=pCost+pFixed;
+        el.textContent=qty>0&&pTotal>0?Math.round(pTotal/qty).toLocaleString('ko-KR')+'원/개':'-';
+      });
     });
-    const grandTotal=grandLabor+grandManual+fixedAlloc;
+    const grandTotal=grandLabor+grandFixed+grandManual;
     const perUnit=grandPack>0?Math.round(grandTotal/grandPack):0;
     const el=document.getElementById('cr-grand-total');if(el)el.textContent=grandTotal.toLocaleString('ko-KR')+'원';
     const el2=document.getElementById('cr-per-unit');if(el2)el2.textContent=perUnit.toLocaleString('ko-KR')+'원/EA';
     const el3=document.getElementById('cr-grand-labor');if(el3)el3.textContent=(grandLabor+grandManual).toLocaleString('ko-KR')+'원';
+    const el4=document.getElementById('cr-grand-fixed');if(el4)el4.textContent=grandFixed.toLocaleString('ko-KR')+'원';
   }
 
   // 테이블 행 생성
@@ -7902,7 +7976,7 @@ function printCostReport(){
       <div style="background:#1e1b4b;color:#fff;padding:12px 16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px">
         <div>
           <div style="font-size:15px;font-weight:700">💰 생산 비용 리포트</div>
-          <div style="font-size:11px;opacity:.7;margin-top:2px">시급 ${(HOURLY).toLocaleString()}원 · 월 고정비 ${(MONTHLY_FIXED).toLocaleString()}원 · 기간 ${dayCount}일 고정비 배분 ${fixedAlloc.toLocaleString()}원</div>
+          <div style="font-size:11px;opacity:.7;margin-top:2px">시급 ${HOURLY.toLocaleString()}원 · 월 고정비 ${MONTHLY_FIXED.toLocaleString()}원 ÷ ${WORK_DAYS}일×8h(${MONTH_HOURS}h) → 공수 1h당 ${Math.round(fixedPerHour).toLocaleString()}원</div>
         </div>
         <div style="display:flex;gap:8px;align-items:center">
           <div style="text-align:right">
@@ -7943,8 +8017,8 @@ function printCostReport(){
               <td colspan="4" style="padding:10px 10px;text-align:right;border-top:2px solid #1e1b4b;font-size:13px" id="cr-grand-labor">계산중...</td>
             </tr>
             <tr style="background:#fef3c7">
-              <td colspan="6" style="padding:8px 10px;text-align:right;font-weight:700;color:#92400e">고정비 배분 (${dayCount}일)</td>
-              <td colspan="4" style="padding:8px 10px;text-align:right;font-weight:700;color:#92400e">${fixedAlloc.toLocaleString()}원</td>
+              <td colspan="6" style="padding:8px 10px;text-align:right;font-weight:700;color:#92400e">고정비 합계 (공수 비례 배분)</td>
+              <td colspan="4" style="padding:8px 10px;text-align:right;font-weight:700;color:#92400e" id="cr-grand-fixed">계산중...</td>
             </tr>
             <tr style="background:#1e1b4b;color:#fff;font-size:14px;font-weight:800">
               <td colspan="6" style="padding:12px 10px;text-align:right">총 생산 비용</td>
