@@ -586,7 +586,11 @@ textarea{min-height:60px;resize:vertical}
       <div class="card-hd">출고 처리 <span id="ob-sel-count" class="badge b-blue"></span></div>
       <div id="ob-per-item-config"></div>
       <div class="fr c2" style="margin-top:10px"><div><label>출고지 (배송지)</label><select id="ob-dest"></select></div></div>
-      <div class="br"><button class="btn btn-s" onclick="doOutbound()">✓ 출고 처리 + 명세서 발행</button><button class="btn btn-g" onclick="clearObSel()">선택 취소</button></div>
+      <div class="br">
+        <button class="btn btn-s" onclick="doOutbound()">✓ 출고 처리 + 명세서 발행</button>
+        <button class="btn btn-g" onclick="previewReceiptOnly()">📄 명세서만 출력</button>
+        <button class="btn btn-g" onclick="clearObSel()">선택 취소</button>
+      </div>
     </div>
   </div>
   <div id="ob-done" style="display:none">
@@ -1112,8 +1116,8 @@ textarea{min-height:60px;resize:vertical}
       <div><label>제품종류</label><select id="b-kind"><option value="A">화장품</option><option value="C">방향제</option></select></div>
     </div>
     <div class="fr c2">
-      <div><label>용량(ml) *</label><input id="b-vol" type="number" min="1" placeholder="예: 50, 100, 200" style="font-weight:700"></div>
-      <div><label>용량 단위</label><select id="b-vol-unit"><option value="ml">ml</option><option value="g">g</option><option value="개">개(PCS)</option></select></div>
+      <div><label>용량(ml) *</label><input id="b-vol" type="number" min="1" placeholder="예: 50, 100, 200" style="font-weight:700" oninput="onBomScentChange()"></div>
+      <div><label>용량 단위</label><select id="b-vol-unit" onchange="onBomScentChange()"><option value="ml">ml</option><option value="g">g</option><option value="개">개(PCS)</option></select></div>
     </div>
     <!-- 자동생성된 제품코드/명 -->
     <div id="bom-prod-preview" style="display:none;background:var(--blue-lt);border-radius:8px;padding:10px;font-size:12px;margin-bottom:10px">
@@ -3630,7 +3634,10 @@ function onBomScentChange(){
   if(!groupId||!scentId){document.getElementById('bom-prod-preview').style.display='none';return;}
   const group=C.productGroups.find(g=>g.id===groupId);
   const scent=C.scents.find(s=>s.id===scentId);
-  const autoCode=groupId+'-'+scentId;
+  const volVal=document.getElementById('b-vol')?.value||'';
+  const volUnit=document.getElementById('b-vol-unit')?.value||'ml';
+  // 용량이 있으면 코드에 포함 → 같은향+다른용량 = 다른 제품
+  const autoCode=volVal?`${groupId}-${scentId}-${volVal}${volUnit}`:`${groupId}-${scentId}`;
   document.getElementById('bom-auto-code').textContent=autoCode;
   const existing=C.products.find(p=>p.code===autoCode);
   document.getElementById('b-prodname').value=existing?.name||(group?.name||'')+(scent?' '+scent.name_ko:'');
@@ -6251,6 +6258,31 @@ function printPalletLabel(obId){
   else toast('팝업이 차단됐습니다','warn');
 }
 
+function previewReceiptOnly(){
+  // 출고처리 없이 현재 선택된 항목으로 임시 명세서 출력
+  if(!obSel.length){toast('출고할 오더를 선택하세요','warn');return;}
+  const dest=document.getElementById('ob-dest')?.value||'';
+  const dateVal=today();
+  // 임시 outbound 객체 생성 (DB 저장 없음)
+  const items=[];
+  obSel.forEach(id=>{
+    const o=C.orders.find(x=>x.id===id);if(!o)return;
+    const prod=prodObj(o.prod)||{};
+    const group=C.productGroups.find(g=>g.id===prod.group_id);
+    const brand=group?.brand||'';
+    const fullName=[brand,prod.name||o.prod].filter(Boolean).join(' ');
+    const bomCont=C.bom.find(b=>b.prod===o.prod&&matObj(b.mat_code)?.vol);
+    const vol_=prod.vol||matObj(bomCont?.mat_code)?.vol||null;
+    const outQty=parseInt(document.getElementById('ob-qty-'+id)?.value)||0;
+    const cartonPer=parseInt(document.getElementById('ob-carton-'+id)?.value)||null;
+    if(outQty>0)items.push({ordId:o.id,lot:o.lot||o.id,exp:o.exp||'',coId:o.co_id,prod:o.prod,prodName:fullName,qty:outQty,dest,mark:o.mark||null,cartonPer,vol:vol_});
+  });
+  if(!items.length){toast('출고 수량을 입력하세요','warn');return;}
+  const tempOb={id:'(임시)',date:dateVal,dest,items,status:'preview'};
+  showReceipt(tempOb);
+  toast('⚠️ 임시 미리보기 — 출고처리는 아직 완료되지 않았습니다','warn',5000);
+}
+
 function showReceiptById(id){const ob=C.outbounds.find(x=>x.id===id);if(ob)showReceipt(ob);}
 
 async function copyReceiptImage(id){
@@ -6813,7 +6845,7 @@ async function renderRhReport(){
         <td style="border:1px solid #ddd;padding:7px 8px;white-space:nowrap">${it.date||'-'}</td>
         <td style="border:1px solid #ddd;padding:7px 8px;font-family:monospace;font-size:11px;white-space:nowrap;color:#1e40af;font-weight:600">${it.lot||'-'}</td>
         <td style="border:1px solid #ddd;padding:7px 8px;white-space:nowrap;font-size:11px">${ord.exp||'-'}</td>
-        <td style="border:1px solid #ddd;padding:7px 8px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${it.prodName||it.prod||'-'}</td>
+        <td style="border:1px solid #ddd;padding:7px 8px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${it.prodName||it.prod||'-'}${it.vol?` <span style="font-size:10px;font-weight:700;color:#1d4ed8;background:#dbeafe;padding:1px 5px;border-radius:3px">${it.vol}ml</span>`:''}</td>
         <td style="border:1px solid #ddd;padding:7px 8px;text-align:right;font-weight:700;font-size:13px">${fmt(it.qty||0)}</td>
         <td style="border:1px solid #ddd;padding:7px 8px;font-size:11px;color:#555;line-height:1.5;word-break:keep-all">${it.dest||'-'}</td>
       </tr>`;
