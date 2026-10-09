@@ -1784,24 +1784,26 @@ async function loadAll(){
   document.getElementById('conn-status').className='badge b-amber';
 
   // 병렬 로드 (개별 실패 시 빈 배열로 fallback)
-  const _tables = await Promise.allSettled([
-    fetchTable('accounts','select=*'),
-    fetchTable('companies','select=*&order=name'),
-    fetchTable('locations','select=*&order=code'),
-    fetchTable('materials','select=*&order=name'),
-    fetchTable('stock','select=*'),
-    fetchTable('products','select=*&order=code'),
-    fetchTable('bom','select=*&order=pri'),
-    fetchTable('orders','select=*&order=created_at&order=id.desc&limit=500'),
-    fetchTable('inbounds','select=*&order=id.desc&limit=500'),
-    fetchTable('outbounds','select=*&order=id.desc&limit=500'),
-    fetchTable('history','select=*&order=id.desc&limit=200'),
-    fetchTable('progress_logs','select=*&order=id.desc'),
+  // 안전한 개별 로드 — 각 테이블 독립적으로, accounts 실패 시에만 전체 중단
+  const _safe = async (table, params) => { try{ return await fetchTable(table, params); }catch(e){ console.warn('table load warn:',table,e.message); return []; } };
+
+  // accounts는 필수 → 실패 시 throw
+  const accounts = await fetchTable('accounts','select=*');
+
+  // 나머지는 병렬, 실패 시 빈 배열
+  const [companies,locations,materials,stock,products,bom,orders,inbounds,outbounds,history,progressLogs] = await Promise.all([
+    _safe('companies','select=*&order=name'),
+    _safe('locations','select=*&order=code'),
+    _safe('materials','select=*&order=name'),
+    _safe('stock','select=*'),
+    _safe('products','select=*&order=code'),
+    _safe('bom','select=*&order=pri'),
+    _safe('orders','select=*&order=id.desc&limit=500'),
+    _safe('inbounds','select=*&order=id.desc&limit=500'),
+    _safe('outbounds','select=*&order=id.desc&limit=500'),
+    _safe('history','select=*&order=id.desc&limit=200'),
+    _safe('progress_logs','select=*&order=id.desc'),
   ]);
-  const _get=(i)=>_tables[i].status==='fulfilled'?_tables[i].value:[];
-  // accounts만 실패하면 로그인 불가 → 에러 throw
-  if(_tables[0].status==='rejected') throw _tables[0].reason;
-  const [accounts,companies,locations,materials,stock,products,bom,orders,inbounds,outbounds,history,progressLogs]=_tables.map(_get);
 
   C.accounts=accounts; C.companies=companies; C.locations=locations;
   C.materials=materials; C.stock=stock; C.products=products;
